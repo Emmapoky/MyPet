@@ -1,0 +1,32 @@
+# macOS
+.DS_Store
+
+# Xcode — user-specific state, never commit this
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+*.xccheckout
+DerivedData/
+build/
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Swift Package Manager
+.swiftpm/
+.build/
+Packages/
+
+# Fastlane (if you add it later)
+fastlane/report.xml
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# Secrets — never commit signing certificates or API keys
+*.p12
+*.mobileprovision
+*.cer
+AuthKey_*.p8
+.env

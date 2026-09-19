@@ -249,8 +249,9 @@ struct PetBaseline: Codable, Hashable {
     /// Fraction of all metrics with an established baseline — the headline
     /// "how well do we know this pet yet" number.
     var coverage: Double {
-        guard !BehaviorMetric.allCases.isEmpty else { return 0 }
-        let established = metrics.values.filter(\.isEstablished).count
-        return Double(established) / Double(BehaviorMetric.allCases.count)
+        let tracked = BehaviorMetric.tracked
+        guard !tracked.isEmpty else { return 0 }
+        let established = tracked.filter { metrics[$0]?.isEstablished == true }.count
+        return Double(established) / Double(tracked.count)
     }
 }

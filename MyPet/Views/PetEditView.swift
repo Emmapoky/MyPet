@@ -76,6 +76,7 @@ struct PetEditView: View {
                     Label(species.displayName, systemImage: species.symbolName).tag(species)
                 }
             }
+            .pickerStyle(.segmented)
             .onChange(of: draft.species) { _, newValue in
                 draft.symbolName = newValue.symbolName
             }
@@ -163,7 +164,7 @@ struct PetEditView: View {
             TextField("Vet phone", text: $draft.vetPhone)
                 .keyboardType(.phonePad)
             TextField("Microchip ID", text: $draft.microchipID)
-            TextField("Allergies", text: $draft.allergies, axis: .vertical)
+            TextField("Allergies or existing conditions (e.g. hip dysplasia)", text: $draft.allergies, axis: .vertical)
                 .lineLimit(1...3)
             TextField("Notes", text: $draft.notes, axis: .vertical)
                 .lineLimit(1...5)

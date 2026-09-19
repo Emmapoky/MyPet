@@ -10,8 +10,10 @@ struct DashboardView: View {
 
     @Environment(MyPetStore.self) private var store
     var onQuickLog: (Pet) -> Void
+    var onQuickCapture: () -> Void = {}
 
     @State private var now = Date.now
+    @State private var showSettings = false
     private let ticker = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
 
     var body: some View {
@@ -27,6 +29,8 @@ struct DashboardView: View {
                             action: nil
                         )
                     } else {
+                        heroHeader
+                        quickCaptureCard
                         flagsSection
                         overdueSection
                         upcomingSection
@@ -37,11 +41,30 @@ struct DashboardView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
             }
-            .background(Theme.background)
-            .navigationTitle(greeting)
-            .navigationBarTitleDisplayMode(.large)
+            .background(Theme.pageGradient.ignoresSafeArea())
+            .navigationTitle("Today")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) { syncIndicator }
+                ToolbarItem(placement: .topBarLeading) {
+                    HStack(spacing: 8) {
+                        BrandLogo(size: 30)
+                        Text("MyPet").font(.headline)
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    HStack(spacing: 14) {
+                        syncIndicator
+                        Button {
+                            showSettings = true
+                        } label: {
+                            Image(systemName: "gearshape.fill")
+                        }
+                        .accessibilityLabel("Settings")
+                    }
+                }
+            }
+            .sheet(isPresented: $showSettings) {
+                SettingsView()
             }
             .refreshable {
                 await store.syncNow()
@@ -58,6 +81,74 @@ struct DashboardView: View {
         case 12..<18: return "Good afternoon"
         default: return "Good evening"
         }
+    }
+
+    // MARK: Hero
+
+    /// Greeting, today's progress, and the three promises in one glance.
+    private var heroHeader: some View {
+        let loggedToday = store.pets.filter { store.log(for: $0.id, on: now) != nil }.count
+        let todays = store.occurrences(on: now)
+        let done = todays.filter(\.isCompleted).count
+
+        return VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(greeting)
+                        .font(.system(.title, design: .rounded).weight(.bold))
+                    Text(now.formatted(.dateTime.weekday(.wide).day().month(.wide)))
+                        .font(.subheadline)
+                        .opacity(0.9)
+                }
+                Spacer()
+                BrandLogo(size: 52)
+                    .shadow(color: .black.opacity(0.15), radius: 6, y: 3)
+            }
+
+            HStack(spacing: 10) {
+                HeroStat(value: "\(loggedToday)/\(store.pets.count)", caption: "pets logged")
+                HeroStat(value: todays.isEmpty ? "—" : "\(done)/\(todays.count)", caption: "tasks done")
+                HeroStat(value: "\(store.activeFlags.filter { $0.severity >= .watch }.count)", caption: "to look at")
+            }
+
+            HStack(spacing: 6) {
+                PromiseChip(text: "Free", symbol: "banknote")
+                PromiseChip(text: "No collar", symbol: "sensor.tag.radiowaves.forward")
+                PromiseChip(text: "~3 taps", symbol: "hand.tap")
+            }
+        }
+        .foregroundStyle(.white)
+        .padding(18)
+        .background(Theme.heroGradient, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .shadow(color: Theme.brand.opacity(0.3), radius: 14, y: 8)
+    }
+
+    // MARK: Quick capture
+
+    /// Entry point for Lingsha's one-sentence logging idea.
+    private var quickCaptureCard: some View {
+        Button(action: onQuickCapture) {
+            HStack(spacing: 12) {
+                Image(systemName: "text.bubble.fill")
+                    .font(.title3)
+                    .foregroundStyle(.white)
+                    .frame(width: 42, height: 42)
+                    .background(Theme.brandLavender, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Quick capture")
+                        .font(.subheadline.weight(.semibold))
+                    Text("“Biscuit ate half, a bit sleepy”. Say it in one line and MyPet fills in the log.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.leading)
+                }
+                Spacer()
+                Image(systemName: "mic.fill")
+                    .foregroundStyle(Theme.brandLavender)
+            }
+            .petCard(accent: Theme.brandLavender)
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: Sync indicator
@@ -435,5 +526,39 @@ struct OccurrenceRow: View {
             }
         }
         .padding(.vertical, 4)
+    }
+}
+
+// MARK: - Hero pieces
+
+private struct HeroStat: View {
+    let value: String
+    let caption: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(value)
+                .font(.system(.title3, design: .rounded).weight(.bold))
+                .monospacedDigit()
+            Text(caption)
+                .font(.caption2)
+                .opacity(0.9)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(.white.opacity(0.18), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+}
+
+private struct PromiseChip: View {
+    let text: String
+    let symbol: String
+
+    var body: some View {
+        Label(text, systemImage: symbol)
+            .font(.caption2.weight(.semibold))
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
+            .background(.white.opacity(0.22), in: Capsule())
     }
 }

@@ -34,7 +34,7 @@ struct TasksView: View {
                 case .rules: rulesView
                 }
             }
-            .background(Theme.background)
+            .background(Theme.pageGradient.ignoresSafeArea())
             .navigationTitle("Schedule")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {

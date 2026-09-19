@@ -177,6 +177,14 @@ enum BehaviorMetric: String, Codable, CaseIterable, Identifiable, Hashable {
 
     var id: String { rawValue }
 
+    /// The channels a carer is actually asked about and shown charts for.
+    /// Dr Yam (18 Sep 2026) asked for the simplest possible daily log: have they
+    /// eaten, how do they seem, toileting, the odd weigh-in. Sleep is out (pets
+    /// sleep most of the day and nobody can measure it), and water and active
+    /// minutes were dropped with it to keep entry to a few taps. The engine
+    /// still understands the other channels, so older data keeps working.
+    static let tracked: [BehaviorMetric] = [.appetite, .energy, .weight]
+
     var displayName: String {
         switch self {
         case .appetite: "Appetite"

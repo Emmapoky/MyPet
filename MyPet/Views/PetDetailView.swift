@@ -11,6 +11,7 @@ struct PetDetailView: View {
     @State private var isLogging = false
     @State private var editingRecord: HealthRecord?
     @State private var isAddingRecord = false
+    @State private var isExporting = false
     @State private var section: Section = .overview
 
     enum Section: String, CaseIterable, Identifiable {
@@ -35,7 +36,7 @@ struct PetDetailView: View {
                 )
             }
         }
-        .background(Theme.background)
+        .background(Theme.pageGradient.ignoresSafeArea())
         .navigationTitle(pet?.name ?? "Pet")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -45,6 +46,7 @@ struct PetDetailView: View {
                         Button { isLogging = true } label: { Label("Log today", systemImage: "square.and.pencil") }
                         Button { isEditing = true } label: { Label("Edit pet", systemImage: "pencil") }
                         Button { isAddingRecord = true } label: { Label("Add health record", systemImage: "cross.case") }
+                        Button { isExporting = true } label: { Label("Summary for the vet", systemImage: "square.and.arrow.up") }
                         Divider()
                         Button {
                             Task { await store.injectAnomaly(for: pet) }
@@ -64,6 +66,7 @@ struct PetDetailView: View {
         }
         .sheet(isPresented: $isEditing) { if let pet { PetEditView(pet: pet) } }
         .sheet(isPresented: $isLogging) { if let pet { QuickLogView(pet: pet) } }
+        .sheet(isPresented: $isExporting) { if let pet { VetExportView(pet: pet) } }
         .sheet(isPresented: $isAddingRecord) { HealthRecordEditView(petID: petID, record: nil) }
         .sheet(item: $editingRecord) { record in HealthRecordEditView(petID: petID, record: record) }
     }

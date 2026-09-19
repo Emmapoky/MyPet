@@ -32,11 +32,12 @@ struct QuickLogView: View {
             Form {
                 daySection
                 appetiteSection
-                restSection
                 wellbeingSection
                 bodySection
                 notesSection
             }
+            .scrollContentBackground(.hidden)
+            .background(Theme.pageGradient.ignoresSafeArea())
             .navigationTitle("Log \(pet.name)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -85,107 +86,91 @@ struct QuickLogView: View {
 
     // MARK: Appetite
 
+    /// "Have you fed them today?" — Dr Yam's framing. One tap on how much they
+    /// ate instead of typing grams or dragging a slider.
     private var appetiteSection: some View {
         Section {
             Stepper(value: $log.mealsOffered, in: 1...6) {
-                LabeledContent("Meals offered", value: "\(log.mealsOffered)")
+                LabeledContent("Meals given today", value: "\(log.mealsOffered)")
+            }
+            .onChange(of: log.mealsOffered) { _, offered in
+                log.mealsEaten = min(log.mealsEaten, Double(offered))
             }
 
-            VStack(alignment: .leading, spacing: 6) {
-                LabeledContent("Meals eaten") {
-                    Text(String(format: "%.1f", log.mealsEaten))
-                        .monospacedDigit()
-                }
+            VStack(alignment: .leading, spacing: 10) {
+                Text("How much did \(pet.name) eat?")
+                    .font(.subheadline)
 
-                Slider(
-                    value: $log.mealsEaten,
-                    in: 0...Double(log.mealsOffered),
-                    step: 0.25
-                )
-                .tint(pet.accent)
-
-                HStack {
-                    Text("Nothing")
-                    Spacer()
-                    Text("\(Int((log.appetiteRatio * 100).rounded()))% of what was offered")
-                        .foregroundStyle(appetiteColor)
-                    Spacer()
-                    Text("All")
-                }
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-            }
-
-            LabeledContent("Water") {
                 HStack(spacing: 6) {
-                    TextField(
-                        "ml",
-                        value: Binding(
-                            get: { log.waterMl ?? 0 },
-                            set: { log.waterMl = $0 > 0 ? $0 : nil }
-                        ),
-                        format: .number.precision(.fractionLength(0))
-                    )
-                    .keyboardType(.numberPad)
-                    .multilineTextAlignment(.trailing)
-                    .frame(maxWidth: 90)
-                    Text("ml").foregroundStyle(.secondary)
+                    ForEach(EatenAmount.allCases) { amount in
+                        let isSelected = abs(log.appetiteRatio - amount.fraction) < 0.13
+                        Button {
+                            log.mealsEaten = Double(log.mealsOffered) * amount.fraction
+                        } label: {
+                            VStack(spacing: 3) {
+                                Text(amount.emoji).font(.title3)
+                                Text(amount.label).font(.caption2.weight(.medium))
+                            }
+                            .frame(maxWidth: .infinity, minHeight: 54)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(isSelected ? amount.tint.opacity(0.25) : Color.secondary.opacity(0.08))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .strokeBorder(isSelected ? amount.tint : .clear, lineWidth: 1.5)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Ate \(amount.label)")
+                        .accessibilityAddTraits(isSelected ? .isSelected : [])
+                    }
                 }
             }
+            .padding(.vertical, 4)
         } header: {
-            Label("Food and water", systemImage: "fork.knife")
+            Label("Fed today?", systemImage: "fork.knife")
         } footer: {
-            Text("Eating less is the earliest and most reliable signal MyPet watches for. Even a rough estimate helps.")
+            Text("Eating less is the earliest signal MyPet watches for. A rough guess is fine.")
         }
     }
 
-    private var appetiteColor: Color {
-        switch log.appetiteRatio {
-        case 0.8...: Theme.positive
-        case 0.5..<0.8: Theme.watch
-        default: Theme.concern
+    private enum EatenAmount: CaseIterable, Identifiable {
+        case none, little, half, most, all
+        var id: Self { self }
+        var fraction: Double {
+            switch self {
+            case .none: 0
+            case .little: 0.25
+            case .half: 0.5
+            case .most: 0.75
+            case .all: 1
+            }
         }
-    }
-
-    // MARK: Rest and movement
-
-    private var restSection: some View {
-        Section {
-            LabeledContent("Sleep") {
-                HStack(spacing: 6) {
-                    TextField(
-                        "hours",
-                        value: Binding(
-                            get: { log.sleepHours ?? 0 },
-                            set: { log.sleepHours = $0 > 0 ? $0 : nil }
-                        ),
-                        format: .number.precision(.fractionLength(1))
-                    )
-                    .keyboardType(.decimalPad)
-                    .multilineTextAlignment(.trailing)
-                    .frame(maxWidth: 70)
-                    Text("h").foregroundStyle(.secondary)
-                }
+        var label: String {
+            switch self {
+            case .none: "None"
+            case .little: "A little"
+            case .half: "Half"
+            case .most: "Most"
+            case .all: "All"
             }
-
-            LabeledContent("Active time") {
-                HStack(spacing: 6) {
-                    TextField(
-                        "minutes",
-                        value: Binding(
-                            get: { log.activityMinutes ?? 0 },
-                            set: { log.activityMinutes = $0 > 0 ? $0 : nil }
-                        ),
-                        format: .number.precision(.fractionLength(0))
-                    )
-                    .keyboardType(.numberPad)
-                    .multilineTextAlignment(.trailing)
-                    .frame(maxWidth: 70)
-                    Text("min").foregroundStyle(.secondary)
-                }
+        }
+        var emoji: String {
+            switch self {
+            case .none: "🚫"
+            case .little: "🥄"
+            case .half: "🌓"
+            case .most: "🍽️"
+            case .all: "✅"
             }
-        } header: {
-            Label("Rest and movement", systemImage: "moon.zzz.fill")
+        }
+        var tint: Color {
+            switch self {
+            case .none, .little: Theme.concern
+            case .half: Theme.watch
+            case .most, .all: Theme.positive
+            }
         }
     }
 
@@ -212,14 +197,34 @@ struct QuickLogView: View {
                 }
             }
 
-            Picker("Mood", selection: $log.mood) {
-                ForEach(Mood.allCases) { mood in
-                    Text("\(mood.emoji)  \(mood.displayName)").tag(mood)
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Mood").font(.subheadline)
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 3), spacing: 6) {
+                    ForEach(Mood.allCases) { mood in
+                        let isSelected = log.mood == mood
+                        Button {
+                            log.mood = mood
+                        } label: {
+                            Text("\(mood.emoji) \(mood.displayName)")
+                                .font(.caption.weight(.medium))
+                                .frame(maxWidth: .infinity, minHeight: 36)
+                                .background(
+                                    Capsule().fill(isSelected ? pet.accent.opacity(0.22) : Color.secondary.opacity(0.08))
+                                )
+                                .overlay(Capsule().strokeBorder(isSelected ? pet.accent : .clear, lineWidth: 1.5))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(isSelected ? .isSelected : [])
+                    }
                 }
             }
+            .padding(.vertical, 4)
 
-            Toggle("Toileting normal", isOn: $log.eliminationNormal)
-                .tint(Theme.positive)
+            Picker("Toileting normal?", selection: $log.eliminationNormal) {
+                Text("👍 Yes").tag(true)
+                Text("⚠️ No").tag(false)
+            }
+            .pickerStyle(.segmented)
         } header: {
             Label("How they seem", systemImage: "heart.fill")
         }

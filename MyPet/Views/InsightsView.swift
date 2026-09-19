@@ -48,7 +48,7 @@ struct InsightsView: View {
                     )
                 }
             }
-            .background(Theme.background)
+            .background(Theme.pageGradient.ignoresSafeArea())
             .navigationTitle("Insights")
             .toolbar {
                 if store.pets.count > 1 {
@@ -81,8 +81,12 @@ struct InsightsView: View {
 
                 baselineSummary(for: pet)
 
-                ForEach(BehaviorMetric.allCases) { metric in
-                    MetricChartCard(pet: pet, metric: metric, days: range.days)
+                if store.baseline(for: pet).daysObserved >= Self.minimumDaysBeforeCharts {
+                    ForEach(BehaviorMetric.tracked) { metric in
+                        MetricChartCard(pet: pet, metric: metric, days: range.days)
+                    }
+                } else {
+                    notEnoughDaysCard(for: pet)
                 }
 
                 methodNote
@@ -92,18 +96,42 @@ struct InsightsView: View {
         }
     }
 
+    /// Charts stay hidden until there is enough history to read them. A graph
+    /// after two days swings wildly and worries owners for no reason (Erwyna,
+    /// Supervisor Meeting 2). 7 matches NFR07; the team may raise it to ~15.
+    static let minimumDaysBeforeCharts = 7
+
+    private func notEnoughDaysCard(for pet: Pet) -> some View {
+        let days = store.baseline(for: pet).daysObserved
+        return VStack(spacing: 10) {
+            Image(systemName: "chart.line.uptrend.xyaxis")
+                .font(.largeTitle)
+                .foregroundStyle(pet.accent)
+            Text("Still learning \(pet.name)'s normal")
+                .font(.headline)
+            Text("Charts appear after \(Self.minimumDaysBeforeCharts) logged days, so a couple of odd days don't look alarming. \(days) of \(Self.minimumDaysBeforeCharts) so far.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            ProgressView(value: Double(min(days, Self.minimumDaysBeforeCharts)), total: Double(Self.minimumDaysBeforeCharts))
+                .tint(pet.accent)
+        }
+        .frame(maxWidth: .infinity)
+        .petCard(accent: pet.accent)
+    }
+
     // MARK: Baseline summary
 
     private func baselineSummary(for pet: Pet) -> some View {
         let baseline = store.baseline(for: pet)
-        let established = baseline.metrics.values.filter(\.isEstablished).count
+        let established = BehaviorMetric.tracked.filter { baseline[$0]?.isEstablished == true }.count
 
         return VStack(alignment: .leading, spacing: 10) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("What MyPet knows about \(pet.name)")
                         .font(.subheadline.weight(.semibold))
-                    Text("\(baseline.daysObserved) days logged · \(established) of \(BehaviorMetric.allCases.count) baselines established")
+                    Text("\(baseline.daysObserved) days logged · \(established) of \(BehaviorMetric.tracked.count) baselines established")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

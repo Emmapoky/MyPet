@@ -73,30 +73,11 @@ enum DemoData {
             carers: ["You", "Wei Ling"]
         )
 
-        var pip = Pet(
-            name: "Pip",
-            species: .rabbit,
-            breed: "Netherland Dwarf",
-            sex: .female,
-            birthDate: calendar.date(byAdding: .month, value: -14, to: today),
-            isNeutered: true,
-            weightKg: 1.15,
-            targetWeightKg: 1.1,
-            accentIndex: 3,
-            symbolName: "hare.fill",
-            microchipID: "",
-            vetClinic: "Exotic Pet Care PJ",
-            vetPhone: "+60 3-7877 5566",
-            allergies: "",
-            notes: "Gut stasis risk — any drop in eating or droppings is urgent for rabbits.",
-            carers: ["You"]
-        )
-
         biscuit.createdAt = calendar.date(byAdding: .day, value: -80, to: today) ?? today
         mochi.createdAt = biscuit.createdAt
-        pip.createdAt = calendar.date(byAdding: .day, value: -50, to: today) ?? today
 
-        let pets = [biscuit, mochi, pip]
+        // Cats and dogs only (scope decision, 27 Aug 2026; confirmed with Dr Yam).
+        let pets = [biscuit, mochi]
 
         // MARK: Logs
 
@@ -126,16 +107,6 @@ enum DemoData {
             // rule catches this where day-level scoring never would.
             decline: nil,
             weightDriftPerDay: 0.0055
-        )
-
-        logs += generateLogs(
-            for: pip,
-            days: 45,
-            today: today,
-            calendar: calendar,
-            generator: &generator,
-            profile: .init(appetite: 0.96, water: 190, sleep: 11.0, activity: 58, energy: 4, weight: 1.15),
-            decline: nil
         )
 
         // MARK: Care tasks
@@ -203,24 +174,6 @@ enum DemoData {
                 recurrence: .everyNDays(30),
                 startDate: calendar.date(byAdding: .day, value: -20, to: today) ?? today,
                 detail: "Spot-on, between the shoulder blades"
-            ),
-            CareTask(
-                petID: pip.id,
-                title: "Hay and greens",
-                category: .feeding,
-                times: [TimeOfDay(hour: 8, minute: 15), TimeOfDay(hour: 18, minute: 45)],
-                recurrence: .daily,
-                startDate: calendar.date(byAdding: .day, value: -45, to: today) ?? today,
-                detail: "Unlimited timothy hay, one cup greens"
-            ),
-            CareTask(
-                petID: pip.id,
-                title: "Nail check",
-                category: .grooming,
-                times: [TimeOfDay(hour: 11, minute: 0)],
-                recurrence: .weekdays([1]),   // Sundays
-                startDate: calendar.date(byAdding: .day, value: -45, to: today) ?? today,
-                detail: "Trim if needed"
             )
         ]
 
@@ -275,21 +228,14 @@ enum DemoData {
                 weightKg: 5.1
             ),
             HealthRecord(
-                petID: pip.id,
+                petID: mochi.id,
                 kind: .vaccination,
-                title: "RHDV2 vaccination",
-                date: calendar.date(byAdding: .day, value: -140, to: today) ?? today,
+                title: "FVRCP booster",
+                date: calendar.date(byAdding: .day, value: -368, to: today) ?? today,
                 nextDueDate: calendar.date(byAdding: .day, value: -3, to: today),   // deliberately overdue
-                detail: "Rabbit haemorrhagic disease. Annual.",
-                vetClinic: "Exotic Pet Care PJ",
+                detail: "Core cat vaccine. Annual booster.",
+                vetClinic: "Bandar Sunway Veterinary Clinic",
                 cost: 95
-            ),
-            HealthRecord(
-                petID: pip.id,
-                kind: .note,
-                title: "Gut stasis warning signs",
-                date: calendar.date(byAdding: .day, value: -45, to: today) ?? today,
-                detail: "Rabbits must eat continuously. Any refusal of food, or no droppings for 12 hours, is an emergency — call the exotics vet immediately, do not wait."
             )
         ]
 
@@ -301,14 +247,13 @@ enum DemoData {
                 switch pet.id {
                 case biscuit.id: biscuit.weightKg = latest
                 case mochi.id: mochi.weightKg = latest
-                case pip.id: pip.weightKg = latest
                 default: break
                 }
             }
         }
 
         return AppSnapshot(
-            pets: [biscuit, mochi, pip],
+            pets: [biscuit, mochi],
             logs: logs.sorted { $0.day > $1.day },
             tasks: tasks,
             healthRecords: records.sorted { $0.date > $1.date },
@@ -387,6 +332,9 @@ enum DemoData {
                 energy = max(1, energy - decline.energyDrop)
                 mood = decline.moodOverride
             }
+            // Still drawn so the random sequence (and every other seeded value)
+            // stays identical to earlier builds; just no longer stored.
+            _ = (activity, sleep, water)
 
             let mealsOffered = 2
             let mealsEaten = (Double(mealsOffered) * min(max(appetite, 0), 1) * 10).rounded() / 10
@@ -404,9 +352,11 @@ enum DemoData {
                     day: day,
                     mealsOffered: mealsOffered,
                     mealsEaten: mealsEaten,
-                    waterMl: (water).rounded(),
-                    sleepHours: (sleep * 10).rounded() / 10,
-                    activityMinutes: activity.rounded(),
+                    // Sleep, water and active minutes are no longer asked for
+                    // (Supervisor Meeting 2), so the demo does not invent them.
+                    waterMl: nil,
+                    sleepHours: nil,
+                    activityMinutes: nil,
                     energyLevel: min(max(energy, 1), 5),
                     mood: mood,
                     weightKg: weight,

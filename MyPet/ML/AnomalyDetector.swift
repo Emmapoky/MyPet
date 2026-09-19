@@ -501,7 +501,7 @@ struct AnomalyDetector {
                 \(abnormalRecent) of the last \(window.count) days were logged as outside \
                 \(pet.name)'s normal toileting pattern. \(Self.historicalRatePhrase(historicalRate))
                 """,
-            recommendation: "Sudden toileting changes can point to urinary, digestive or stress problems. Worth a vet call if it continues past another day or two."
+            recommendation: "A sudden toileting change is worth a vet call if it continues past another day or two."
         )
     }
 
@@ -597,7 +597,7 @@ private enum Copy {
         case .appetiteLoss:
             return Result(
                 headline: "\(name) is eating less than usual",
-                explanation: "Over the last few days: \(detail). Reduced appetite is the single most common first sign that something is wrong, across nearly every species.",
+                explanation: "Over the last few days: \(detail). Eating less is the most common first sign of change in both cats and dogs.",
                 recommendation: severity >= .concern
                     ? "If \(name) has eaten noticeably less for more than 48 hours, call your vet — especially for cats, where short fasts carry real risk."
                     : "Keep offering food as normal and log each meal. If this continues another day, call your vet."
@@ -606,7 +606,7 @@ private enum Copy {
         case .lethargy:
             return Result(
                 headline: "\(name) seems flatter than normal",
-                explanation: "Over the last few days: \(detail). Lower movement and energy against \(name)'s own usual pattern, not against any breed average.",
+                explanation: "Over the last few days: \(detail). Lower energy against \(name)'s own usual pattern, not against any breed average.",
                 recommendation: severity >= .concern
                     ? "Sustained lethargy warrants a vet call, particularly alongside any change in eating or drinking."
                     : "Watch for another day. Note anything else that has changed — heat, a new routine, a recent vaccination."
@@ -623,7 +623,7 @@ private enum Copy {
             return Result(
                 headline: "\(name)'s water intake has changed",
                 explanation: "Over the last few days: \(detail). Drinking noticeably more or less than usual is a signal worth taking seriously in its own right.",
-                recommendation: "Increased thirst in particular is associated with kidney and endocrine conditions. If this holds for several more days, ask your vet."
+                recommendation: "A lasting change in how much your pet drinks is worth mentioning to your vet if it holds for several more days."
             )
 
         case .weightTrend, .eliminationChange, .multiSystem:

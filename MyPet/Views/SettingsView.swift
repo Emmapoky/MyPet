@@ -10,6 +10,7 @@ import SwiftUI
 struct SettingsView: View {
 
     @Environment(MyPetStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
 
     @State private var pendingAlerts: [String] = []
     @State private var showResetConfirmation = false
@@ -20,6 +21,7 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
+                whyMyPetSection
                 detectionSection
                 syncSection
                 activitySection
@@ -27,8 +29,47 @@ struct SettingsView: View {
                 dataSection
                 aboutSection
             }
+            .scrollContentBackground(.hidden)
+            .background(Theme.pageGradient.ignoresSafeArea())
             .navigationTitle("Settings")
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
             .task { await refreshAlerts() }
+        }
+    }
+
+    // MARK: Why MyPet
+
+    /// The affordability and ease-of-use promises, stated where a carer (or a
+    /// marker) can check them. Each line is something the build actually does.
+    private var whyMyPetSection: some View {
+        Section {
+            HStack(spacing: 12) {
+                BrandLogo(size: 44)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("MyPet").font(.headline)
+                    Text("Notice changes early. For free.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.vertical, 4)
+
+            ForEach(Promise.all) { promise in
+                Label {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(promise.title).font(.subheadline.weight(.medium))
+                        Text(promise.detail).font(.caption).foregroundStyle(.secondary)
+                    }
+                } icon: {
+                    Image(systemName: promise.symbol).foregroundStyle(promise.tint)
+                }
+            }
+        } header: {
+            Text("Why MyPet")
         }
     }
 
@@ -298,4 +339,28 @@ struct SettingsView: View {
     private func refreshAlerts() async {
         pendingAlerts = await store.pendingNotificationSummaries()
     }
+}
+
+// MARK: - Promise
+
+/// One line of the "Why MyPet" list.
+struct Promise: Identifiable {
+    let id = UUID()
+    let symbol: String
+    let title: String
+    let detail: String
+    let tint: Color
+
+    static let all: [Promise] = [
+        Promise(symbol: "banknote", title: "Free to use",
+                detail: "No collar, no hardware, no subscription.", tint: Theme.positive),
+        Promise(symbol: "iphone", title: "Everything in one app",
+                detail: "No ChatGPT or other AI account needed. Nothing costs you tokens.", tint: Theme.brandTeal),
+        Promise(symbol: "hand.tap", title: "About 3 taps a day",
+                detail: "Normal days come pre-filled. You only change what's different.", tint: Theme.brand),
+        Promise(symbol: "lock.shield", title: "Private by design",
+                detail: "No 24/7 camera. Checks run on your phone and only when you tap.", tint: Theme.brandLavender),
+        Promise(symbol: "stethoscope", title: "Not a diagnosis",
+                detail: "MyPet points out changes in behaviour. Your vet decides what they mean.", tint: Theme.watch)
+    ]
 }

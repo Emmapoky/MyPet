@@ -15,6 +15,30 @@ Native iOS, SwiftUI, Swift 5, **no third-party dependencies**. Everything runs o
 
 ---
 
+## What changed in September 2026
+
+These updates follow team Meetings 1–3 and the supervisor meetings with Dr Yam
+on 17 Aug and 18 Sep 2026.
+
+| Change | Why |
+| --- | --- |
+| **One app, no hardware and no AI account.** A "Why MyPet" section in Settings and chips on Today spell it out: free, no collar, about 3 taps a day, private, not a diagnosis | Affordability was the main pitch feedback, and Dr Yam ruled out anything that needs a ChatGPT account or paid tokens |
+| **Simpler daily log.** Did they eat (None, A little, Half, Most, All), energy, mood chips, toileting yes/no, an optional weigh-in, and notes. **Sleep, water and active minutes are gone** | Dr Yam asked for "have you fed them today", not detail, and to drop sleep. The engine still accepts older data with those fields |
+| **New Check tab (middle).** Photo mode with a live camera viewfinder, or Sound mode with a waveform. A **timer at the bottom** runs a 3-second hold for photos or a 10-second minimum for sound. The result is a behaviour likelihood such as "High possibility Biscuit is hungry" | Dr Yam's behaviour feature. It starts with photo or sound, and video comes later. The result is behaviour only, never a diagnosis. It uses a placeholder model for now; FYP2 swaps in a trained Core ML classifier |
+| **Quick capture (Lingsha's idea).** Type or dictate one sentence and MyPet fills in the log. You confirm, then save. It also runs from Siri or Shortcuts ("Log my pet in MyPet") | This is Lingsha's Shortcut demo rebuilt to run inside the app, on the phone, with no external AI |
+| **Cats and dogs only.** The species picker offers Dog or Cat and nothing else. The demo household is Biscuit (dog) and Mochi (cat); Pip the rabbit is gone | Scope decision on 27 Aug, confirmed by Dr Yam |
+| **Vet summary (FR04).** Pet → ⋯ → *Summary for the vet*. Pick a date range (7, 30 or 90 days, or custom) and share it as plain text that opens without the app | Listed in scope but missing from the build |
+| **Daily "haven't logged yet" reminder at 8 PM**, skipped once every pet is logged that day | The users-stop-logging risk, rated increased at M3. Dr Yam: remind people, you can't force them |
+| **Insights charts wait for 7 logged days** before showing (NFR07). This may rise to about 15 if the team agrees | So a couple of odd days don't worry an owner |
+| **Pet profile has "Allergies or existing conditions"**, and no flag advice names a disease | Pre-existing conditions come from Erwyna's prototype. No disease names comes from FR-N01 |
+| **More colour and room for the logo.** A coral, teal and sun palette, a gradient hero on Today, and tinted pages. Settings moved behind the gear on Today | This was feedback on the plain white UI. To use your logo, drop the image from the slides into `Assets.xcassets/AppLogo` and it replaces the paw placeholder everywhere |
+
+Camera and microphone are only used while the Check tab is open and only after you tap. The
+Simulator has no camera, so the viewfinder shows a placeholder there, with a "Choose a photo" button.
+
+Debug launch arguments (Scheme → Run → Arguments) for demos: `-MyPetInitialTab check`, or
+`-MyPetQuickCapture "Biscuit ate half, a bit sleepy"`.
+
 ## Table of contents
 
 1. [Get it running (5 minutes)](#1-get-it-running-5-minutes)
@@ -47,7 +71,7 @@ Then in Xcode:
 2. Press **⌘R**.
 3. It builds and launches straight onto the dashboard, already populated.
 
-**Run the tests:** press **⌘U**. **44 tests across 9 suites** should pass in well under a second.
+**Run the tests:** press **⌘U**. **54 tests across 12 suites** should pass in well under a second.
 
 ### Verified state
 
@@ -56,7 +80,7 @@ As committed, on Xcode 26.6 / iOS 26.5 simulator:
 | Check | Result |
 | --- | --- |
 | `xcodebuild build` | ✅ succeeds, no errors |
-| `xcodebuild test` | ✅ 44/44 pass |
+| `xcodebuild test` | ✅ 54/54 pass |
 | Launch on iPhone 17 Pro | ✅ dashboard renders, detector fires on seed data |
 | Runtime log | ✅ no exceptions, no crashes |
 
@@ -117,7 +141,7 @@ an event, and the analysis service picked it up on a background executor.
 ### d. Trigger a decline on demand
 
 Open any pet → **⋯ menu** → **Simulate a decline (demo)**. This writes three days of reduced
-appetite, low energy and raised sleep into that pet's history and re-runs the model. Good for
+appetite and low energy into that pet's history and re-runs the model. Good for
 demonstrating detection live without waiting a week.
 
 ### e. Break the network on purpose
@@ -175,7 +199,7 @@ MyPet/
 │  ├─ Views/                    Dashboard, Pets, PetDetail, Tasks, QuickLog, Insights, Settings
 │  ├─ Components/               FlagCard, sparkline, badges, shared pieces
 │  └─ Support/                  Theme (light+dark tokens), DemoData (seeded household)
-└─ MyPetTests/MyPetTests.swift  44 tests, 9 suites
+└─ MyPetTests/MyPetTests.swift  54 tests, 12 suites
 ```
 
 ---
@@ -378,15 +402,14 @@ cancelling and re-deriving is cheap and cannot leave a ghost behind.
 
 ## 8. The seeded demo household
 
-First launch seeds three pets with **ten weeks of plausible daily history**, generated from a
+First launch seeds two pets, **one dog and one cat** (MyPet is cats and dogs only), with **ten weeks of plausible daily history**, generated from a
 deterministic PRNG (SplitMix64, fixed seed) so it is **identical on every machine** — a demo that
 looks different each launch is impossible to discuss with a supervisor.
 
 | Pet | Species | The story it tells |
 | --- | --- | --- |
-| **Biscuit** | Golden Retriever, 5y | Four-day decline: appetite and energy down, sleep up. Trips lethargy + appetite + multi-system. |
-| **Mochi** | British Shorthair, 2y8m | Day-to-day normal, but gaining ~0.5%/week. Only the **weight-trend** rule catches this. |
-| **Pip** | Netherland Dwarf rabbit, 14m | Healthy. Has an **overdue** RHDV2 vaccination, and a note about gut stasis being an emergency. |
+| **Biscuit** | Golden Retriever, 5y | Four-day decline: appetite and energy down. Trips lethargy, appetite and multi-system. |
+| **Mochi** | British Shorthair, 2y8m | Day-to-day normal, but gaining ~0.5%/week. Only the **weight-trend** rule catches this. Also has an **overdue** FVRCP booster. |
 
 The generator deliberately **skips roughly one day in nine**, so the model's gap handling is
 exercised rather than being handed perfect data it will never see in the field.
@@ -405,7 +428,7 @@ xcodebuild -project MyPet.xcodeproj -scheme MyPet \
   -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test
 ```
 
-**44 tests, 9 suites** (Swift Testing, not XCTest):
+**54 tests, 12 suites** (Swift Testing, not XCTest):
 
 | Suite | Covers |
 | --- | --- |

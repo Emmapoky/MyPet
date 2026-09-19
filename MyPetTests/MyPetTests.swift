@@ -812,3 +812,108 @@ struct DomainModelTests {
         #expect(BehaviorMetric.Direction.both.admits(2))
     }
 }
+
+// MARK: - Quick capture (Lingsha's idea, M3 / Supervisor Meeting 2)
+
+@Suite("Quick capture parser")
+struct QuickCaptureParserTests {
+
+    private let biscuit = Pet(name: "Biscuit", species: .dog)
+    private let mochi = Pet(name: "Mochi", species: .cat)
+
+    @Test("Reads pet, appetite, energy and toileting from one sentence")
+    func readsSentence() {
+        let parser = QuickCaptureParser(pets: [biscuit, mochi])
+        let result = parser.parse("Biscuit ate half his dinner, a bit sleepy, pooped normally")
+
+        #expect(result.petID == biscuit.id)
+        #expect(result.eatenFraction == 0.5)
+        #expect(result.energyLevel == 2)
+        #expect(result.eliminationNormal == true)
+    }
+
+    @Test("Negative appetite wins over 'all'")
+    func negativeFirst() {
+        let result = QuickCaptureParser(pets: [mochi]).parse("didn't eat all day, hiding")
+        #expect(result.eatenFraction == 0)
+        #expect(result.mood == .withdrawn)
+        #expect(result.petID == mochi.id)
+    }
+
+    @Test("Weight and abnormal toileting are picked up")
+    func weightAndToileting() {
+        let result = QuickCaptureParser(pets: [biscuit]).parse("Weighed 12.4 kg, threw up once")
+        #expect(result.weightKg == 12.4)
+        #expect(result.eliminationNormal == false)
+    }
+
+    @Test("Applying keeps the sentence in the notes")
+    func applyKeepsText() {
+        let draft = BehaviorLog(petID: biscuit.id, day: Fixture.today, mealsOffered: 2, mealsEaten: 2)
+        let result = QuickCaptureParser(pets: [biscuit]).parse("ate half")
+        let log = QuickCaptureParser.apply(result, text: "ate half", to: draft)
+        #expect(log.mealsEaten == 1)
+        #expect(log.notes.contains("ate half"))
+    }
+}
+
+@Suite("Behaviour check")
+struct BehaviourCheckTests {
+
+    @Test("Likelihoods sum to one and are sorted")
+    func normalised() {
+        let pet = Pet(name: "Biscuit", species: .dog)
+        let results = BehaviourCheckModel.analyse(mode: .sound, pet: pet, recentLog: nil, seed: 42)
+        #expect(abs(results.map(\.probability).reduce(0, +) - 1) < 0.0001)
+        #expect(results == results.sorted { $0.probability > $1.probability })
+    }
+
+    @Test("A low-appetite day leans towards hungry")
+    func hungryBias() {
+        let pet = Pet(name: "Biscuit", species: .dog)
+        let log = BehaviorLog(petID: pet.id, day: Fixture.today, mealsOffered: 2, mealsEaten: 0.2)
+        let results = BehaviourCheckModel.analyse(mode: .sound, pet: pet, recentLog: log, seed: 7)
+        #expect(results.first?.state == .hungry)
+    }
+
+    @Test("The headline never names a disease")
+    func headlineIsBehavioural() {
+        let results = [BehaviourCheckModel.Likelihood(state: .hungry, probability: 0.5)]
+        #expect(BehaviourCheckModel.headline(for: results, petName: "Biscuit") == "High possibility Biscuit is hungry")
+    }
+}
+
+@Suite("Scope rules")
+struct ScopeRuleTests {
+
+    @Test("MyPet supports cats and dogs only")
+    func catsAndDogsOnly() {
+        #expect(Species.allCases == [.dog, .cat])
+    }
+
+    @Test("The demo household is cats and dogs only, with no sleep data")
+    func demoIsCatsAndDogs() {
+        let snapshot = DemoData.snapshot(nodeID: "n", asOf: Fixture.today, calendar: Fixture.calendar)
+        #expect(snapshot.pets.allSatisfy { $0.species == .dog || $0.species == .cat })
+        #expect(snapshot.logs.allSatisfy { $0.sleepHours == nil })
+    }
+
+    @Test("The vet summary covers only the chosen range and never diagnoses")
+    func vetSummary() {
+        let pet = Pet(name: "Biscuit", species: .dog)
+        let inside = BehaviorLog(petID: pet.id, day: Fixture.today, mealsOffered: 2, mealsEaten: 1)
+        let outside = BehaviorLog(
+            petID: pet.id,
+            day: Fixture.calendar.date(byAdding: .day, value: -40, to: Fixture.today)!,
+            mealsOffered: 2, mealsEaten: 2
+        )
+        let text = VetSummary.make(
+            pet: pet, logs: [inside, outside], flags: [], records: [],
+            from: Fixture.calendar.date(byAdding: .day, value: -6, to: Fixture.today)!,
+            to: Fixture.today, calendar: Fixture.calendar
+        )
+        #expect(text.contains("1 of 7 days logged"))
+        #expect(text.contains("ate 50%"))
+        #expect(text.contains("It does not diagnose."))
+    }
+}

@@ -106,6 +106,50 @@ actor NotificationService {
         }
     }
 
+    // MARK: Daily logging reminder
+
+    /// The "users stop logging" risk (rated *increased* at Meeting 3). Dr Yam's
+    /// answer on 18 Sep: we cannot force anyone to log, but we can remind them.
+    /// One gentle nudge at 8 PM on any day not everyone has been logged, for
+    /// the next few days. Rebuilt after every log so a finished day stays quiet.
+    func rescheduleLogReminders(pets: [Pet], loggedToday: Set<UUID>, now: Date = .now) async {
+        guard isAuthorized else { return }
+
+        let existing = await center.pendingNotificationRequests()
+        center.removePendingNotificationRequests(
+            withIdentifiers: existing.map(\.identifier).filter { $0.hasPrefix(Identifier.logPrefix) }
+        )
+        guard !pets.isEmpty else { return }
+
+        let calendar = Calendar.current
+        for dayOffset in 0..<horizonDays {
+            guard let day = calendar.date(byAdding: .day, value: dayOffset, to: now),
+                  let fireAt = calendar.date(bySettingHour: 20, minute: 0, second: 0, of: day),
+                  fireAt > now
+            else { continue }
+
+            let missing = dayOffset == 0 ? pets.filter { !loggedToday.contains($0.id) } : pets
+            guard !missing.isEmpty else { continue }
+
+            let content = UNMutableNotificationContent()
+            content.title = "How were your pets today?"
+            content.body = missing.count == 1
+                ? "\(missing[0].name) hasn't been logged yet. It takes about 3 taps."
+                : "\(missing.map(\.name).joined(separator: " and ")) haven't been logged yet. About 3 taps each."
+            content.sound = .default
+
+            let trigger = UNCalendarNotificationTrigger(
+                dateMatching: calendar.dateComponents([.year, .month, .day, .hour, .minute], from: fireAt),
+                repeats: false
+            )
+            try? await center.add(UNNotificationRequest(
+                identifier: "\(Identifier.logPrefix)\(Int(fireAt.timeIntervalSince1970))",
+                content: content,
+                trigger: trigger
+            ))
+        }
+    }
+
     // MARK: Behaviour flag alerts
 
     /// Raises at most one notification per flag, only for `concern` and above.
@@ -173,6 +217,7 @@ actor NotificationService {
     private enum Identifier {
         static let taskPrefix = "task."
         static let flagPrefix = "flag."
+        static let logPrefix = "logreminder."
 
         static func task(taskID: UUID, dueAt: Date) -> String {
             "\(taskPrefix)\(taskID.uuidString).\(Int(dueAt.timeIntervalSince1970))"

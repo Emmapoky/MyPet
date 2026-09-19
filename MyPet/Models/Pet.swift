@@ -83,8 +83,11 @@ struct Pet: Identifiable, Codable, Hashable, Syncable {
 
 // MARK: - Species
 
+/// Cats and dogs only. Agreed on 27 Aug 2026 and confirmed by Dr Yam on
+/// 18 Sep: the baseline defaults, the behaviour check and the demo data are
+/// all tuned for these two, and scope stays small enough to finish.
 enum Species: String, Codable, CaseIterable, Identifiable, Hashable {
-    case dog, cat, rabbit, bird, reptile, smallMammal, other
+    case dog, cat
 
     var id: String { rawValue }
 
@@ -92,11 +95,6 @@ enum Species: String, Codable, CaseIterable, Identifiable, Hashable {
         switch self {
         case .dog: "Dog"
         case .cat: "Cat"
-        case .rabbit: "Rabbit"
-        case .bird: "Bird"
-        case .reptile: "Reptile"
-        case .smallMammal: "Small mammal"
-        case .other: "Other"
         }
     }
 
@@ -104,25 +102,15 @@ enum Species: String, Codable, CaseIterable, Identifiable, Hashable {
         switch self {
         case .dog: "dog.fill"
         case .cat: "cat.fill"
-        case .rabbit: "hare.fill"
-        case .bird: "bird.fill"
-        case .reptile: "lizard.fill"
-        case .smallMammal: "tortoise.fill"
-        case .other: "pawprint.fill"
         }
     }
 
     /// Typical daily sleep, used only to seed a baseline before the pet has
-    /// enough of its own history. Individual baselines replace these fast.
+    /// enough of its own history. Kept for older logs; sleep is no longer asked.
     var typicalSleepHours: Double {
         switch self {
         case .dog: 12.5
         case .cat: 15.0
-        case .rabbit: 11.0
-        case .bird: 11.0
-        case .reptile: 13.0
-        case .smallMammal: 12.0
-        case .other: 12.0
         }
     }
 
@@ -131,11 +119,6 @@ enum Species: String, Codable, CaseIterable, Identifiable, Hashable {
         switch self {
         case .dog: 90
         case .cat: 45
-        case .rabbit: 60
-        case .bird: 60
-        case .reptile: 20
-        case .smallMammal: 40
-        case .other: 50
         }
     }
 }

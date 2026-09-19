@@ -226,9 +226,9 @@ final class MyPetStore {
             day: day,
             mealsOffered: recent.first?.mealsOffered ?? 2,
             mealsEaten: Double(recent.first?.mealsOffered ?? 2),
-            waterMl: baseline[.water]?.median,
-            sleepHours: baseline[.sleep]?.median ?? pet.species.typicalSleepHours,
-            activityMinutes: baseline[.activity]?.median ?? pet.species.typicalActivityMinutes,
+            waterMl: nil,
+            sleepHours: nil,
+            activityMinutes: nil,
             energyLevel: 3,
             mood: .content,
             weightKg: nil,
@@ -269,6 +269,7 @@ final class MyPetStore {
         let currentFlags = flags
 
         Task {
+            await rescheduleLogReminders()
             await sync.enqueue(updated, type: .log)
             await bus.publish(.logRecorded(petID: updated.petID, day: updated.day))
             await refreshSyncStatus()
@@ -633,6 +634,12 @@ final class MyPetStore {
 
     private func rescheduleAlerts() async {
         await notifications.rescheduleTaskAlerts(tasks: tasks, pets: pets)
+        await rescheduleLogReminders()
+    }
+
+    private func rescheduleLogReminders() async {
+        let loggedToday = Set(pets.filter { log(for: $0.id, on: .now) != nil }.map(\.id))
+        await notifications.rescheduleLogReminders(pets: pets, loggedToday: loggedToday)
     }
 
     func pendingNotificationSummaries() async -> [String] {
@@ -678,8 +685,6 @@ final class MyPetStore {
             log.mealsOffered = 2
             log.mealsEaten = offset == 0 ? 0.3 : 0.6      // eating a third to a fifth
             log.energyLevel = 1
-            log.activityMinutes = (log.activityMinutes ?? 60) * 0.25
-            log.sleepHours = (log.sleepHours ?? 12) * 1.35
             log.mood = .withdrawn
             log.notes = "Simulated decline (demo)."
 

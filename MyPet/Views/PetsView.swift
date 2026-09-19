@@ -46,6 +46,8 @@ struct PetsView: View {
                         }
                     }
                     .listStyle(.insetGrouped)
+                    .scrollContentBackground(.hidden)
+                    .background(Theme.pageGradient.ignoresSafeArea())
                 }
             }
             .navigationTitle("Pets")

@@ -316,6 +316,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_NSCameraUsageDescription = "MyPet uses the camera only when you start a behaviour check, to look at your pet. Nothing is recorded in the background.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "MyPet uses the microphone only when you record a sound check, so it can listen to your pet's barks or meows.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -344,6 +346,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_NSCameraUsageDescription = "MyPet uses the camera only when you start a behaviour check, to look at your pet. Nothing is recorded in the background.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "MyPet uses the microphone only when you record a sound check, so it can listen to your pet's barks or meows.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

@@ -47,9 +47,44 @@ enum Theme {
               dark: .init(red: 0.60, green: 0.78, blue: 0.44))
     ]
 
+    // MARK: Brand
+
+    /// MyPet's own colours: a friendly coral, a fresh teal and a sunny yellow.
+    /// Used for the hero header, the tab tint and anything that is "MyPet"
+    /// rather than one specific pet.
+    static let brand = Color(light: .init(red: 0.98, green: 0.45, blue: 0.38),
+                             dark: .init(red: 1.0, green: 0.58, blue: 0.50))
+
+    static let brandTeal = Color(light: .init(red: 0.16, green: 0.62, blue: 0.62),
+                                 dark: .init(red: 0.36, green: 0.80, blue: 0.78))
+
+    static let brandSun = Color(light: .init(red: 1.0, green: 0.76, blue: 0.30),
+                                dark: .init(red: 1.0, green: 0.82, blue: 0.45))
+
+    static let brandLavender = Color(light: .init(red: 0.56, green: 0.48, blue: 0.90),
+                                     dark: .init(red: 0.72, green: 0.66, blue: 0.98))
+
+    /// The hero gradient behind the Today header and the Check screen.
+    static let heroGradient = LinearGradient(
+        colors: [brand, Color(light: .init(red: 1.0, green: 0.62, blue: 0.42),
+                              dark: .init(red: 0.85, green: 0.45, blue: 0.35))],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+
+    /// Soft page wash so screens are never flat white.
+    static let pageGradient = LinearGradient(
+        colors: [
+            Color(light: .init(red: 1.0, green: 0.95, blue: 0.92), dark: .init(red: 0.10, green: 0.08, blue: 0.09)),
+            Color(light: .init(red: 0.93, green: 0.97, blue: 0.97), dark: .init(red: 0.06, green: 0.08, blue: 0.09))
+        ],
+        startPoint: .top,
+        endPoint: .bottom
+    )
+
     // MARK: Surfaces
 
-    static let background = Color(light: .init(red: 0.97, green: 0.97, blue: 0.96),
+    static let background = Color(light: .init(red: 0.99, green: 0.96, blue: 0.94),
                                   dark: .init(red: 0.07, green: 0.07, blue: 0.08))
 
     static let card = Color(light: .init(red: 1.0, green: 1.0, blue: 1.0),

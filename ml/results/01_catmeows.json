@@ -1,0 +1,11 @@
+{"run": "2026-11-19, Google Colab free CPU, transformers 5.22.1, notebook commit 0a58c1a",
+ "split": {"cats_train_val_test": [14, 3, 4], "clips_train_val_test": [293, 53, 94]},
+ "chosen_C": 1,
+ "majority_test": {"accuracy": 0.404, "macro_f1": 0.192},
+ "zero_shot_test": {"accuracy": 0.266, "macro_f1": 0.275},
+ "logreg_test": {"accuracy": 0.436, "macro_f1": 0.402},
+ "zero_shot_all": {"accuracy": 0.339, "macro_f1": 0.335},
+ "logreg_cv7": {"accuracy": 0.541, "macro_f1": 0.49},
+ "confusion_logreg_cv7_rows_true_B_F_I": [[57, 35, 35], [34, 32, 26], [34, 38, 149]],
+ "confusion_zero_shot_rows_true_B_F_I": [[27, 78, 22], [13, 65, 14], [7, 157, 57]],
+ "seconds_per_clip_colab_cpu": 0.628}

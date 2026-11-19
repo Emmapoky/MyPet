@@ -185,6 +185,8 @@ def main():
                 continue
             seg = x[int(s0 * base.SR):int((s0 + dur) * base.SR)][:base.N_SAMPLES]
             ee = emb(base.from_pcm16(base.to_pcm16(seg)))
+            if sp_of[keys[int(order[0])]] != sp:  # the sound must also come from the pet, or the demo looks odd
+                continue
             task = "cat_context" if sp == "cat" else "dog_report"
             pf = base.probs(clf[task], ee)
             if sp == "dog":

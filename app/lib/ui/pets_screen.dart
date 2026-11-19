@@ -1,0 +1,61 @@
+import 'package:material_ui/material_ui.dart';
+import 'package:provider/provider.dart';
+
+import '../models/pet.dart';
+import '../state/app_state.dart';
+import 'pet_detail_screen.dart';
+import 'pet_edit_screen.dart';
+import 'theme.dart';
+import 'widgets/common.dart';
+
+/// All pets on the account (FR01: several pets per account, report Table 3.1).
+class PetsScreen extends StatelessWidget {
+  const PetsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<AppState>();
+    final active = s.activePets;
+    final past = s.pets.where((p) => !p.isActive).toList();
+
+    Widget tile(Pet p) => ListTile(
+          leading: CircleAvatar(child: Text(p.name.characters.first.toUpperCase())),
+          title: Text(p.name),
+          subtitle: Text([
+            p.species == Species.cat ? 'Cat' : 'Dog',
+            if (p.breed.isNotEmpty) p.breed,
+            if (p.isActive) s.loggedToday(p.id) ? 'logged today' : 'not logged today',
+            if (!p.isActive) p.status.name,
+          ].join(' · ')),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => PetDetailScreen(petId: p.id))),
+        );
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Pets')),
+      floatingActionButton: FloatingActionButton.extended(
+        heroTag: null,
+        icon: const Icon(Icons.add),
+        label: const Text('Add a pet'),
+        onPressed: () => Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => const PetEditScreen())),
+      ),
+      body: ListView(padding: const EdgeInsets.all(Tokens.space4), children: [
+        if (active.isEmpty)
+          const EmptyState(
+            icon: Icons.pets,
+            title: 'No pets yet',
+            body: 'Add a cat or dog to start logging.',
+          )
+        else
+          Card(child: Column(children: [for (final p in active) tile(p)])),
+        if (past.isNotEmpty) ...[
+          const SectionTitle('Archived, rehomed or passed away'),
+          Card(child: Column(children: [for (final p in past) tile(p)])),
+        ],
+        const SizedBox(height: 80),
+      ]),
+    );
+  }
+}

@@ -19,13 +19,12 @@ elif [ ! -f "$APP/assets/models/clap_audio_quantized.onnx" ]; then
 fi
 
 # Picture model (ML step 11): CLIP ViT-B/32 image encoder, quantized (MIT), about 90 MB.
-if [ ! -f "$APP/assets/models/clip_vision_quantized.onnx" ]; then
-  if [ -f "$BENCH/assets/models/clip_vision_quantized.onnx" ]; then
-    cp "$BENCH/assets/models/clip_vision_quantized.onnx" "$APP/assets/models/"
-  else
-    curl -L --fail -o "$APP/assets/models/clip_vision_quantized.onnx" \
-      https://huggingface.co/Xenova/clip-vit-base-patch32/resolve/main/onnx/vision_model_quantized.onnx
-  fi
+# Prefer the ML Lab's copy so the picture classifiers match the exact model they were trained on.
+if [ -f "$BENCH/assets/models/clip_vision_quantized.onnx" ]; then
+  cp "$BENCH/assets/models/clip_vision_quantized.onnx" "$APP/assets/models/"
+elif [ ! -f "$APP/assets/models/clip_vision_quantized.onnx" ]; then
+  curl -L --fail -o "$APP/assets/models/clip_vision_quantized.onnx" \
+    https://huggingface.co/Xenova/clip-vit-base-patch32/resolve/main/onnx/vision_model_quantized.onnx
 fi
 # Optional: without photo_classifiers.json the check uses sound only.
 if [ -f "$BENCH/assets/test_library/photo_classifiers.json" ]; then

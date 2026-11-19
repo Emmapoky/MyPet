@@ -654,7 +654,7 @@ class ResultView extends StatelessWidget {
                   PictureUse.combined => 'From picture and sound',
                   PictureUse.confirmed => 'From sound · ${_speciesWord(o.species)} seen in picture',
                   PictureUse.notSeen => 'From sound · ${_speciesWord(o.species)} not clear in picture',
-                  PictureUse.none => 'From sound · picture check coming soon',
+                  PictureUse.none => 'From sound',
                 },
                 style: t.textTheme.bodySmall),
           ),

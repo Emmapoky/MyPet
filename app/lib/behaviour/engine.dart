@@ -113,7 +113,8 @@ class PhoneBehaviourEngine implements BehaviourEngine {
     if (!hasVideo || dur <= 0) return const [];
     final out = <Uint8List>[];
     for (var i = 0; i < n; i++) {
-      final at = dur * (i + 0.5) / n;
+      // Same spots as the ML Lab: 20%, 50% and 80% through the clip for 3 frames.
+      final at = dur * (n == 1 ? 0.5 : 0.2 + 0.6 * i / (n - 1));
       final raw = await _tmp('frame$i.rgb');
       await FFmpegKit.execute('-y -ss ${at.toStringAsFixed(2)} -i "$src" -frames:v 1 '
           '-vf "scale=$size:$size:force_original_aspect_ratio=increase:flags=bicubic,crop=$size:$size" '

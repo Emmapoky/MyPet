@@ -24,6 +24,9 @@ class Tokens {
   static const bodyFont = 'Atkinson Hyperlegible Next';
 }
 
+/// Tonal buttons (secondaryContainer) use the light teal, as in the Figma "Later" and
+/// "Export for the vet" buttons; apricot stays a fill accent (pet avatar).
+///
 /// Colours the Material scheme has no role for.
 /// A change flag is amber, never red: red is only for errors (token rules).
 @immutable
@@ -80,8 +83,8 @@ const _lightScheme = ColorScheme(
   onPrimaryContainer: Color(0xFF0A4F55),
   secondary: Color(0xFFF4B27A),
   onSecondary: Color(0xFF3D2A12),
-  secondaryContainer: Color(0xFFF4B27A),
-  onSecondaryContainer: Color(0xFF3D2A12),
+  secondaryContainer: Color(0xFFD3ECEE),
+  onSecondaryContainer: Color(0xFF0A4F55),
   tertiary: Color(0xFF7A4A00),
   onTertiary: Color(0xFFFFFFFF),
   error: Color(0xFFB3261E),
@@ -111,8 +114,8 @@ const _darkScheme = ColorScheme(
   onPrimaryContainer: Color(0xFFD3ECEE),
   secondary: Color(0xFFF4B27A),
   onSecondary: Color(0xFF3D2A12),
-  secondaryContainer: Color(0xFFF4B27A),
-  onSecondaryContainer: Color(0xFF3D2A12),
+  secondaryContainer: Color(0xFF0A4F55),
+  onSecondaryContainer: Color(0xFFD3ECEE),
   tertiary: Color(0xFFFFD08A),
   onTertiary: Color(0xFF3A2A0E),
   error: Color(0xFFFFB4AB),
@@ -197,12 +200,13 @@ ThemeData buildTheme(Brightness b) {
       foregroundColor: scheme.onSurface,
     ),
     cardTheme: CardThemeData(
-      elevation: 2,
-      shadowColor: scheme.shadow.withValues(alpha: light ? 0.25 : 0.6),
+      // Figma card shadow: y 2, blur 8, 8%.
+      elevation: 1,
+      shadowColor: scheme.shadow.withValues(alpha: light ? 0.12 : 0.5),
       color: scheme.surface,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(Tokens.radiusCard)),
+          borderRadius: BorderRadius.circular(Tokens.radiusCard), side: BorderSide.none),
       margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
     ),

@@ -42,6 +42,14 @@ class AppState extends ChangeNotifier {
   final Map<String, DetectionResult> _detection = {};
   bool waitingToSync = false;
 
+  /// Bottom tab shown (0 Today, 1 Pets, 2 Check, 3 Insights, 4 Reminders).
+  int tab = 0;
+
+  void goToTab(int i) {
+    tab = i;
+    notifyListeners();
+  }
+
   DateTime now() => _clock();
   Day get today => Day.of(_clock());
 

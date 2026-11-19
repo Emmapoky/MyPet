@@ -1,35 +1,65 @@
+import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../models/care_entry.dart';
-import '../wording.dart';
 import '../../util/day.dart';
+import '../theme.dart';
+import '../wording.dart';
 
-IconData entryIcon(EntryKind k) => switch (k) {
-      EntryKind.dailyLog => Icons.edit_note,
-      EntryKind.healthRecord => Icons.medical_information_outlined,
-      EntryKind.behaviourResult => Icons.graphic_eq,
-      EntryKind.taskDone => Icons.task_alt,
-    };
-
+/// Timeline row (Figma Components): time column, primary dot, title, detail.
 class EntryTile extends StatelessWidget {
   const EntryTile({super.key, required this.entry, required this.today, this.onTap});
   final CareEntry entry;
   final Day today;
   final VoidCallback? onTap;
 
+  String get _when {
+    if (entry.day == today) return DateFormat.jm().format(entry.createdAt.toLocal()).toLowerCase();
+    final diff = today.difference(entry.day);
+    if (diff < 7) return DateFormat.E().format(entry.day.asDateTime);
+    return DateFormat('d MMM').format(entry.day.asDateTime);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final note = entry.note;
-    return ListTile(
-      leading: Icon(entryIcon(entry.kind)),
-      title: Text(Wording.entrySummary(entry)),
-      subtitle: Text([
-        '${Wording.entryTitle(entry.kind)} · ${Wording.day(entry.day, today)}',
-        if (note.isNotEmpty) note,
-      ].join('\n')),
-      isThreeLine: note.isNotEmpty,
+    final t = Theme.of(context);
+    final detail = [
+      Wording.entryDetail(entry),
+      if (entry.note.isNotEmpty) entry.note,
+    ].where((x) => x.isNotEmpty).join('\n');
+    return InkWell(
       onTap: onTap,
-      minTileHeight: 56,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: Tokens.minTarget),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: Tokens.space2),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            SizedBox(
+              width: 64,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 3),
+                child: Text(_when, style: t.textTheme.bodySmall),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(top: 7, right: Tokens.space3),
+              child: ExcludeSemantics(
+                child: Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(color: t.colorScheme.primary, shape: BoxShape.circle),
+                ),
+              ),
+            ),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(Wording.entryTitleOf(entry), style: t.textTheme.titleSmall),
+                if (detail.isNotEmpty) Text(detail, style: t.textTheme.bodySmall),
+              ]),
+            ),
+          ]),
+        ),
+      ),
     );
   }
 }

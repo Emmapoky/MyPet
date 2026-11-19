@@ -50,3 +50,6 @@ app.*.map.json
 # Firebase emulator logs
 firebase-debug.log
 firestore-debug.log
+
+# Screenshots made by test/screens (run on purpose)
+test/screens/out/

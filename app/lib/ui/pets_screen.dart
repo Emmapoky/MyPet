@@ -7,6 +7,8 @@ import 'pet_detail_screen.dart';
 import 'pet_edit_screen.dart';
 import 'theme.dart';
 import 'widgets/common.dart';
+import 'widgets/pet_bar.dart';
+import 'home_shell.dart';
 
 /// All pets on the account (FR01: several pets per account, report Table 3.1).
 class PetsScreen extends StatelessWidget {
@@ -19,7 +21,7 @@ class PetsScreen extends StatelessWidget {
     final past = s.pets.where((p) => !p.isActive).toList();
 
     Widget tile(Pet p) => ListTile(
-          leading: CircleAvatar(child: Text(p.name.characters.first.toUpperCase())),
+          leading: const PetAvatar(size: 40),
           title: Text(p.name),
           subtitle: Text([
             p.species == Species.cat ? 'Cat' : 'Dog',
@@ -33,7 +35,7 @@ class PetsScreen extends StatelessWidget {
         );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Pets')),
+      appBar: AppBar(title: const Text('Pets'), actions: const [MoreMenu()]),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: null,
         icon: const Icon(Icons.add),

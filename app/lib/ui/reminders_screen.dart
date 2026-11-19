@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../models/reminder.dart';
 import '../models/schedule.dart';
 import '../state/app_state.dart';
+import 'home_shell.dart';
 import 'reminder_edit_screen.dart';
 import 'theme.dart';
 import 'widgets/common.dart';
@@ -29,12 +30,18 @@ class RemindersScreen extends StatelessWidget {
     final s = context.watch<AppState>();
     final pet = s.selectedPet;
     return Scaffold(
-      appBar: AppBar(title: const PetSwitcher(), actions: const [SyncBadge()]),
+      appBar: AppBar(
+        title: Text(pet == null ? 'Reminders' : 'Reminders · ${pet.name}'),
+        actions: [
+          const SyncBadge(),
+          MoreMenu(extra: [if (s.activePets.length > 1) ('Switch pet', () => showPetSwitcher(context))]),
+        ],
+      ),
       floatingActionButton: pet == null
           ? null
           : FloatingActionButton.extended(
               heroTag: null,
-              icon: const Icon(Icons.add_alarm),
+              icon: const Icon(Icons.add_alert_rounded),
               label: const Text('Add reminder'),
               onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => ReminderEditScreen(pet: pet))),
@@ -58,7 +65,7 @@ class RemindersScreen extends StatelessWidget {
                     child: Column(children: [
                       for (final r in reminders)
                         ListTile(
-                          leading: Icon(r.active ? Icons.alarm : Icons.alarm_off),
+                          leading: Icon(r.active ? Icons.notifications_active_outlined : Icons.notifications_off_outlined),
                           title: Text(r.title),
                           subtitle: Text([
                             everyText(r),

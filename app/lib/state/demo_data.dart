@@ -42,14 +42,30 @@ Future<void> addDemoPets(AppState s) async {
         data: e.data,
       ));
     }
-    await s.saveReminder(Reminder(
+    final breakfast = Reminder(
       id: s.backend.newId(),
       petId: pet.id,
       title: 'Breakfast',
       kind: ReminderKind.feeding,
       start: first,
       times: const [8 * 60],
-    ));
+    );
+    await s.saveReminder(breakfast);
+    // Breakfast ticked off on every day but one, so Today shows a single missed item.
+    for (var i = 0; i < 30; i++) {
+      if (i == 26) continue;
+      final d = first.addDays(i);
+      final at = DateTime(d.year, d.month, d.dayOfMonth, 8);
+      await s.backend.addEntry(CareEntry(
+        id: s.backend.newId(),
+        petId: pet.id,
+        kind: EntryKind.taskDone,
+        day: d,
+        createdAt: at.add(const Duration(minutes: 5)),
+        createdBy: s.carer!.id,
+        data: {'reminderId': breakfast.id, 'occurrence': at.toIso8601String(), 'title': 'Breakfast'},
+      ));
+    }
   }
 
   await one('Mochi', Species.cat, 'Domestic shorthair', 4.2, 11, false);

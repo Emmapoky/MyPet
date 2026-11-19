@@ -4,41 +4,58 @@ import 'package:provider/provider.dart';
 import '../../models/pet.dart';
 import '../../state/app_state.dart';
 import '../pet_edit_screen.dart';
+import '../theme.dart';
 
-IconData speciesIcon(Species s) => Icons.pets;
-
-/// Top bar title: the selected pet, with a menu to switch pets or add one.
-class PetSwitcher extends StatelessWidget {
-  const PetSwitcher({super.key});
+/// Pet avatar: apricot circle with a paw (Figma Today, pet row).
+class PetAvatar extends StatelessWidget {
+  const PetAvatar({super.key, this.size = 56});
+  final double size;
 
   @override
   Widget build(BuildContext context) {
-    final s = context.watch<AppState>();
-    final pet = s.selectedPet;
-    if (pet == null) return const Text('MyPet');
-    return PopupMenuButton<String>(
-      tooltip: 'Switch pet',
-      onSelected: (id) {
-        if (id == '+') {
-          Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PetEditScreen()));
-        } else {
-          s.selectPet(id);
-        }
-      },
-      itemBuilder: (_) => [
-        for (final p in s.activePets)
-          PopupMenuItem(value: p.id, child: Text('${p.name} (${p.species.name})')),
-        const PopupMenuItem(value: '+', child: Text('Add a pet')),
-      ],
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Flexible(child: Text(pet.name, overflow: TextOverflow.ellipsis)),
-          const Icon(Icons.expand_more),
-        ]),
+    final s = Theme.of(context).colorScheme;
+    return ExcludeSemantics(
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(color: s.secondary, shape: BoxShape.circle),
+        child: Icon(Icons.pets_rounded, color: s.onSecondary, size: size * 0.45),
       ),
     );
   }
+}
+
+/// Opens a sheet to switch to another pet or add one.
+Future<void> showPetSwitcher(BuildContext context) {
+  final s = context.read<AppState>();
+  return showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    builder: (c) => SafeArea(
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        for (final p in s.activePets)
+          ListTile(
+            leading: const PetAvatar(size: 40),
+            title: Text(p.name),
+            subtitle: Text(p.species == Species.cat ? 'Cat' : 'Dog'),
+            trailing: p.id == s.selectedPet?.id ? const Icon(Icons.check_rounded) : null,
+            onTap: () {
+              s.selectPet(p.id);
+              Navigator.pop(c);
+            },
+          ),
+        ListTile(
+          leading: const Icon(Icons.add_rounded),
+          title: const Text('Add a pet'),
+          onTap: () {
+            Navigator.pop(c);
+            Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PetEditScreen()));
+          },
+        ),
+        const SizedBox(height: Tokens.space2),
+      ]),
+    ),
+  );
 }
 
 /// Shown while changes made offline are waiting to reach the server (FR06).

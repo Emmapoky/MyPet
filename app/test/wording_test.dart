@@ -24,7 +24,13 @@ void main() {
           petId: 'p', first: first, days: 45, change: PlantedChange(m, first.addDays(38)));
       for (var d = 30; d < 45; d++) {
         for (final f in const ChangeDetector().run(logs, first.addDays(d)).flags) {
-          final text = [Wording.flagHeadline(f, pet), ...Wording.flagEvidence(f)]
+          final text = [
+            Wording.flagHeadline(f, pet),
+            Wording.flagTitle(f),
+            Wording.flagBody(f, pet),
+            Wording.flagEvidenceLine(f),
+            ...Wording.flagEvidence(f),
+          ]
               .join(' ')
               .toLowerCase();
           for (final w in conditionWords) {

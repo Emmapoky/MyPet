@@ -57,9 +57,9 @@ void main() {
     await settle(t);
     await t.tap(find.text('Log now'));
     await settle(t);
-    await t.tap(find.byTooltip('Ate today?: Yes'));
-    await t.tap(find.byTooltip('Energy (1 very low, 5 high): 3'));
-    await t.tap(find.byTooltip('Toileting normal?: Yes'));
+    await t.tap(find.bySemanticsLabel('Ate today: Yes'));
+    await t.tap(find.bySemanticsLabel('Energy: 3'));
+    await t.tap(find.bySemanticsLabel('Toileting normal: Yes'));
     await t.pump();
     await t.tap(find.text('Save'));
     await settle(t);
@@ -78,7 +78,7 @@ void main() {
     await settle(t);
     await t.tap(find.text('Insights'));
     await settle(t);
-    expect(find.textContaining('Insights start after 7 logged days'), findsOneWidget);
+    expect(find.textContaining('Insights unlock after 7 days'), findsOneWidget);
     expect(find.textContaining('6 of 7 days logged'), findsOneWidget);
   });
 
@@ -95,7 +95,7 @@ void main() {
     s.selectPet(biscuit.id);
     await t.tap(find.text('Insights'));
     await settle(t);
-    expect(find.textContaining("energy lower than Biscuit's usual"), findsWidgets);
+    expect(find.textContaining("Energy lower than Biscuit's usual"), findsWidgets);
     expect(find.textContaining('Not a medical diagnosis'), findsWidgets);
   });
 

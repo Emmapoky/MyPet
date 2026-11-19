@@ -1,0 +1,10 @@
+name: clap_features
+description: Turns a mono 48 kHz recording into the CLAP ONNX model input for MyPet. Pure Dart, no Flutter needed.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.4.0
+
+dev_dependencies:
+  test: ^1.25.0

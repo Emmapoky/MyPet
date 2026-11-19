@@ -10,7 +10,8 @@ Rules these follow (Dr Yam, 18 Sep 2026; proposal report): machine learning, not
 | 1 | `01_clap_catmeows_spike.ipynb`: CLAP zero-shot vs CLAP embeddings + logistic regression on CatMeows | Done 19 Nov 2026 |
 | 2 | `02_onnx_matches_pytorch.ipynb`: the planned on-device ONNX files give the same embeddings and the same result as step 1 | Done 19 Nov 2026 |
 | 2b | `reference/`: plain NumPy version of the model input, checked against transformers, plus test files for any app port | Done 19 Nov 2026 |
-| 2c | Dart (Flutter) version of the model input, tested against the 2b test files | Next |
+| 2c | `dart/clap_features`: Dart (Flutter) version of the model input, tested against the 2b test files | Done 19 Nov 2026 |
+| 3 | Run the ONNX model from Dart on a phone (Android and iPhone) and time it | Next |
 | 3 | Dogs: same test on EmotionalCanines | Later |
 | 4 | YAMNet embeddings on the same splits (the fallback) | Later |
 
@@ -60,6 +61,12 @@ Same 440 clips, same input features fed to both. Xenova ships the same preproces
 One deliberate difference: transformers takes a *random* 10 s from a longer clip; ours takes the *first* 10 s, so the app gives the same answer for the same recording.
 
 `reference/fixtures/` holds the filter bank and the expected output for three test signals, so the Dart (or Swift) version can be checked number by number. Details in `reference/README.md`.
+
+## Step 2c result (Dart version)
+
+`dart/clap_features` is a line-by-line Dart port with no packages (own FFT). `dart test` checks it against the 2b fixtures: the filter bank matches within 1e-9 and the features within 0.00001 dB on all three test signals (pass mark 0.01 dB). One clip takes about 0.15 s on a laptop CPU; a phone will be slower and is timed in step 3.
+
+This closes the risk in the report: the app can compute the model input exactly, so CLAP stays the plan and YAMNet stays the fallback only.
 
 **Honest wording for the app and report:** show likelihoods with "not a diagnosis", and say the behaviour check is an early estimate. This matches Dr Yam's line that logging is the minimum and AI is the best case.
 

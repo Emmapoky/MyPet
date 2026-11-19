@@ -72,7 +72,6 @@ class HeroCard extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: c.heroGradient,
         borderRadius: BorderRadius.circular(Tokens.radiusHero),
-        boxShadow: [BoxShadow(color: c.brand.withValues(alpha: 0.3), blurRadius: 14, offset: const Offset(0, 8))],
       ),
       child: DefaultTextStyle.merge(
         style: const TextStyle(color: Colors.white),

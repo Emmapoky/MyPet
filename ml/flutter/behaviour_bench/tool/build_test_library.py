@@ -17,7 +17,8 @@ Writes (all gitignored except the results file):
   assets/test_library/classifiers.json   weights for the phone (scaler folded into the weights)
   assets/test_library/manifest.json      one entry per test clip: true labels + Python's likelihoods
   assets/test_library/*.wav              the test clips, 48 kHz mono 16-bit, at most 10 s
-  ../../results/05_test_library.json     scores on the held-out clips
+  assets/test_library/sound_evidence.json  CLAP text embeddings for the sound-evidence labels (--sound-evidence)
+  ../../results/07_report_labels.json    scores on the held-out clips
 
 Run from ml/flutter/behaviour_bench after tool/fetch_model.sh:
   .venv/bin/pip install numpy scipy scikit-learn onnxruntime
@@ -44,12 +45,39 @@ from clap_features import SR, N_SAMPLES, clap_input_features  # noqa: E402
 
 CACHE = os.path.join(HERE, ".cache")
 OUT = os.path.join(APP, "assets", "test_library")
-RESULTS = os.path.join(APP, "..", "..", "results", "05_test_library.json")
+RESULTS = os.path.join(APP, "..", "..", "results", "07_report_labels.json")
 MODEL = os.path.join(APP, "assets", "models", "clap_audio_quantized.onnx")
 SEED = 42
 
 CAT_CLASSES = ["F", "B", "I"]
-CAT_NAMES = {"F": "Waiting for food", "B": "Being brushed", "I": "Alone in a strange place"}
+# What the app says (report Table 4.2)
+CAT_NAMES = {"F": "Likely hungry", "B": "Likely reacting to handling", "I": "Likely stressed in a strange place"}
+# Dog labels from report Table 4.2: positive -> happy or playful; neutral -> calm;
+# negative with high arousal -> upset; negative with low or medium arousal -> sad or uneasy.
+DOG_REPORT = ["happy", "calm", "sad_uneasy", "upset"]
+DOG_REPORT_NAMES = {"happy": "Likely happy or playful", "calm": "Likely calm",
+                    "sad_uneasy": "Likely sad or uneasy", "upset": "Likely upset"}
+
+
+def dog_report_label(arousal, valence):
+    if valence == "Positive":
+        return "happy"
+    if valence == "Neutral":
+        return "calm"
+    return "upset" if arousal == "High" else "sad_uneasy"
+
+
+# CLAP zero-shot sound evidence (report 4.2: "its sound labels, such as whimpering, will be shown as evidence")
+SOUNDS = [("dog_bark", "dog", "Barking", "the sound of a dog barking"),
+          ("dog_whimper", "dog", "Whimpering", "the sound of a dog whimpering"),
+          ("dog_growl", "dog", "Growling", "the sound of a dog growling"),
+          ("dog_howl", "dog", "Howling", "the sound of a dog howling"),
+          ("cat_meow", "cat", "Meowing", "the sound of a cat meowing"),
+          ("cat_purr", "cat", "Purring", "the sound of a cat purring"),
+          ("cat_hiss", "cat", "Hissing", "the sound of a cat hissing"),
+          ("cat_yowl", "cat", "Yowling", "the sound of a cat yowling"),
+          ("speech", "other", "People talking", "the sound of people talking"),
+          ("quiet", "other", "Background noise", "quiet background noise in a room")]
 DOG_TASKS = {"arousal": ["Low", "Medium", "High"], "valence": ["Negative", "Neutral", "Positive"]}
 DOG_NAMES = {"Low": "Calm", "Medium": "Medium", "High": "Excited",
              "Negative": "Negative", "Neutral": "Neutral", "Positive": "Positive"}
@@ -151,6 +179,40 @@ class Embedder:
         return e / np.linalg.norm(e)
 
 
+def cached_embeddings(name, clips, emb):
+    """Embeddings are slow on a laptop CPU; cache them next to the downloads."""
+    path = os.path.join(CACHE, f"emb_{name}{'_fake' if emb.fake else ''}.npz")
+    names = np.array([c["name"] for c in clips])
+    if os.path.exists(path):
+        z = np.load(path)
+        if len(z["names"]) == len(names) and (z["names"] == names).all():
+            return z["X"]
+    X = np.stack([emb(from_pcm16(c["pcm"])) for c in clips])
+    np.savez(path, X=X, names=names)
+    return X
+
+
+def sound_text_embeddings():
+    """Text side of CLAP for the sound-evidence prompts (PyTorch; needs torch + transformers)."""
+    import torch
+    from transformers import ClapModel, ClapProcessor
+    model = ClapModel.from_pretrained("laion/clap-htsat-unfused").eval()
+    proc = ClapProcessor.from_pretrained("laion/clap-htsat-unfused")
+    tok = proc.tokenizer([s[3] for s in SOUNDS], padding=True, return_tensors="pt")
+    with torch.no_grad():
+        t = model.text_projection(model.text_model(input_ids=tok["input_ids"],
+                                                   attention_mask=tok["attention_mask"]).pooler_output)
+        t = torch.nn.functional.normalize(t, dim=-1).numpy().astype(np.float64)
+        scale = float(model.logit_scale_a.exp())
+    return t, scale
+
+
+def sound_probs(T, scale, x):
+    z = scale * (T @ x)
+    z = np.exp(z - z.max())
+    return z / z.sum()
+
+
 def export(pipe, classes, names):
     """Fold StandardScaler into the logistic regression: logits = W x + b."""
     sc, lr = pipe.named_steps["standardscaler"], pipe.named_steps["logisticregression"]
@@ -179,6 +241,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--fake-model", action="store_true", help="plumbing test without the ONNX file")
     ap.add_argument("--skip-cats", action="store_true", help="plumbing test where zenodo is unreachable")
+    ap.add_argument("--sound-evidence", action="store_true",
+                    help="also export CLAP zero-shot sound labels (needs torch + transformers)")
     a = ap.parse_args()
     t0 = time.time()
     emb = Embedder(a.fake_model)
@@ -189,7 +253,7 @@ def main():
 
     if not a.skip_cats:
         cats = load_cats()
-        X = np.stack([emb(from_pcm16(c["pcm"])) for c in cats])
+        X = cached_embeddings("cats", cats, emb)
         y = np.array([CAT_CLASSES.index(c["label"]) for c in cats])
         g = np.array([c["cat"] for c in cats])
         # the exact step 1 split: 70/15/15 by cat with seed 42; the test cats stay out of training
@@ -198,13 +262,15 @@ def main():
         te = rest[te_i]
         trn = np.setdiff1d(np.arange(len(y)), te)
         grid = GridSearchCV(make_pipeline(StandardScaler(), LogisticRegression(max_iter=5000)),
-                            {"logisticregression__C": [0.01, 0.1, 1, 10]}, scoring="f1_macro",
+                            {"logisticregression__C": [0.01, 0.1, 1, 10],
+                             "logisticregression__class_weight": [None, "balanced"]}, scoring="f1_macro",
                             cv=GroupKFold(5)).fit(X[trn], y[trn], groups=g[trn])
         clf = export(grid.best_estimator_, CAT_CLASSES, CAT_NAMES)
         classifiers["cat_context"] = clf
         P = np.stack([probs(clf, X[i]) for i in te])
         results["cat_context"] = score("cat_context", y[te], P.argmax(1), CAT_CLASSES)
         results["cat_context"].update(C=grid.best_params_["logisticregression__C"],
+                                      class_weight=grid.best_params_["logisticregression__class_weight"],
                                       train_cats=len(set(g[trn])), test_cats=sorted(set(g[te])))
         for i, p in zip(te, P):
             c = cats[i]
@@ -212,10 +278,11 @@ def main():
             manifest.append({"file": c["name"] + ".wav", "species": "cat", "animal": "cat " + c["cat"],
                              "truth": {"cat_context": c["label"]},
                              "python": {"cat_context": [round(float(v), 5) for v in p]},
+                             "_x": X[i],
                              "seconds": round(len(c["pcm"]) / SR, 2), "source": c["source"]})
 
     dogs = load_dogs()
-    X = np.stack([emb(from_pcm16(d["pcm"])) for d in dogs])
+    X = cached_embeddings("dogs", dogs, emb)
     tr = np.array([d["split"] == "train" for d in dogs])
     te = ~tr
     dogP = {}
@@ -229,14 +296,56 @@ def main():
         dogP[task] = np.stack([probs(clf, x) for x in X[te]])
         results["dog_" + task] = score("dog_" + task, y[te], dogP[task].argmax(1), classes)
         results["dog_" + task]["C"] = grid.best_params_["logisticregression__C"]
+    # the report's four dog labels, one classifier trained directly on them
+    y = np.array([DOG_REPORT.index(dog_report_label(d["arousal"], d["valence"])) for d in dogs])
+    grid = GridSearchCV(make_pipeline(StandardScaler(), LogisticRegression(max_iter=5000)),
+                        {"logisticregression__C": [0.001, 0.01, 0.1, 1],
+                         "logisticregression__class_weight": [None, "balanced"]}, scoring="f1_macro",
+                        cv=StratifiedKFold(5, shuffle=True, random_state=SEED)).fit(X[tr], y[tr])
+    clf = export(grid.best_estimator_, DOG_REPORT, DOG_REPORT_NAMES)
+    classifiers["dog_report"] = clf
+    dogP["report"] = np.stack([probs(clf, x) for x in X[te]])
+    results["dog_report"] = score("dog_report", y[te], dogP["report"].argmax(1), DOG_REPORT)
+    results["dog_report"].update(C=grid.best_params_["logisticregression__C"],
+                                 class_weight=grid.best_params_["logisticregression__class_weight"],
+                                 train_counts=np.bincount(y[tr], minlength=4).tolist(),
+                                 test_counts=np.bincount(y[te], minlength=4).tolist())
+    # comparison only: the same four labels built from the separate energy and mood classifiers
+    pa, pv = dogP["arousal"], dogP["valence"]  # [Low, Medium, High], [Negative, Neutral, Positive]
+    derived = np.stack([pv[:, 2], pv[:, 1], pv[:, 0] * (pa[:, 0] + pa[:, 1]), pv[:, 0] * pa[:, 2]], 1)
+    results["dog_report_from_energy_and_mood"] = score("  (derived)", y[te], derived.argmax(1), DOG_REPORT)
     for k, i in enumerate(np.where(te)[0]):
         d = dogs[i]
         wavfile.write(os.path.join(OUT, d["name"] + ".wav"), SR, d["pcm"])
         manifest.append({"file": d["name"] + ".wav", "species": "dog", "animal": d["breed"].capitalize(),
-                         "truth": {"dog_arousal": d["arousal"], "dog_valence": d["valence"]},
-                         "python": {f"dog_{t}": [round(float(v), 5) for v in dogP[t][k]] for t in DOG_TASKS},
+                         "truth": {"dog_report": dog_report_label(d["arousal"], d["valence"]),
+                                   "dog_arousal": d["arousal"], "dog_valence": d["valence"]},
+                         "python": {f"dog_{t}": [round(float(v), 5) for v in dogP[t][k]]
+                                    for t in ["report", *DOG_TASKS]},
+                         "_x": X[i],
                          "seconds": round(len(d["pcm"]) / SR, 2), "source": d["source"]})
 
+    if a.sound_evidence:
+        T, scale = sound_text_embeddings()
+        json.dump({"keys": [s[0] for s in SOUNDS], "species": [s[1] for s in SOUNDS],
+                   "names": [s[2] for s in SOUNDS], "prompts": [s[3] for s in SOUNDS], "scale": scale,
+                   "T": [[round(float(v), 7) for v in row] for row in T]},
+                  open(os.path.join(OUT, "sound_evidence.json"), "w"))
+        species_right, top_counts = 0, {}
+        for m in manifest:
+            p = sound_probs(T, scale, m["_x"])
+            m["python"]["sound"] = [round(float(v), 5) for v in p]
+            by = {sp: sum(p[j] for j, s_ in enumerate(SOUNDS) if s_[1] == sp) for sp in ["dog", "cat", "other"]}
+            species_right += max(by, key=by.get) == m["species"]
+            key = f"{m['species']}->{SOUNDS[int(p.argmax())][0]}"
+            top_counts[key] = top_counts.get(key, 0) + 1
+        results["sound_evidence"] = {"clips": len(manifest),
+                                     "species_from_sound_right": species_right,
+                                     "top_sound_counts": dict(sorted(top_counts.items()))}
+        print(f"sound evidence: species right from sound alone on {species_right}/{len(manifest)} clips; "
+              f"top sounds {results['sound_evidence']['top_sound_counts']}")
+    for m in manifest:
+        m.pop("_x", None)
     json.dump(classifiers, open(os.path.join(OUT, "classifiers.json"), "w"))
     json.dump(manifest, open(os.path.join(OUT, "manifest.json"), "w"))
     results["note"] = ("Held-out clips only (other cats, other dogs). Phone pipeline: first 10 s, ml/reference "
@@ -246,7 +355,7 @@ def main():
         json.dump(results, open(RESULTS, "w"), indent=1)
     mb = sum(os.path.getsize(p) for p in glob.glob(os.path.join(OUT, "*"))) / 1e6
     print(f"test library: {len(manifest)} clips, {mb:.1f} MB in assets/test_library/ ({time.time()-t0:.0f} s)")
-    print("STEP5_JSON", json.dumps({k: {kk: vv for kk, vv in v.items() if kk != "confusion_rows_true_cols_pred"}
+    print("STEP7_JSON", json.dumps({k: {kk: vv for kk, vv in v.items() if kk != "confusion_rows_true_cols_pred"}
                                     for k, v in results.items() if isinstance(v, dict)}))
 
 

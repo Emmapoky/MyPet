@@ -29,8 +29,8 @@ difference between the phone's likelihoods and Python's, to prove the phone give
 
 ```sh
 cd ml/flutter/behaviour_bench
-.venv/bin/pip install numpy scipy scikit-learn onnxruntime
-.venv/bin/python tool/build_test_library.py   # downloads clips (cached in tool/.cache), trains, exports
+.venv/bin/pip install numpy scipy scikit-learn onnxruntime torch transformers
+.venv/bin/python tool/build_test_library.py --sound-evidence   # downloads clips (cached in tool/.cache), trains, exports
 flutter run -d <iphone-id> --profile --dart-define=AUTORUN_LIBRARY=true
 ```
 
@@ -38,3 +38,9 @@ flutter run -d <iphone-id> --profile --dart-define=AUTORUN_LIBRARY=true
 phone pipeline (first 10 s, `ml/reference` features, quantized ONNX), and writes
 `assets/test_library/` (classifiers, manifest, clips; not in git because the dog data is CC BY-NC-SA and the
 cat data is someone else's) plus `ml/results/05_test_library.json`. Look for `LIBRARY_JSON` in the app output.
+
+Step 7 added the report's own labels (Table 4.2): cats "likely hungry / reacting to handling / stressed in a
+strange place", dogs "likely happy or playful / calm / sad or uneasy / upset" (one classifier trained on those
+four labels), and CLAP zero-shot sound evidence (barking, whimpering, growling, howling, meowing, purring, hissing,
+yowling, people talking, background noise), which also checks that the sound is from the right animal.
+Scores go to `ml/results/07_report_labels.json`.

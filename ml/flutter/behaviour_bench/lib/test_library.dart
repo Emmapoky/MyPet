@@ -25,10 +25,42 @@ const _dir = 'assets/test_library';
 const _modelAsset = 'assets/models/clap_audio_quantized.onnx';
 
 const taskTitles = {
-  'cat_context': 'Situation',
+  'cat_context': 'Likely feeling',
+  'dog_report': 'Likely feeling',
   'dog_arousal': 'Energy',
   'dog_valence': 'Mood',
 };
+
+/// CLAP zero-shot sound labels shown as evidence (report 4.2), from sound_evidence.json.
+class SoundEvidence {
+  SoundEvidence(Map<String, dynamic> j)
+      : names = List<String>.from(j['names']),
+        species = List<String>.from(j['species']),
+        scale = (j['scale'] as num).toDouble(),
+        t = (j['T'] as List).map((r) => (r as List).map((v) => (v as num).toDouble()).toList()).toList();
+  final List<String> names, species;
+  final double scale;
+  final List<List<double>> t;
+
+  List<double> probs(List<double> x) {
+    final z = [
+      for (final row in t) scale * List.generate(x.length, (i) => row[i] * x[i]).fold(0.0, (a, b) => a + b)
+    ];
+    final m = z.reduce(math.max);
+    final e = z.map((v) => math.exp(v - m)).toList();
+    final s = e.reduce((a, b) => a + b);
+    return e.map((v) => v / s).toList();
+  }
+
+  /// Which species the sound alone points to: the group with the most likelihood.
+  String speciesOf(List<double> p) {
+    final by = <String, double>{};
+    for (var i = 0; i < p.length; i++) {
+      by[species[i]] = (by[species[i]] ?? 0) + p[i];
+    }
+    return by.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+  }
+}
 
 class Classifier {
   Classifier(Map<String, dynamic> j)
@@ -120,6 +152,7 @@ class TestLibraryPage extends StatefulWidget {
 
 class _TestLibraryPageState extends State<TestLibraryPage> {
   Map<String, Classifier> _clf = {};
+  SoundEvidence? _sound;
   List<Clip> _clips = [];
   String _filter = 'all';
   String? _error;
@@ -144,7 +177,12 @@ class _TestLibraryPageState extends State<TestLibraryPage> {
     try {
       final c = jsonDecode(await rootBundle.loadString('$_dir/classifiers.json')) as Map<String, dynamic>;
       final m = jsonDecode(await rootBundle.loadString('$_dir/manifest.json')) as List;
+      SoundEvidence? sound;
+      try {
+        sound = SoundEvidence(jsonDecode(await rootBundle.loadString('$_dir/sound_evidence.json')));
+      } catch (_) {}
       setState(() {
+        _sound = sound;
         _clf = c.map((k, v) => MapEntry(k, Classifier(v)));
         _clips = m.map((j) => Clip(j)).toList();
       });
@@ -177,7 +215,10 @@ class _TestLibraryPageState extends State<TestLibraryPage> {
         }
         final norm = math.sqrt(e.fold(0.0, (s, v) => s + v * v));
         final emb = e.map((v) => v / norm).toList();
-        clip.phone = {for (final t in clip.truth.keys) t: _clf[t]!.probs(emb)};
+        clip.phone = {
+          for (final t in clip.truth.keys) t: _clf[t]!.probs(emb),
+          if (_sound != null) 'sound': _sound!.probs(emb),
+        };
         clip.ms = sw.elapsedMilliseconds;
         if (mounted) setState(() => _done++);
       }
@@ -217,6 +258,20 @@ class _TestLibraryPageState extends State<TestLibraryPage> {
         'macro_f1': double.parse(macroF1(yt, yp, cls.length).toStringAsFixed(3)),
       };
     }
+    if (_sound != null) {
+      final run = _clips.where((c) => c.phone?['sound'] != null).toList();
+      var right = 0;
+      for (final c in run) {
+        if (_sound!.speciesOf(c.phone!['sound']!) == c.species) right++;
+        final py = c.python['sound'];
+        if (py != null) {
+          for (var k = 0; k < py.length; k++) {
+            maxGap = math.max(maxGap, (c.phone!['sound']![k] - py[k]).abs());
+          }
+        }
+      }
+      if (run.isNotEmpty) out['species_from_sound'] = {'clips': run.length, 'right': right};
+    }
     for (final c in _clips) {
       if (c.ms != null) ms.add(c.ms!);
     }
@@ -246,6 +301,11 @@ class _TestLibraryPageState extends State<TestLibraryPage> {
       final r = s[t];
       if (r == null) continue;
       final species = t.startsWith('cat') ? 'Cats' : 'Dogs';
+      if (t == 'dog_arousal' || t == 'dog_valence') {
+        rows.add(Text('  $species, ${taskTitles[t]}: ${r['right']} of ${r['clips']} right, macro F1 ${r['macro_f1']}',
+            style: Theme.of(context).textTheme.bodySmall));
+        continue;
+      }
       rows.add(Text('$species, ${taskTitles[t]}: ${r['right']} of ${r['clips']} right '
           '(${(100 * r['accuracy']).round()}%), macro F1 ${r['macro_f1']}'));
     }
@@ -254,7 +314,11 @@ class _TestLibraryPageState extends State<TestLibraryPage> {
           '${_clips.where((c) => c.species == 'cat').length} cat meows, '
           '${_clips.where((c) => c.species == 'dog').length} dog barks, all from animals the model never saw.'));
     } else {
-      rows.add(Text('Chance is about 33% for three labels. '
+      final sp = s['species_from_sound'];
+      if (sp != null) {
+        rows.add(Text('Sound evidence names the right animal on ${sp['right']} of ${sp['clips']} clips'));
+      }
+      rows.add(Text('Chance is about 33% for three labels and 25% for four. '
           'Median ${s['median_ms_per_clip']} ms per clip. '
           'Largest difference from Python: ${s['max_gap_vs_python']}'));
     }
@@ -277,11 +341,23 @@ class _TestLibraryPageState extends State<TestLibraryPage> {
         continue;
       }
       final p = c.phone![t]!;
+      if (t == 'dog_arousal' || t == 'dog_valence') {
+        final k = argmax(p);
+        lines.add(Text('${taskTitles[t]}: ${clf.classes[k] == c.truth[t] ? '✓' : '✗'} ${clf.names[k]}, true $truthName',
+            style: Theme.of(context).textTheme.bodySmall));
+        continue;
+      }
       final k = argmax(p);
       final ok = clf.classes[k] == c.truth[t];
-      allRight &= ok;
+      if (t == 'cat_context' || t == 'dog_report') allRight &= ok;
       lines.add(Text('${taskTitles[t]}: ${ok ? '✓' : '✗'} said ${clf.names[k]} ${(100 * p[k]).round()}%, '
           'true $truthName'));
+    }
+    final sp = c.phone?['sound'];
+    if (sp != null && _sound != null) {
+      final order = List.generate(sp.length, (i) => i)..sort((a, b) => sp[b].compareTo(sp[a]));
+      lines.add(Text('Sounds like: ${order.take(2).map((i) => '${_sound!.names[i]} ${(100 * sp[i]).round()}%').join(', ')}',
+          style: Theme.of(context).textTheme.bodySmall));
     }
     return Card(
       child: ExpansionTile(
@@ -304,7 +380,7 @@ class _TestLibraryPageState extends State<TestLibraryPage> {
                   Text(taskTitles[t]!, style: const TextStyle(fontWeight: FontWeight.bold)),
                   for (var k = 0; k < _clf[t]!.classes.length; k++)
                     Row(children: [
-                      SizedBox(width: 170, child: Text(_clf[t]!.names[k])),
+                      SizedBox(width: 190, child: Text(_clf[t]!.names[k])),
                       Expanded(child: LinearProgressIndicator(value: c.phone![t]![k])),
                       SizedBox(width: 48, child: Text(' ${(100 * c.phone![t]![k]).round()}%')),
                     ]),

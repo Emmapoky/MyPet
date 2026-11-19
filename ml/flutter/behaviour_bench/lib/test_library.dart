@@ -34,7 +34,7 @@ const taskTitles = {
 /// CLAP zero-shot sound labels shown as evidence (report 4.2), from sound_evidence.json.
 class SoundEvidence {
   SoundEvidence(Map<String, dynamic> j)
-      : names = List<String>.from(j['names']),
+      : names = List<String>.from(j['names'] ?? j['keys']),
         keys = List<String>.from(j['keys']),
         species = List<String>.from(j['species']),
         scale = (j['scale'] as num).toDouble(),

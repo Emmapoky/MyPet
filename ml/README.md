@@ -19,7 +19,7 @@ Rules these follow (Dr Yam, 18 Sep 2026; proposal report): machine learning, not
 | 8 | `build_online_test.py`: 144 clips recorded by ordinary people (Wikimedia Commons audio and video, ESC-50) | Done 19 Nov 2026 (iPhone) |
 | 9 | `09_compare_free_models.ipynb`: is another free audio model better than CLAP? (AST, YAMNet, PANNs) | Done 19 Nov 2026 |
 | 10 | ML Lab "Try a clip": record near a pet or pick a video on the phone | Done 19 Nov 2026 (iPhone) |
-| 11 | `build_photo_check.py`, `check_short_clips.py`: the picture half of the clip check, and 5 s vs 10 s clips | Running |
+| 11 | `build_photo_check.py`, `check_short_clips.py`: the picture half of the clip check, and 5 s vs 10 s clips | Done 19 Nov 2026 (Mac); picture on the iPhone not yet run |
 | later | Android timing on a borrowed phone; YAMNet only if needed | Later |
 
 ## For Li Shen: how to retrain and test
@@ -204,3 +204,27 @@ Same data, same splits, same classifier. Only the model that turns sound into nu
 ## Step 11b result (5 s clips vs 10 s, 19 Nov 2026)
 
 The app records one clip of 5 to 10 s. On the 46 test clips longer than 5 s (mostly Commons recordings), keeping only the first 5 s gave: cat or dog right 40 vs 42 (10 s), sound type right 29 vs 30 of 41, same feeling on 35 of 46. **5 s works but 10 s is a little better**, so the app records up to 10 s and lets the user stop from 5 s. Most dataset clips are under 2 s (median 1.8 s) and are repeat-padded already. Full numbers: `results/11_short_clips.json`.
+
+## Step 11 result (the picture half of the clip, 19 Nov 2026)
+
+The app records one clip. The sound and the picture are checked separately, then combined (Erwyna, 19 Nov). The report had kept picture analysis as a later extension because a video's background adds noise (Dr Yam, 18 Sep), so this needs to go on the list for Dr Yam.
+
+Picture model: CLIP ViT-B/32 image encoder (free, MIT licence, quantized ONNX, 85 MB on the phone). Three frames from the clip, averaged.
+
+| Check | Test | Result |
+|---|---|---|
+| Is a dog in view? | CIFAR-10 test, 1,000 dog photos | 886 right (89%) |
+| Is a cat in view? | CIFAR-10 test, 1,000 cat photos | 717 right (72%) |
+| Is it neither? | CIFAR-10 test, 8,000 other photos | 7,693 right (96%) |
+| Is a dog in view? | Dog Emotion v2 test, 800 dog photos | 790 said dog |
+| Dog feeling from a photo (4 report labels) | Dog Emotion v2 test, 739 photos (61 near copies of training photos removed) | macro F1 0.83 |
+
+**How to read this**
+
+- The cat result is low partly because CIFAR-10 photos are 32 by 32 pixels. Real phone frames are much sharper. It should be rechecked on our own videos.
+- The dog feeling from a photo looks far stronger than from sound (0.83 against 0.36). Be careful with this. The photos are posed internet pictures, labelled by the person who uploaded them (method not stated), with licence creativeml-openrail-m. Phone frames of a moving dog will be harder. Treat 0.83 as an upper bound, not a promise.
+- Most misses are calm versus sad or uneasy (32 calm dogs called sad or uneasy, and 24 the other way). 19 of 199 upset dogs were called happy.
+- **Combining:** no dataset labels the same pet's picture and sound together, so the weights cannot be fitted on paired clips. They come from each side's held-out score: sound weight = 0.36 / (0.36 + 0.83) = 0.3, picture 0.7. For cats, no cat expression photo set with a clear licence could be downloaded, so the picture only checks a cat is in view and the feeling comes from the sound.
+- The ML Lab's **Try a clip** now checks the picture too when you pick a video.
+
+Full numbers: `results/11_photo_check.json`. Data: CIFAR-10 (Krizhevsky 2009); Dog Emotion Dataset v2 (huggingface.co/datasets/Dewa/Dog_Emotion_Dataset_v2).

@@ -1,8 +1,9 @@
 // MyPet ML step 10: try the behaviour check on a real pet.
 //
 // Record 10 s with the microphone (report Table 4.1), or pick a video or sound
-// file already on the phone (for example a video of a relative's cat). Only the
-// sound is used: a video's soundtrack is extracted, the picture is never read.
+// file already on the phone (for example a video of a relative's cat). For a video,
+// the soundtrack goes through CLAP and three frames through the CLIP image model
+// (step 11, when its files are in assets), and the two are combined.
 // The clip is analysed on the phone and deleted straight after (FR-N02).
 import 'dart:io';
 import 'dart:math' as math;
@@ -58,6 +59,8 @@ class _TryLivePageState extends State<TryLivePage> {
   int _seconds = 0;
   bool _busy = false;
   CheckResult? _result;
+  List<Uint8List>? _frames;
+  OrtSession? _vision;
 
   @override
   void initState() {
@@ -81,6 +84,7 @@ class _TryLivePageState extends State<TryLivePage> {
   void dispose() {
     _rec.dispose();
     _session?.close();
+    _vision?.close();
     super.dispose();
   }
 
@@ -104,6 +108,7 @@ class _TryLivePageState extends State<TryLivePage> {
       await Future.delayed(const Duration(seconds: 1));
     }
     await _rec.stop();
+    _frames = null; // the Lab records sound only; pick a video to test the picture too
     await _analyseFile(path, fromRecording: true);
   }
 
@@ -119,6 +124,25 @@ class _TryLivePageState extends State<TryLivePage> {
     // Any audio or video file -> 48 kHz mono 16-bit WAV (soundtrack only).
     final wav = await _tmp('picked.wav');
     final s = await FFmpegKit.execute('-y -i "$src" -vn -ac 1 -ar $sampleRate -c:a pcm_s16le "$wav"');
+    // Picture (step 11): one frame a second, scaled and centre-cropped to 224x224 like the Python side.
+    List<Uint8List>? frames;
+    if (_analysis?.photo != null) {
+      final raw = await _tmp('frames.rgb');
+      await FFmpegKit.execute('-y -i "$src" -an -vf "fps=1,scale=224:224:force_original_aspect_ratio=increase:'
+          'flags=bicubic,crop=224:224" -pix_fmt rgb24 -f rawvideo "$raw"');
+      final f = File(raw);
+      if (await f.exists()) {
+        final b = await f.readAsBytes();
+        const size = 224 * 224 * 3;
+        final all = [for (var i = 0; i + size <= b.length; i += size) Uint8List.sublistView(b, i, i + size)];
+        await f.delete();
+        if (all.isNotEmpty) {
+          // three evenly spaced frames
+          frames = [for (final k in [0.2, 0.5, 0.8]) all[((all.length - 1) * k).round()]];
+        }
+      }
+    }
+    _frames = frames;
     if (!(await File(wav).exists()) || (await s.getReturnCode())?.isValueSuccess() != true) {
       setState(() {
         _busy = false;
@@ -145,7 +169,8 @@ class _TryLivePageState extends State<TryLivePage> {
         await v.dispose();
       }
       final n = math.sqrt(e.fold(0.0, (s, v) => s + v * v));
-      final r = _analysis!.check(e.map((v) => v / n).toList(), _species);
+      final img = await _pictureEmbedding();
+      final r = _analysis!.check(e.map((v) => v / n).toList(), _species, img);
       setState(() {
         _result = r;
         _status = 'Done in ${sw.elapsedMilliseconds} ms';
@@ -157,6 +182,29 @@ class _TryLivePageState extends State<TryLivePage> {
     }
   }
 
+  /// Average CLIP image embedding of the picked video's frames, scaled to length 1.
+  Future<List<double>?> _pictureEmbedding() async {
+    final ph = _analysis?.photo;
+    final frames = _frames;
+    _frames = null;
+    if (ph == null || frames == null) return null;
+    _vision ??= await OnnxRuntime().createSessionFromAsset('assets/models/clip_vision_quantized.onnx');
+    List<double>? sum;
+    for (final f in frames) {
+      final input = await OrtValue.fromList(ph.toInput(f), [1, 3, 224, 224]);
+      final out = await _vision!.run({ph.inputName: input});
+      final e = (await out[ph.outputName]!.asFlattenedList()).map((v) => (v as num).toDouble()).toList();
+      await input.dispose();
+      for (final v in out.values) {
+        await v.dispose();
+      }
+      final n = math.sqrt(e.fold(0.0, (s, v) => s + v * v));
+      sum = sum == null ? [for (final v in e) v / n] : [for (var i = 0; i < e.length; i++) sum[i] + e[i] / n];
+    }
+    final n = math.sqrt(sum!.fold(0.0, (s, v) => s + v * v));
+    return [for (final v in sum) v / n];
+  }
+
   @override
   Widget build(BuildContext context) {
     final ready = _analysis != null && _session != null;
@@ -164,8 +212,9 @@ class _TryLivePageState extends State<TryLivePage> {
     return Scaffold(
       appBar: AppBar(title: const Text('Try a clip')),
       body: ListView(padding: const EdgeInsets.all(16), children: [
-        const Text('Record 10 seconds near the pet, or pick a video or sound already on this phone. '
-            'Only the sound is used, and it is deleted after the check.'),
+        const Text('Record 10 seconds of sound near the pet, or pick a video already on this phone. '
+            'For a video, the sound and a few frames of the picture are checked separately, then combined. '
+            'Nothing is kept after the check.'),
         const SizedBox(height: 12),
         SegmentedButton<String>(
           segments: const [
@@ -198,6 +247,7 @@ class _TryLivePageState extends State<TryLivePage> {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: 8, children: [
                 Text(r.headline, style: Theme.of(context).textTheme.titleLarge),
                 if (r.reason != null) Text(r.reason!),
+                if (r.picture != null) Text(r.picture!),
                 for (final (name, p) in r.feelings)
                   Row(children: [
                     SizedBox(width: 190, child: Text(name)),

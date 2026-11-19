@@ -49,3 +49,4 @@ app.*.map.json
 
 # model is downloaded by tool/fetch_model.sh
 assets/models/*.onnx
+.venv/

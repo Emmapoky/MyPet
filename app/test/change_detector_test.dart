@@ -4,27 +4,34 @@ import 'package:mypet/detection/change_detector.dart';
 import 'package:mypet/models/care_entry.dart';
 import 'package:mypet/util/day.dart';
 
-CareEntry log(Day d, {bool ate = true, int energy = 4, bool toilet = true, double? w}) =>
-    CareEntry(
-      id: d.toString(),
-      petId: 'p',
-      kind: EntryKind.dailyLog,
-      day: d,
-      createdAt: d.asDateTime.add(const Duration(hours: 18)),
-      createdBy: 't',
-      data: {
-        'ate': ate,
-        'energy': energy,
-        'toiletingNormal': toilet,
-        'weightKg': ?w,
-      },
-    );
+CareEntry log(
+  Day d, {
+  bool ate = true,
+  int energy = 4,
+  bool toilet = true,
+  double? w,
+}) => CareEntry(
+  id: d.toString(),
+  petId: 'p',
+  kind: EntryKind.dailyLog,
+  day: d,
+  createdAt: d.asDateTime.add(const Duration(hours: 18)),
+  createdBy: 't',
+  data: {
+    'ate': ate,
+    'energy': energy,
+    'toiletingNormal': toilet,
+    'weightKg': ?w,
+  },
+);
 
 void main() {
   const detector = ChangeDetector();
   final start = Day(2027, 3, 1);
 
-  List<CareEntry> steady(int n) => [for (var i = 0; i < n; i++) log(start.addDays(i))];
+  List<CareEntry> steady(int n) => [
+    for (var i = 0; i < n; i++) log(start.addDays(i)),
+  ];
 
   group('NFR07: nothing before 7 days of logs', () {
     test('6 logged days with a big drop gives no flags and is not ready', () {
@@ -84,11 +91,14 @@ void main() {
 
     test('weight gain is not flagged, weight loss is', () {
       List<CareEntry> withWeights(double a, double b) => [
-            for (var i = 0; i < 20; i++) log(start.addDays(i), w: 10),
-            log(start.addDays(20), w: a),
-            log(start.addDays(21), w: b),
-          ];
-      expect(detector.run(withWeights(11, 11), start.addDays(21)).flags, isEmpty);
+        for (var i = 0; i < 20; i++) log(start.addDays(i), w: 10),
+        log(start.addDays(20), w: a),
+        log(start.addDays(21), w: b),
+      ];
+      expect(
+        detector.run(withWeights(11, 11), start.addDays(21)).flags,
+        isEmpty,
+      );
       final r = detector.run(withWeights(9.3, 9.2), start.addDays(21));
       expect(r.flags.single.measure, Measure.weight);
     });
@@ -127,18 +137,21 @@ void main() {
     expect(f.confidence, Confidence.early);
   });
 
-  test('baseline excludes the last 3 days and only reaches back 28 days (FR13)', () {
-    // Energy 1 long ago, then 28 steady days at 4, then two low days.
-    final e = [
-      for (var i = 0; i < 10; i++) log(start.addDays(i), energy: 1),
-      for (var i = 10; i < 38; i++) log(start.addDays(i)),
-      log(start.addDays(38), energy: 2),
-      log(start.addDays(39), energy: 2),
-    ];
-    final f = detector.run(e, start.addDays(39)).flags.single;
-    expect(f.usual, 4);
-    expect(f.baselineLoggedDays, 28);
-  });
+  test(
+    'baseline excludes the last 3 days and only reaches back 28 days (FR13)',
+    () {
+      // Energy 1 long ago, then 28 steady days at 4, then two low days.
+      final e = [
+        for (var i = 0; i < 10; i++) log(start.addDays(i), energy: 1),
+        for (var i = 10; i < 38; i++) log(start.addDays(i)),
+        log(start.addDays(38), energy: 2),
+        log(start.addDays(39), energy: 2),
+      ];
+      final f = detector.run(e, start.addDays(39)).flags.single;
+      expect(f.usual, 4);
+      expect(f.baselineLoggedDays, 28);
+    },
+  );
 
   test('a later log on the same day replaces the earlier one', () {
     final d = start.addDays(20);

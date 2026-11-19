@@ -32,8 +32,11 @@ class PetsScreen extends StatelessWidget {
               ? Icon(Icons.check_circle_rounded,
                   color: MyPetColors.of(context).loggedEdge, semanticLabel: 'Logged today')
               : const Icon(Icons.chevron_right),
-          onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => PetDetailScreen(petId: p.id))),
+          onTap: () {
+            // Opening a pet also makes it the pet shown on Today, Check and Insights.
+            if (p.isActive) context.read<AppState>().selectPet(p.id);
+            Navigator.of(context).push(MaterialPageRoute(builder: (_) => PetDetailScreen(petId: p.id)));
+          },
         );
 
     return Scaffold(

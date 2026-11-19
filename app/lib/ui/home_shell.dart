@@ -9,6 +9,7 @@ import 'reminders_screen.dart';
 import 'settings_screen.dart';
 import 'theme.dart';
 import 'today_screen.dart';
+import 'feedback.dart';
 
 /// Bottom tabs, the same on every screen (report Fig 4.4 item 5; Figma "Bottom tabs").
 class HomeShell extends StatelessWidget {
@@ -39,8 +40,15 @@ class HomeShell extends StatelessWidget {
           ),
           child: NavigationBar(
           selectedIndex: s.tab,
-          onDestinationSelected: s.goToTab,
-          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          onDestinationSelected: (i) {
+            Feel.tap();
+            s.goToTab(i);
+          },
+          // Very large text: icons only (each still has its name for screen readers),
+          // so labels never get cut off.
+          labelBehavior: MediaQuery.textScalerOf(context).scale(1) > 1.3
+              ? NavigationDestinationLabelBehavior.alwaysHide
+              : NavigationDestinationLabelBehavior.alwaysShow,
           destinations: const [
             NavigationDestination(icon: Icon(Icons.grid_view_rounded), label: 'Today'),
             NavigationDestination(icon: Icon(Icons.pets_rounded), label: 'Pets'),
@@ -76,4 +84,24 @@ class MoreMenu extends StatelessWidget {
           const PopupMenuItem(value: -1, child: Text('Settings')),
         ],
       );
+}
+
+/// One-tap light/dark switch. Opens light the first time; the choice is remembered.
+class LookToggle extends StatelessWidget {
+  const LookToggle({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<AppState>();
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return IconButton(
+      tooltip: dark ? 'Light mode' : 'Dark mode',
+      icon: Icon(dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+          color: Theme.of(context).colorScheme.onSurfaceVariant),
+      onPressed: () {
+        Feel.tap();
+        s.setLook(dark ? ThemeMode.light : ThemeMode.dark);
+      },
+    );
+  }
 }

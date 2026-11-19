@@ -9,6 +9,7 @@ import 'health_record_screen.dart';
 import 'pet_edit_screen.dart';
 import 'quick_log_screen.dart';
 import 'theme.dart';
+import 'vet_export.dart';
 import 'widgets/common.dart';
 import 'widgets/entry_tile.dart';
 
@@ -53,41 +54,6 @@ class PetDetailScreen extends StatelessWidget {
     if (status != PetStatus.active) nav.pop();
   }
 
-  void _openEntry(BuildContext context, Pet pet, CareEntry e) {
-    final s = context.read<AppState>();
-    final canEdit = e.kind == EntryKind.dailyLog || e.kind == EntryKind.healthRecord;
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (c) => SafeArea(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          if (canEdit)
-            ListTile(
-              leading: const Icon(Icons.edit_outlined),
-              title: const Text('Edit'),
-              onTap: () {
-                Navigator.pop(c);
-                Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => e.kind == EntryKind.dailyLog
-                      ? QuickLogScreen(pet: pet, editing: e)
-                      : HealthRecordScreen(pet: pet, editing: e),
-                ));
-              },
-            ),
-          ListTile(
-            leading: const Icon(Icons.delete_outline),
-            title: const Text('Delete'),
-            subtitle: const Text('Earlier versions are kept and can be recovered'),
-            onTap: () {
-              Navigator.pop(c);
-              s.deleteEntry(e);
-            },
-          ),
-        ]),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final s = context.watch<AppState>();
@@ -107,6 +73,11 @@ class PetDetailScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(pet.name),
         actions: [
+          IconButton(
+            tooltip: 'Export for the vet',
+            icon: const Icon(Icons.picture_as_pdf_rounded),
+            onPressed: () => showVetExport(context, pet),
+          ),
           PopupMenuButton<String>(
             tooltip: 'More',
             onSelected: (v) => switch (v) {
@@ -171,7 +142,7 @@ class PetDetailScreen extends StatelessWidget {
                 EntryTile(
                   entry: e,
                   today: s.today,
-                  onTap: () => _openEntry(context, pet, e),
+                  onTap: () => openEntrySheet(context, pet, e),
                 ),
             ]),
           ),
@@ -181,4 +152,47 @@ class PetDetailScreen extends StatelessWidget {
       ]),
     );
   }
+}
+
+/// Edit or delete one entry (used by Today and the pet page). Delete can be undone.
+void openEntrySheet(BuildContext context, Pet pet, CareEntry e) {
+  final s = context.read<AppState>();
+  final canEdit = e.kind == EntryKind.dailyLog || e.kind == EntryKind.healthRecord;
+  showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    builder: (c) => SafeArea(
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        if (canEdit)
+          ListTile(
+            leading: const Icon(Icons.edit_outlined),
+            title: const Text('Edit'),
+            onTap: () {
+              Navigator.pop(c);
+              Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => e.kind == EntryKind.dailyLog
+                    ? QuickLogScreen(pet: pet, editing: e)
+                    : HealthRecordScreen(pet: pet, editing: e),
+              ));
+            },
+          ),
+        ListTile(
+          leading: const Icon(Icons.delete_outline),
+          title: const Text('Delete'),
+                    onTap: () {
+            Navigator.pop(c);
+            final messenger = ScaffoldMessenger.of(context);
+            s.deleteEntry(e).then((gone) => messenger
+              ..hideCurrentSnackBar()
+              ..showSnackBar(SnackBar(
+                content: const Text('Deleted'),
+                // Writing the old version again brings it back (versions are kept, FR-N04).
+                action: SnackBarAction(
+                    label: 'Undo', onPressed: () => s.editEntry(gone, e.data)),
+              )));
+          },
+        ),
+      ]),
+    ),
+  );
 }

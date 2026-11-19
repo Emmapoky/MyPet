@@ -1,4 +1,7 @@
 import 'package:material_ui/material_ui.dart';
+
+import '../feedback.dart';
+
 import 'package:provider/provider.dart';
 
 import '../../models/pet.dart';
@@ -27,7 +30,11 @@ class PetAvatar extends StatelessWidget {
           color: onHero ? Colors.white : accent,
           shape: BoxShape.circle,
         ),
-        child: Icon(Icons.pets_rounded, color: onHero ? accent : Colors.white, size: size * 0.48),
+        child: Icon(
+          Icons.pets_rounded,
+          color: onHero ? accent : MyPetColors.onAccent(accent),
+          size: size * 0.48,
+        ),
       ),
     );
   }
@@ -40,28 +47,35 @@ Future<void> showPetSwitcher(BuildContext context) {
     context: context,
     showDragHandle: true,
     builder: (c) => SafeArea(
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        for (final p in s.activePets)
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final p in s.activePets)
+            ListTile(
+              leading: PetAvatar(pet: p, size: 40),
+              title: Text(p.name),
+              subtitle: Text(p.species == Species.cat ? 'Cat' : 'Dog'),
+              trailing: p.id == s.selectedPet?.id
+                  ? const Icon(Icons.check_rounded)
+                  : null,
+              onTap: () {
+                s.selectPet(p.id);
+                Navigator.pop(c);
+              },
+            ),
           ListTile(
-            leading: PetAvatar(pet: p, size: 40),
-            title: Text(p.name),
-            subtitle: Text(p.species == Species.cat ? 'Cat' : 'Dog'),
-            trailing: p.id == s.selectedPet?.id ? const Icon(Icons.check_rounded) : null,
+            leading: const Icon(Icons.add_rounded),
+            title: const Text('Add a pet'),
             onTap: () {
-              s.selectPet(p.id);
               Navigator.pop(c);
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const PetEditScreen()));
             },
           ),
-        ListTile(
-          leading: const Icon(Icons.add_rounded),
-          title: const Text('Add a pet'),
-          onTap: () {
-            Navigator.pop(c);
-            Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PetEditScreen()));
-          },
-        ),
-        const SizedBox(height: Tokens.space2),
-      ]),
+          const SizedBox(height: Tokens.space2),
+        ],
+      ),
     ),
   );
 }
@@ -78,7 +92,10 @@ class SyncBadge extends StatelessWidget {
       message: 'Saved on this phone, waiting to sync',
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: 12),
-        child: Icon(Icons.cloud_upload_outlined, semanticLabel: 'Waiting to sync'),
+        child: Icon(
+          Icons.cloud_upload_outlined,
+          semanticLabel: 'Waiting to sync',
+        ),
       ),
     );
   }
@@ -86,7 +103,12 @@ class SyncBadge extends StatelessWidget {
 
 /// One coloured chip per pet; tap to switch (each pet keeps its colour everywhere).
 class PetStrip extends StatelessWidget {
-  const PetStrip({super.key, required this.pets, required this.selected, this.onSelect});
+  const PetStrip({
+    super.key,
+    required this.pets,
+    required this.selected,
+    this.onSelect,
+  });
   final List<Pet> pets;
   final String selected;
 
@@ -98,50 +120,79 @@ class PetStrip extends StatelessWidget {
     final t = Theme.of(context);
     final c = MyPetColors.of(context);
     final s = context.read<AppState>();
-    return SizedBox(
-      height: Tokens.minTarget,
-      child: ListView(scrollDirection: Axis.horizontal, children: [
-        for (final p in pets) ...[
-          Semantics(
-            selected: p.id == selected,
-            button: true,
-            label: p.name,
-            excludeSemantics: true,
-            child: Material(
-              color: p.id == selected ? c.petAccent(p.id) : t.colorScheme.surface,
-              shape: StadiumBorder(side: BorderSide(color: c.petAccent(p.id), width: 1.5)),
-              child: InkWell(
-                customBorder: const StadiumBorder(),
-                onTap: () {
-                  s.selectPet(p.id);
-                  onSelect?.call();
-                },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: Tokens.space4),
-                  child: Row(children: [
-                    Icon(Icons.pets_rounded,
-                        size: 18, color: p.id == selected ? Colors.white : c.petAccent(p.id)),
-                    const SizedBox(width: Tokens.space2),
-                    Text(p.name,
-                        style: t.textTheme.titleSmall!
-                            .copyWith(color: p.id == selected ? Colors.white : t.colorScheme.onSurface)),
-                  ]),
+    // Grows with large text (no fixed height); scrolls sideways when there are many pets.
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          for (final p in pets) ...[
+            Semantics(
+              selected: p.id == selected,
+              button: true,
+              label: p.name,
+              excludeSemantics: true,
+              child: Material(
+                color: p.id == selected
+                    ? c.petAccent(p.id)
+                    : t.colorScheme.surface,
+                shape: StadiumBorder(
+                  side: BorderSide(color: c.petAccent(p.id), width: 1.5),
+                ),
+                child: InkWell(
+                  customBorder: const StadiumBorder(),
+                  onTap: () {
+                    Feel.tap();
+                    s.selectPet(p.id);
+                    onSelect?.call();
+                  },
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      minHeight: Tokens.minTarget,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: Tokens.space4,
+                        vertical: Tokens.space2,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.pets_rounded,
+                            size: 18,
+                            color: p.id == selected
+                                ? MyPetColors.onAccent(c.petAccent(p.id))
+                                : c.petAccent(p.id),
+                          ),
+                          const SizedBox(width: Tokens.space2),
+                          Text(
+                            p.name,
+                            style: t.textTheme.titleSmall!.copyWith(
+                              color: p.id == selected
+                                  ? MyPetColors.onAccent(c.petAccent(p.id))
+                                  : t.colorScheme.onSurface,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(width: Tokens.space2),
+            const SizedBox(width: Tokens.space2),
+          ],
+          if (onSelect == null)
+            IconButton(
+              tooltip: 'Add a pet',
+              onPressed: () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const PetEditScreen())),
+              icon: const Icon(Icons.add_rounded),
+            ),
         ],
-        if (onSelect == null)
-        Center(
-          child: IconButton(
-            tooltip: 'Add a pet',
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PetEditScreen())),
-            icon: const Icon(Icons.add_rounded),
-          ),
-        ),
-      ]),
+      ),
     );
   }
 }
-

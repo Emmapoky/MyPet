@@ -13,6 +13,7 @@ import 'package:mypet/behaviour/model.dart';
 import 'package:mypet/models/care_entry.dart';
 import 'package:mypet/models/pet.dart';
 import 'package:mypet/ui/app.dart';
+import 'package:mypet/ui/feedback.dart';
 import 'package:mypet/ui/wording.dart';
 
 import 'app_flow_test.dart' show settle, signedInState;
@@ -22,7 +23,12 @@ const bark = [1.0, 0.0, 0.0, 0.0];
 const meow = [0.0, 1.0, 0.0, 0.0];
 const purr = [0.0, 0.0, 1.0, 0.0];
 const talk = [0.0, 0.0, 0.0, 1.0];
-const barkUnclear = [0.8, 0.0, 0.0, 0.6]; // mostly bark, but the dog feelings are flat
+const barkUnclear = [
+  0.8,
+  0.0,
+  0.0,
+  0.6,
+]; // mostly bark, but the dog feelings are flat
 
 final fakeAnalysis = Analysis(
   sound: SoundEvidence({
@@ -35,7 +41,12 @@ final fakeAnalysis = Analysis(
   classifiers: {
     'dog_report': Classifier({
       'classes': ['happy', 'calm', 'sad_uneasy', 'upset'],
-      'names': ['Likely happy or playful', 'Likely calm', 'Likely sad or uneasy', 'Likely upset'],
+      'names': [
+        'Likely happy or playful',
+        'Likely calm',
+        'Likely sad or uneasy',
+        'Likely upset',
+      ],
       'W': [
         [5.0, 0.0, 0.0, -10.0],
         [0.0, 0.0, 0.0, 0.0],
@@ -46,7 +57,11 @@ final fakeAnalysis = Analysis(
     }),
     'cat_context': Classifier({
       'classes': ['food', 'brushing', 'isolation'],
-      'names': ['Likely hungry', 'Likely reacting to handling', 'Likely stressed in a strange place'],
+      'names': [
+        'Likely hungry',
+        'Likely reacting to handling',
+        'Likely stressed in a strange place',
+      ],
       'W': [
         [0.0, 5.0, 0.0, 0.0],
         [0.0, 0.0, 0.0, 0.0],
@@ -75,7 +90,11 @@ class FakeEngine implements BehaviourEngine {
   @override
   Future<String?> pickFile() async => 'picked.mp4';
   @override
-  Future<CheckOutcome> check(String wavPath, Species species, {required bool picked}) async {
+  Future<CheckOutcome> check(
+    String wavPath,
+    Species species, {
+    required bool picked,
+  }) async {
     checked.add(wavPath);
     return fakeAnalysis.check(emb, species);
   }
@@ -92,6 +111,7 @@ void phoneSize(WidgetTester t) {
 }
 
 void main() {
+  Feel.sounds = false;
   group('decision rules', () {
     test('a clear bark gives a feeling for a dog', () {
       final o = fakeAnalysis.check(bark, Species.dog);
@@ -125,58 +145,107 @@ void main() {
       expect(o.feelings.first.$1, 'Likely hungry');
     });
 
-    test('C: no feeling over 50% is "Not sure", with every likelihood kept', () {
-      final o = fakeAnalysis.check(barkUnclear, Species.dog);
-      expect(o.kind, OutcomeKind.notSure);
-      expect(o.feelings.first.$2, lessThan(Analysis.unsureBelow));
-      expect(o.feelings, hasLength(4));
-      final d = o.toEntryData(ms: 90, source: 'file');
-      expect(d['unsure'], isTrue);
-      expect((d['likelihoods'] as Map).length, 4);
-    });
+    test(
+      'C: no feeling over 50% is "Not sure", with every likelihood kept',
+      () {
+        final o = fakeAnalysis.check(barkUnclear, Species.dog);
+        expect(o.kind, OutcomeKind.notSure);
+        expect(o.feelings.first.$2, lessThan(Analysis.unsureBelow));
+        expect(o.feelings, hasLength(4));
+        final d = o.toEntryData(ms: 90, source: 'file');
+        expect(d['unsure'], isTrue);
+        expect((d['likelihoods'] as Map).length, 4);
+      },
+    );
 
     test('a saved result never holds audio (FR-N02)', () {
-      final d = fakeAnalysis.check(bark, Species.dog).toEntryData(ms: 110, source: 'recording');
+      final d = fakeAnalysis
+          .check(bark, Species.dog)
+          .toEntryData(ms: 110, source: 'recording');
       expect(d.keys, isNot(anyElement(anyOf('audio', 'clip', 'recording'))));
       expect(d['soundEvidence'], hasLength(3));
     });
   });
 
   group('picture and sound combined (ML step 11)', () {
-    const names = ['Likely happy or playful', 'Likely calm', 'Likely sad or uneasy', 'Likely upset'];
+    const names = [
+      'Likely happy or playful',
+      'Likely calm',
+      'Likely sad or uneasy',
+      'Likely upset',
+    ];
     test('no picture model: the sound result is unchanged', () {
       final o = fakeAnalysis.check(bark, Species.dog);
       expect(combine(o, null, soundWeight: 0.6, names: names), same(o));
       expect(o.picture, PictureUse.none);
     });
     test('the picture does not show a dog: sound only, marked as not seen', () {
-      final o = combine(fakeAnalysis.check(bark, Species.dog), PictureReading(species: 'other', feelings: [0, 0, 0, 1]),
-          soundWeight: 0.6, names: names);
+      final o = combine(
+        fakeAnalysis.check(bark, Species.dog),
+        PictureReading(species: 'other', feelings: [0, 0, 0, 1]),
+        soundWeight: 0.6,
+        names: names,
+      );
       expect(o.picture, PictureUse.notSeen);
       expect(o.feelings.first.$1, 'Likely happy or playful');
     });
     test('picture and sound are weighted together', () {
       final sound = fakeAnalysis.check(bark, Species.dog);
-      final o = combine(sound, PictureReading(species: 'dog', feelings: [0, 0, 0, 1]), soundWeight: 0.6, names: names);
+      final o = combine(
+        sound,
+        PictureReading(species: 'dog', feelings: [0, 0, 0, 1]),
+        soundWeight: 0.6,
+        names: names,
+      );
       expect(o.picture, PictureUse.combined);
       final happy = sound.feelings.firstWhere((f) => f.$1 == names[0]).$2;
-      expect(o.feelings.firstWhere((f) => f.$1 == names[0]).$2, closeTo(0.6 * happy, 1e-9));
-      expect(o.feelings.firstWhere((f) => f.$1 == names[3]).$2, greaterThan(0.4));
+      expect(
+        o.feelings.firstWhere((f) => f.$1 == names[0]).$2,
+        closeTo(0.6 * happy, 1e-9),
+      );
+      expect(
+        o.feelings.firstWhere((f) => f.$1 == names[3]).$2,
+        greaterThan(0.4),
+      );
     });
-    test('a cat in view only confirms: the feeling still comes from the meow', () {
-      final o = combine(fakeAnalysis.check(meow, Species.cat), PictureReading(species: 'cat'),
-          soundWeight: 0.6, names: const ['Likely hungry', 'Likely reacting to handling', 'Likely stressed in a strange place']);
-      expect(o.picture, PictureUse.confirmed);
-      expect(o.feelings.first.$1, 'Likely hungry');
-    });
+    test(
+      'a cat in view only confirms: the feeling still comes from the meow',
+      () {
+        final o = combine(
+          fakeAnalysis.check(meow, Species.cat),
+          PictureReading(species: 'cat'),
+          soundWeight: 0.6,
+          names: const [
+            'Likely hungry',
+            'Likely reacting to handling',
+            'Likely stressed in a strange place',
+          ],
+        );
+        expect(o.picture, PictureUse.confirmed);
+        expect(o.feelings.first.$1, 'Likely hungry');
+      },
+    );
     test('pixels are normalised per channel, channels first', () {
       final m = PictureModel({
         'input': [1, 3, 2, 2],
         'mean': [0.5, 0.5, 0.5],
         'std': [0.5, 0.5, 0.5],
-        'gate': {'keys': ['dog', 'cat', 'other'], 'species': ['dog', 'cat', 'other'], 'scale': 1, 'T': [[1.0], [0.0], [0.0]]},
+        'gate': {
+          'keys': ['dog', 'cat', 'other'],
+          'species': ['dog', 'cat', 'other'],
+          'scale': 1,
+          'T': [
+            [1.0],
+            [0.0],
+            [0.0],
+          ],
+        },
       });
-      final px = m.pixels(Uint8List.fromList([for (var i = 0; i < 4; i++) ...[255, 0, 255]]));
+      final px = m.pixels(
+        Uint8List.fromList([
+          for (var i = 0; i < 4; i++) ...[255, 0, 255],
+        ]),
+      );
       expect(px.sublist(0, 4), everyElement(closeTo(1, 1e-6)));
       expect(px.sublist(4, 8), everyElement(closeTo(-1, 1e-6)));
     });
@@ -185,7 +254,9 @@ void main() {
   group('audio helpers', () {
     test('readWav16 reads 16-bit PCM', () {
       final b = BytesBuilder();
-      void u32(int v) => b.add((ByteData(4)..setUint32(0, v, Endian.little)).buffer.asUint8List());
+      void u32(int v) => b.add(
+        (ByteData(4)..setUint32(0, v, Endian.little)).buffer.asUint8List(),
+      );
       b.add('RIFF'.codeUnits);
       u32(36 + 4);
       b.add('WAVEfmt '.codeUnits);
@@ -193,11 +264,13 @@ void main() {
       b.add(List.filled(16, 0));
       b.add('data'.codeUnits);
       u32(4);
-      b.add((ByteData(4)
-            ..setInt16(0, 16384, Endian.little)
-            ..setInt16(2, -32768, Endian.little))
-          .buffer
-          .asUint8List());
+      b.add(
+        (ByteData(4)
+              ..setInt16(0, 16384, Endian.little)
+              ..setInt16(2, -32768, Endian.little))
+            .buffer
+            .asUint8List(),
+      );
       expect(readWav16(ByteData.sublistView(b.toBytes())), [0.5, -1.0]);
     });
 
@@ -214,50 +287,57 @@ void main() {
   });
 
   test('result title drops "Likely"', () {
-    expect(Wording.feelingHeadline('Likely happy or playful'), 'Happy or playful');
+    expect(
+      Wording.feelingHeadline('Likely happy or playful'),
+      'Happy or playful',
+    );
   });
 
-  testWidgets('record, see the result, save it to the timeline (Figma 07 to 09)', (t) async {
-    final s = await signedInState();
-    final pet = await s.addPet(name: 'Milo', species: Species.dog);
-    phoneSize(t);
-    final engine = FakeEngine(bark);
-    await t.pumpWidget(MyPetApp(state: s, engine: engine));
-    await settle(t);
-    await t.tap(find.text('Check'));
-    await settle(t);
-    expect(find.text('Fit Milo in the frame'), findsOneWidget);
-    expect(find.text('Fit Milo in the frame'), findsOneWidget);
+  testWidgets(
+    'record, see the result, save it to the timeline (Figma 07 to 09)',
+    (t) async {
+      final s = await signedInState();
+      final pet = await s.addPet(name: 'Milo', species: Species.dog);
+      phoneSize(t);
+      final engine = FakeEngine(bark);
+      await t.pumpWidget(MyPetApp(state: s, engine: engine));
+      await settle(t);
+      await t.tap(find.text('Check'));
+      await settle(t);
+      expect(find.text('Fit Milo in the frame'), findsOneWidget);
+      expect(find.text('Fit Milo in the frame'), findsOneWidget);
 
-    await t.tap(find.bySemanticsLabel('Record a clip'));
-    await t.pump();
-    await t.pump(const Duration(seconds: 1));
-    expect(find.text('Recording · 9 s'), findsOneWidget);
-    // Stop is off until the clip is 5 s long.
-    await t.tap(find.bySemanticsLabel('Stop recording'));
-    await t.pump();
-    expect(engine.checked, isEmpty);
-    for (var i = 0; i < 4; i++) {
+      await t.tap(find.bySemanticsLabel('Record a clip of Milo'));
+      await t.pump(const Duration(milliseconds: 300)); // start chime
+      await t.pump();
       await t.pump(const Duration(seconds: 1));
-    }
-    await t.tap(find.bySemanticsLabel('Stop recording'));
-    await settle(t);
+      expect(find.text('Recording · 9 s'), findsOneWidget);
+      // Stop is off until the clip is 5 s long.
+      await t.tap(find.bySemanticsLabel('Stop recording'));
+      await t.pump();
+      expect(engine.checked, isEmpty);
+      for (var i = 0; i < 4; i++) {
+        await t.pump(const Duration(seconds: 1));
+      }
+      await t.tap(find.bySemanticsLabel('Stop recording'));
+      await settle(t);
 
-    expect(engine.checked, ['clip.mov']);
-    expect(find.text('Result'), findsOneWidget);
-    expect(find.text('Happy or playful'), findsOneWidget);
-    expect(find.text('Other possibilities'), findsOneWidget);
-    expect(find.text(Wording.notDiagnosisBehaviour), findsOneWidget);
-    await t.scrollUntilVisible(find.textContaining('Clip deleted'), 200);
-    expect(find.textContaining('Clip deleted'), findsOneWidget);
+      expect(engine.checked, ['clip.mov']);
+      expect(find.text('Result'), findsOneWidget);
+      expect(find.text('Happy or playful'), findsOneWidget);
+      expect(find.text('Other possibilities'), findsOneWidget);
+      expect(find.text(Wording.notDiagnosisBehaviour), findsOneWidget);
+      await t.scrollUntilVisible(find.textContaining('Clip deleted'), 200);
+      expect(find.textContaining('Clip deleted'), findsOneWidget);
 
-    await t.tap(find.text('Save'));
-    await settle(t);
-    final saved = s.timelineOf(pet.id).ofKind(EntryKind.behaviourResult);
-    expect(saved, hasLength(1));
-    expect(saved.first.topLabel, 'Likely happy or playful');
-    expect(s.tab, 0);
-  });
+      await t.tap(find.text('Save'));
+      await settle(t);
+      final saved = s.timelineOf(pet.id).ofKind(EntryKind.behaviourResult);
+      expect(saved, hasLength(1));
+      expect(saved.first.topLabel, 'Likely happy or playful');
+      expect(s.tab, 0);
+    },
+  );
 
   testWidgets('A: nothing to save when the dog was not heard', (t) async {
     final s = await signedInState();
@@ -267,7 +347,7 @@ void main() {
     await settle(t);
     await t.tap(find.text('Check'));
     await settle(t);
-    await t.tap(find.text('Choose a video'));
+    await t.tap(find.byTooltip('Choose a video'));
     await settle(t);
     expect(find.text('Did not clearly hear a dog'), findsOneWidget);
     expect(find.text('Closest sound: People talking'), findsOneWidget);

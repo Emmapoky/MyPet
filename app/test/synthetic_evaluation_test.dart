@@ -18,7 +18,11 @@ void main() {
     final measures = [Measure.ate, Measure.energy, Measure.toileting];
     final rng = math.Random(2027);
 
-    var hits = 0, planted = 0, falseBefore = 0, controlFalse = 0, earlyFlags = 0;
+    var hits = 0,
+        planted = 0,
+        falseBefore = 0,
+        controlFalse = 0,
+        earlyFlags = 0;
     final hitsBy = {for (final m in measures) m: 0};
     final plantedBy = {for (final m in measures) m: 0};
     final delays = <int>[];
@@ -31,8 +35,8 @@ void main() {
       final change = changedPet
           ? PlantedChange(measures[p % 3], first.addDays(30 + rng.nextInt(21)))
           : null;
-      final entries = SyntheticLogs(p).pet(
-          petId: 'pet$p', first: first, days: days, change: change);
+      final entries = SyntheticLogs(p)
+          .pet(petId: 'pet$p', first: first, days: days, change: change);
       final loggedBefore = <Day>{};
       int? firstHit;
       for (var i = 0; i < days; i++) {

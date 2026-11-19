@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import '../feedback.dart';
 
 import '../theme.dart';
 
@@ -201,7 +202,10 @@ class AnswerChip extends StatelessWidget {
           ),
           child: InkWell(
             borderRadius: BorderRadius.circular(Tokens.radiusInput),
-            onTap: onTap,
+            onTap: () {
+              Feel.tap();
+              onTap();
+            },
             child: ConstrainedBox(
               constraints: const BoxConstraints(minHeight: Tokens.minTarget),
               child: Padding(

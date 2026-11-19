@@ -37,8 +37,9 @@ class EntryTile extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: Tokens.space2),
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            SizedBox(
-              width: 64,
+            ConstrainedBox(
+              // Grows with large text instead of cutting the time off.
+              constraints: BoxConstraints(minWidth: 64 * MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.0)),
               child: Padding(
                 padding: const EdgeInsets.only(top: 3),
                 child: Text(_when, style: t.textTheme.bodySmall),

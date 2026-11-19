@@ -55,6 +55,7 @@ dependencies:
   clap_features:
     path: ../ml/dart/clap_features
   camera: ^0.12.2
+  audioplayers: ^6.8.1
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -90,6 +91,7 @@ flutter:
   assets:
     - assets/models/
     - assets/behaviour/
+    - assets/sounds/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

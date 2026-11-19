@@ -1,3 +1,4 @@
+import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 import 'package:speech_to_text/speech_to_text.dart';
@@ -5,16 +6,22 @@ import 'package:speech_to_text/speech_to_text.dart';
 import '../models/care_entry.dart';
 import '../models/pet.dart';
 import '../state/app_state.dart';
+import '../util/day.dart';
+import 'feedback.dart';
 import 'theme.dart';
 import 'widgets/common.dart';
+import 'widgets/pet_bar.dart';
 
 /// Quick log (report Table 4.4 screen 3; Figma screen 03): same as last entry, three
 /// numbered questions, optional weight and voice note, Save. A routine day takes 2 taps
 /// from Today, Log now then Save (NFR01: 3 taps or fewer).
 class QuickLogScreen extends StatefulWidget {
-  const QuickLogScreen({super.key, required this.pet, this.editing});
+  const QuickLogScreen({super.key, required this.pet, this.editing, this.day});
   final Pet pet;
   final CareEntry? editing;
+
+  /// A past day to fill in (tapped from a "Missed" row). Null means today.
+  final Day? day;
 
   @override
   State<QuickLogScreen> createState() => _QuickLogScreenState();
@@ -150,7 +157,18 @@ class _QuickLogScreenState extends State<QuickLogScreen> {
     if (widget.editing != null) {
       await s.editEntry(widget.editing!, data);
     } else {
-      await s.addEntry(widget.pet.id, EntryKind.dailyLog, data);
+      await s.addEntry(widget.pet.id, EntryKind.dailyLog, data, day: widget.day);
+    }
+    Feel.saved();
+    // Several pets: go straight to the next one not logged today, so a household
+    // logs everyone in a row (Save, Save, Save) instead of going back each time.
+    final next = widget.editing == null && widget.day == null
+        ? s.activePets.where((p) => p.id != widget.pet.id && !s.loggedToday(p.id)).firstOrNull
+        : null;
+    if (next != null) {
+      s.selectPet(next.id);
+      nav.pushReplacement(MaterialPageRoute(builder: (_) => QuickLogScreen(pet: next)));
+      return;
     }
     s.goToTab(0);
     nav.pop();
@@ -163,7 +181,21 @@ class _QuickLogScreenState extends State<QuickLogScreen> {
     final pet = widget.pet;
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.editing == null ? 'Log for ${pet.name}' : 'Edit log'),
+        title: Row(children: [
+          PetAvatar(pet: pet, size: 36),
+          const SizedBox(width: Tokens.space3),
+          Flexible(child: Text(widget.editing == null ? pet.name : 'Edit log', overflow: TextOverflow.ellipsis)),
+        ]),
+        actions: [
+          if (widget.day != null)
+            Padding(
+              padding: const EdgeInsets.only(right: Tokens.space4),
+              child: Chip(
+                avatar: const Icon(Icons.event_rounded, size: 18),
+                label: Text(DateFormat('EEE d MMM').format(widget.day!.asDateTime)),
+              ),
+            ),
+        ],
       ),
       body: SafeArea(
         child: ListView(
@@ -229,8 +261,10 @@ class _QuickLogScreenState extends State<QuickLogScreen> {
                 borderRadius: BorderRadius.circular(Tokens.radiusInput),
               ),
               child: Row(children: [
-                Text('Weight (optional)',
-                    style: t.textTheme.bodyLarge!.copyWith(color: t.colorScheme.onSurfaceVariant)),
+                Flexible(
+                  child: Text('Weight (optional)',
+                      style: t.textTheme.bodyLarge!.copyWith(color: t.colorScheme.onSurfaceVariant)),
+                ),
                 Expanded(
                   child: TextField(
                     controller: weight,

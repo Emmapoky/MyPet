@@ -70,16 +70,22 @@ class _InsightsScreenState extends State<InsightsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(pet == null ? 'Insights' : 'Insights · ${pet.name}'),
+        title: const Text('Insights'),
         actions: [
           const SyncBadge(),
-          MoreMenu(extra: [if (s.activePets.length > 1) ('Switch pet', () => showPetSwitcher(context))]),
+          const MoreMenu(),
         ],
       ),
       body: PageWash(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(Tokens.space4, Tokens.space2, Tokens.space4, Tokens.space5),
-          children: children,
+          children: [
+            if (pet != null && s.activePets.length > 1) ...[
+              PetStrip(pets: s.activePets, selected: pet.id, onSelect: () {}),
+              const SizedBox(height: Tokens.space4),
+            ],
+            ...children,
+          ],
         ),
       ),
     );

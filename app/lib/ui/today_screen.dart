@@ -8,6 +8,7 @@ import '../models/schedule.dart';
 import '../notify/reminder_notifications.dart';
 import '../state/app_state.dart';
 import '../util/day.dart';
+import 'feedback.dart';
 import 'home_shell.dart';
 import 'pet_detail_screen.dart';
 import 'pet_edit_screen.dart';
@@ -39,7 +40,7 @@ class TodayScreen extends StatelessWidget {
           SizedBox(width: Tokens.space2),
           Text('MyPet'),
         ]),
-        actions: const [SyncBadge(), MoreMenu()],
+        actions: const [SyncBadge(), LookToggle(), MoreMenu()],
       ),
       body: PageWash(child: pet == null ? const _NoPets() : _TodayBody(pet: pet)),
     );
@@ -94,7 +95,7 @@ class _TodayBody extends StatelessWidget {
     final todayLog = logs.where((e) => e.day == today).firstOrNull;
     final due = DateTime(now.year, now.month, now.day, dailyLogDueMinutes ~/ 60, dailyLogDueMinutes % 60);
     rows.add(todayLog != null
-        ? _CareRow('Daily log', _RowState.done, time(todayLog.createdAt))
+        ? _CareRow('Daily log', _RowState.done, time(todayLog.createdAt), () => _openLog(context, editing: todayLog))
         : _CareRow('Daily log', now.isAfter(due) ? _RowState.missed : _RowState.todo,
             'By ${time(due)}', () => _openLog(context)));
 
@@ -107,14 +108,26 @@ class _TodayBody extends StatelessWidget {
       final d = today.addDays(-i);
       if (d.isBefore(start)) break;
       if (!loggedDays.contains(d)) {
-        rows.add(_CareRow('Daily log', _RowState.missed, 'Missed ${date(d.asDateTime)}'));
+        rows.add(_CareRow('Daily log', _RowState.missed, 'Missed ${date(d.asDateTime)}',
+            () => _openLog(context, day: d)));
       }
     }
 
     final done = {
       for (final e in tl.ofKind(EntryKind.taskDone))
-        '${e.reminderId}@${e.occurrence?.toIso8601String()}': e.createdAt,
+        '${e.reminderId}@${e.occurrence?.toIso8601String()}': e,
     };
+    final messenger = ScaffoldMessenger.of(context);
+    // A wrong tap is easy to fix: Undo on the bar, or tap the done row again.
+    void undoable(Future<CareEntry> made, String what) async {
+      final e = await made;
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+          content: Text(what),
+          action: SnackBarAction(label: 'Undo', onPressed: () => s.deleteEntry(e)),
+        ));
+    }
     // Older missed tasks: the latest two here, the rest on the Reminders tab.
     final older = Schedule.missedBeforeToday(s.remindersOf(pet.id), tl, now);
     final occurrences = [
@@ -123,14 +136,20 @@ class _TodayBody extends StatelessWidget {
     ];
     for (final o in occurrences) {
       final key = '${o.reminder.id}@${o.at.toIso8601String()}';
-      void tick() => s.addEntry(pet.id, EntryKind.taskDone, {
+      void tick() => undoable(
+          s.addEntry(pet.id, EntryKind.taskDone, {
             'reminderId': o.reminder.id,
             'occurrence': o.at.toIso8601String(),
             'title': o.reminder.title,
-          });
+          }),
+          '${o.reminder.title} done');
       rows.add(switch (o.state) {
-        OccurrenceState.done =>
-          _CareRow(o.reminder.title, _RowState.done, time(done[key]!)),
+        OccurrenceState.done => _CareRow(o.reminder.title, _RowState.done, time(done[key]!.createdAt), () {
+            s.deleteEntry(done[key]!);
+            messenger
+              ..hideCurrentSnackBar()
+              ..showSnackBar(SnackBar(content: Text('${o.reminder.title} not done')));
+          }),
         OccurrenceState.due => _CareRow(o.reminder.title, _RowState.todo, 'By ${time(o.at)}', tick),
         OccurrenceState.missed => _CareRow(
             o.reminder.title,
@@ -145,8 +164,8 @@ class _TodayBody extends StatelessWidget {
     return rows;
   }
 
-  void _openLog(BuildContext context) => Navigator.of(context)
-      .push(MaterialPageRoute(builder: (_) => QuickLogScreen(pet: pet)));
+  void _openLog(BuildContext context, {Day? day, CareEntry? editing}) => Navigator.of(context)
+      .push(MaterialPageRoute(builder: (_) => QuickLogScreen(pet: pet, day: day, editing: editing)));
 
   @override
   Widget build(BuildContext context) {
@@ -247,14 +266,18 @@ class _TodayBody extends StatelessWidget {
         else
           MyCard(
             padding: const EdgeInsets.symmetric(horizontal: Tokens.space3, vertical: Tokens.space2),
-            child: Column(children: [for (final e in recent) EntryTile(entry: e, today: s.today, dot: accent)]),
+            child: Column(children: [
+              for (final e in recent)
+                EntryTile(entry: e, today: s.today, dot: accent, onTap: () => openEntrySheet(context, pet, e)),
+            ]),
           ),
         if (logged) ...[
           const SizedBox(height: Tokens.space4),
           OutlinedButton.icon(
             icon: const Icon(Icons.edit_note_rounded),
-            label: const Text('Log again'),
-            onPressed: () => _openLog(context),
+            label: const Text('Edit today'),
+            onPressed: () => _openLog(context,
+                editing: s.timelineOf(pet.id).ofKind(EntryKind.dailyLog).where((e) => e.day == s.today).firstOrNull),
           ),
         ],
       ],
@@ -291,7 +314,10 @@ class _CareRowTile extends StatelessWidget {
       button: row.onTap != null,
       excludeSemantics: true,
       child: InkWell(
-        onTap: row.onTap,
+        onTap: row.onTap == null ? null : () {
+          Feel.tap();
+          row.onTap!();
+        },
         borderRadius: BorderRadius.circular(Tokens.radiusInput),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 56),

@@ -1,9 +1,9 @@
 import 'package:material_ui/material_ui.dart';
 
-/// Design tokens v2: the colourful look of the September SwiftUI MyPet
-/// (MyPet/Support/Theme.swift), kept accessible. Source of truth:
-/// mypet/design/mypet-tokens-v2.json. Text colours are darkened where needed so
-/// text passes WCAG AA; the bright brand colours are used for fills and edges.
+/// Design tokens v3: violet, pink, sky blue and sun yellow from Erwyna's pitch
+/// slides and her September SwiftUI MyPet. Source of truth: mypet/design/mypet-tokens-v3.json.
+/// Violet is the trusted main colour; pink, sky and sun are accents only.
+/// Every text pair passes WCAG AA (4.5:1).
 class Tokens {
   static const space1 = 4.0;
   static const space2 = 8.0;
@@ -46,6 +46,12 @@ class MyPetColors extends ThemeExtension<MyPetColors> {
     required this.lavender,
     required this.lavenderContainer,
     required this.onLavenderContainer,
+    required this.pink,
+    required this.pinkContainer,
+    required this.onPinkContainer,
+    required this.sky,
+    required this.skyContainer,
+    required this.onSkyContainer,
     required this.cardBorder,
     required this.changeContainer,
     required this.onChangeContainer,
@@ -61,12 +67,14 @@ class MyPetColors extends ThemeExtension<MyPetColors> {
   final List<Color> hero, page;
   final Color sun, sunContainer, onSunContainer;
   final Color lavender, lavenderContainer, onLavenderContainer;
+  final Color pink, pinkContainer, onPinkContainer;
+  final Color sky, skyContainer, onSkyContainer;
   final Color cardBorder;
   final Color changeContainer, onChangeContainer, changeEdge;
   final Color loggedContainer, onLoggedContainer, loggedEdge;
   final List<Color> petAccents;
 
-  /// Light teal wash used for notes and tips (calm, not alarming).
+  /// Light sky wash used for notes and tips (calm, not alarming).
   final Color surfaceTint;
 
   LinearGradient get heroGradient =>
@@ -78,58 +86,75 @@ class MyPetColors extends ThemeExtension<MyPetColors> {
   Color petAccent(String petId) => petAccents[petId.codeUnits.fold(0, (a, b) => a + b) % petAccents.length];
 
   static const light = MyPetColors(
-    brand: Color(0xFFFA7361),
-    brandStrong: Color(0xFFC9452F),
-    brandContainer: Color(0xFFFFE3DA),
-    onBrandContainer: Color(0xFF8A2E20),
-    hero: [Color(0xFFD9503C), Color(0xFFF27A55)],
-    page: [Color(0xFFFCEFE8), Color(0xFFF6F4F1)],
-    sun: Color(0xFFFFC24D),
-    sunContainer: Color(0xFFFFF1CC),
+    brand: Color(0xFF6A4FD6),
+    brandStrong: Color(0xFF5B47C7),
+    brandContainer: Color(0xFFEEEAFF),
+    onBrandContainer: Color(0xFF4A36B0),
+    hero: [Color(0xFF6A4FD6), Color(0xFFB5488A)],
+    page: [Color(0xFFFAF7FF), Color(0xFFF3F8FF)],
+    sun: Color(0xFFFFC94D),
+    sunContainer: Color(0xFFFFF3CF),
     onSunContainer: Color(0xFF6B4A00),
-    lavender: Color(0xFF8F7AE6),
-    lavenderContainer: Color(0xFFECE8FC),
-    onLavenderContainer: Color(0xFF4B3BA0),
-    cardBorder: Color(0xFFE3E3DE),
-    changeContainer: Color(0xFFFFEFD3),
+    lavender: Color(0xFF9C86F5),
+    lavenderContainer: Color(0xFFF1EDFF),
+    onLavenderContainer: Color(0xFF4A36B0),
+    pink: Color(0xFFF27BAA),
+    pinkContainer: Color(0xFFFDE6F0),
+    onPinkContainer: Color(0xFF8A2A5C),
+    sky: Color(0xFF5AA9E6),
+    skyContainer: Color(0xFFE3F0FB),
+    onSkyContainer: Color(0xFF1E5C8F),
+    cardBorder: Color(0xFFECE8F5),
+    changeContainer: Color(0xFFFFF1D6),
     onChangeContainer: Color(0xFF7A4A00),
-    changeEdge: Color(0xFFE0A030),
-    loggedContainer: Color(0xFFDCF1E5),
+    changeEdge: Color(0xFFF2B544),
+    loggedContainer: Color(0xFFDFF3E7),
     onLoggedContainer: Color(0xFF1F6B4A),
-    loggedEdge: Color(0xFF34875F),
+    loggedEdge: Color(0xFF5CC08E),
     petAccents: [
-      Color(0xFF2E877A), Color(0xFF8C54A3), Color(0xFFB8602F),
-      Color(0xFF3D73B8), Color(0xFF9E4F6B), Color(0xFF4F7A34),
+      Color(0xFF7B5CE0), Color(0xFFF27BAA), Color(0xFF5AA9E6),
+      Color(0xFFFFB938), Color(0xFF4FC1A6), Color(0xFFFF9A6B),
     ],
-    surfaceTint: Color(0xFFE6F3F2),
+    surfaceTint: Color(0xFFE3F0FB),
   );
 
   static const dark = MyPetColors(
-    brand: Color(0xFFFF9480),
-    brandStrong: Color(0xFFFF9480),
-    brandContainer: Color(0xFF5A2418),
-    onBrandContainer: Color(0xFFFFDAD0),
-    hero: [Color(0xFF8E2F20), Color(0xFFB4472F)],
-    page: [Color(0xFF1A1416), Color(0xFF0F1517)],
+    brand: Color(0xFFB9A8FF),
+    brandStrong: Color(0xFFCFC2FF),
+    brandContainer: Color(0xFF3A2E6E),
+    onBrandContainer: Color(0xFFE5DEFF),
+    hero: [Color(0xFF5B47C7), Color(0xFFA9457F)],
+    page: [Color(0xFF17141F), Color(0xFF141824)],
     sun: Color(0xFFFFD173),
-    sunContainer: Color(0xFF4A3800),
-    onSunContainer: Color(0xFFFFE7A8),
-    lavender: Color(0xFFB8A8FA),
-    lavenderContainer: Color(0xFF352A73),
-    onLavenderContainer: Color(0xFFE3DDFF),
-    cardBorder: Color(0xFF38383F),
-    changeContainer: Color(0xFF3A2A0E),
-    onChangeContainer: Color(0xFFFFD08A),
-    changeEdge: Color(0xFFF0C761),
-    loggedContainer: Color(0xFF0F3424),
+    sunContainer: Color(0xFF3A2E1A),
+    onSunContainer: Color(0xFFFFD9A0),
+    lavender: Color(0xFFC9B8FF),
+    lavenderContainer: Color(0xFF322A55),
+    onLavenderContainer: Color(0xFFE5DEFF),
+    pink: Color(0xFFF7A8CB),
+    pinkContainer: Color(0xFF4A2338),
+    onPinkContainer: Color(0xFFFFD6E7),
+    sky: Color(0xFF8CC8F2),
+    skyContainer: Color(0xFF1C3550),
+    onSkyContainer: Color(0xFFCDE6FA),
+    cardBorder: Color(0xFF363044),
+    changeContainer: Color(0xFF3A2E1A),
+    onChangeContainer: Color(0xFFFFD9A0),
+    changeEdge: Color(0xFFF2C261),
+    loggedContainer: Color(0xFF1E3A2C),
     onLoggedContainer: Color(0xFF9FE0BE),
     loggedEdge: Color(0xFF6BC799),
     petAccents: [
-      Color(0xFF5FBFAD), Color(0xFFBD8FDB), Color(0xFFF0A878),
-      Color(0xFF7DADED), Color(0xFFDB87A6), Color(0xFF99C770),
+      Color(0xFFB9A8FF), Color(0xFFF7A8CB), Color(0xFF8CC8F2),
+      Color(0xFFFFD173), Color(0xFF86DCC4), Color(0xFFFFBE9A),
     ],
-    surfaceTint: Color(0xFF16282A),
+    surfaceTint: Color(0xFF1C3550),
   );
+
+  /// Text or icon colour on a pet colour: white on violet, dark ink on the light
+  /// accents (pink, sky, sun, mint, peach), so it always passes contrast.
+  static Color onAccent(Color fill) =>
+      fill.computeLuminance() > 0.3 ? const Color(0xFF2B2340) : Colors.white;
 
   static MyPetColors of(BuildContext context) => Theme.of(context).extension<MyPetColors>()!;
 
@@ -142,61 +167,61 @@ class MyPetColors extends ThemeExtension<MyPetColors> {
 
 const _lightScheme = ColorScheme(
   brightness: Brightness.light,
-  primary: Color(0xFF17706F),
+  primary: Color(0xFF6A4FD6),
   onPrimary: Color(0xFFFFFFFF),
-  primaryContainer: Color(0xFFDDF2F2),
-  onPrimaryContainer: Color(0xFF0F4F4F),
-  secondary: Color(0xFFC9452F),
+  primaryContainer: Color(0xFFEEEAFF),
+  onPrimaryContainer: Color(0xFF4A36B0),
+  secondary: Color(0xFF8A2A5C),
   onSecondary: Color(0xFFFFFFFF),
-  secondaryContainer: Color(0xFFDDF2F2),
-  onSecondaryContainer: Color(0xFF0F4F4F),
-  tertiary: Color(0xFF7A4A00),
+  secondaryContainer: Color(0xFFFDE6F0),
+  onSecondaryContainer: Color(0xFF8A2A5C),
+  tertiary: Color(0xFF1E5C8F),
   onTertiary: Color(0xFFFFFFFF),
   error: Color(0xFFB3261E),
   onError: Color(0xFFFFFFFF),
   errorContainer: Color(0xFFFDE7E5),
   onErrorContainer: Color(0xFF8C1D18),
   surface: Color(0xFFFFFFFF),
-  onSurface: Color(0xFF2B1D1A),
-  onSurfaceVariant: Color(0xFF6E5F5A),
+  onSurface: Color(0xFF2B2340),
+  onSurfaceVariant: Color(0xFF6B6480),
   surfaceContainerLowest: Color(0xFFFFFFFF),
   surfaceContainerLow: Color(0xFFFFFFFF),
-  surfaceContainer: Color(0xFFF6F0EC),
-  surfaceContainerHigh: Color(0xFFF6F0EC),
-  surfaceContainerHighest: Color(0xFFEDE5E0),
-  outline: Color(0xFF8A7B76),
-  outlineVariant: Color(0xFFE3E3DE),
-  scrim: Color(0xFF2B1D1A),
-  shadow: Color(0xFF8A2E20),
+  surfaceContainer: Color(0xFFF4F1FB),
+  surfaceContainerHigh: Color(0xFFF4F1FB),
+  surfaceContainerHighest: Color(0xFFEAE6F4),
+  outline: Color(0xFF8A84A0),
+  outlineVariant: Color(0xFFECE8F5),
+  scrim: Color(0xFF2B2340),
+  shadow: Color(0xFF4A36B0),
   surfaceTint: Color(0x00000000),
 );
 
 const _darkScheme = ColorScheme(
   brightness: Brightness.dark,
-  primary: Color(0xFF5DCCC7),
-  onPrimary: Color(0xFF00302F),
-  primaryContainer: Color(0xFF124B4A),
-  onPrimaryContainer: Color(0xFFBFF0EE),
-  secondary: Color(0xFFFF9480),
-  onSecondary: Color(0xFF4A1206),
-  secondaryContainer: Color(0xFF124B4A),
-  onSecondaryContainer: Color(0xFFBFF0EE),
-  tertiary: Color(0xFFFFD08A),
-  onTertiary: Color(0xFF3A2A0E),
+  primary: Color(0xFFB9A8FF),
+  onPrimary: Color(0xFF1B1530),
+  primaryContainer: Color(0xFF3A2E6E),
+  onPrimaryContainer: Color(0xFFE5DEFF),
+  secondary: Color(0xFFF7A8CB),
+  onSecondary: Color(0xFF3A1229),
+  secondaryContainer: Color(0xFF4A2338),
+  onSecondaryContainer: Color(0xFFFFD6E7),
+  tertiary: Color(0xFF8CC8F2),
+  onTertiary: Color(0xFF0F2A40),
   error: Color(0xFFF2B8B5),
   onError: Color(0xFF5C1410),
   errorContainer: Color(0xFF5C1410),
   onErrorContainer: Color(0xFFFFDAD6),
-  surface: Color(0xFF211D20),
-  onSurface: Color(0xFFF2ECEA),
-  onSurfaceVariant: Color(0xFFC4B8B4),
-  surfaceContainerLowest: Color(0xFF1A1416),
-  surfaceContainerLow: Color(0xFF211D20),
-  surfaceContainer: Color(0xFF2B2629),
-  surfaceContainerHigh: Color(0xFF2B2629),
-  surfaceContainerHighest: Color(0xFF353033),
-  outline: Color(0xFF9A8D89),
-  outlineVariant: Color(0xFF38383F),
+  surface: Color(0xFF231F2D),
+  onSurface: Color(0xFFF3F0FA),
+  onSurfaceVariant: Color(0xFFC5BFD6),
+  surfaceContainerLowest: Color(0xFF17141F),
+  surfaceContainerLow: Color(0xFF231F2D),
+  surfaceContainer: Color(0xFF2C2738),
+  surfaceContainerHigh: Color(0xFF2C2738),
+  surfaceContainerHighest: Color(0xFF363044),
+  outline: Color(0xFF9A93AE),
+  outlineVariant: Color(0xFF363044),
   scrim: Color(0xFF000000),
   shadow: Color(0xFF000000),
   surfaceTint: Color(0x00000000),
@@ -328,14 +353,24 @@ ThemeData buildTheme(Brightness b) {
     ),
     navigationBarTheme: NavigationBarThemeData(
       surfaceTintColor: Colors.transparent,
-      // Floating pill bar: selected tab on a pale grey-teal highlight, icon and label in coral.
+      // Floating pill bar: selected tab on a pale violet highlight.
       backgroundColor: Colors.transparent,
-      indicatorColor: light ? const Color(0xFFE5ECEC) : const Color(0xFF2E3A3A),
+      indicatorColor: extra.brandContainer,
       iconTheme: WidgetStateProperty.resolveWith((st) => IconThemeData(
           color: st.contains(WidgetState.selected) ? extra.brandStrong : scheme.onSurface)),
-      labelTextStyle: WidgetStateProperty.resolveWith((st) => text.labelMedium!.copyWith(
+      labelTextStyle: WidgetStateProperty.resolveWith((st) => text.labelMedium!.copyWith(fontSize: 12,
           color: st.contains(WidgetState.selected) ? extra.brandStrong : scheme.onSurface)),
       height: 72,
+    ),
+    floatingActionButtonTheme: FloatingActionButtonThemeData(
+      backgroundColor: scheme.primary,
+      foregroundColor: scheme.onPrimary,
+      elevation: 2,
+      focusElevation: 2,
+      hoverElevation: 3,
+      highlightElevation: 3,
+      shape: pill,
+      extendedTextStyle: text.titleSmall,
     ),
     bottomSheetTheme: const BottomSheetThemeData(
       shape: RoundedRectangleBorder(
@@ -346,7 +381,7 @@ ThemeData buildTheme(Brightness b) {
     ),
     segmentedButtonTheme: SegmentedButtonThemeData(
       style: SegmentedButton.styleFrom(
-        backgroundColor: light ? const Color(0xFFEAE4DF) : scheme.surfaceContainer,
+        backgroundColor: scheme.surfaceContainerHighest,
         selectedBackgroundColor: scheme.surface,
         selectedForegroundColor: scheme.onSurface,
         side: BorderSide.none,

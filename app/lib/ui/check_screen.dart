@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
@@ -11,7 +12,7 @@ import '../state/app_state.dart';
 import 'home_shell.dart';
 import 'theme.dart';
 import 'widgets/common.dart';
-import 'widgets/pet_bar.dart';
+import 'feedback.dart';
 import 'wording.dart';
 
 /// Behaviour check: Record (Figma 07), Recording (08) and Result (09, outcomes A to C).
@@ -87,6 +88,8 @@ class _CheckScreenState extends State<CheckScreen> {
         return;
       }
     }
+    await Feel.recordStart();
+    await Future<void>.delayed(const Duration(milliseconds: 300)); // keep the chime out of the clip
     await _engine.startRecording();
     setState(() {
       _step = _Step.recording;
@@ -105,6 +108,7 @@ class _CheckScreenState extends State<CheckScreen> {
     _timer?.cancel();
     if (_step != _Step.recording) return;
     final path = await _engine.stopRecording();
+    unawaited(Feel.recordStop());
     await _check(pet, path, picked: false);
   }
 
@@ -155,6 +159,7 @@ class _CheckScreenState extends State<CheckScreen> {
     if (_saved) return;
     _saved = true;
     final s = context.read<AppState>();
+    unawaited(Feel.saved());
     await s.addEntry(pet.id, EntryKind.behaviourResult,
         o.toEntryData(ms: _ms, source: _picked ? 'file' : 'recording'));
     _reset();
@@ -172,6 +177,25 @@ class _CheckScreenState extends State<CheckScreen> {
     if (s.tab == CheckScreen.tabIndex) _loadOnce();
     final pet = s.selectedPet;
     final onResult = _step == _Step.result && _outcome != null;
+    if (pet != null && _problem == null && !onResult) {
+      // Full-screen camera, like a camera app: pets to swipe through by the record button.
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: _CameraView(
+          camera: _cameraOn ? _engine.preview() : null,
+          cameraAsked: _cameraAsked,
+          pet: pet,
+          step: _step,
+          ready: _ready,
+          left: _left,
+          pets: s.activePets,
+          onPet: (p) => s.selectPet(p.id),
+          onRecord: () => _record(pet),
+          onStop: () => _stop(pet),
+          onPick: () => _pick(pet),
+        ),
+      );
+    }
     return Scaffold(
       appBar: AppBar(
         leading: onResult ? BackButton(onPressed: _reset) : null,
@@ -212,25 +236,17 @@ class _CheckScreenState extends State<CheckScreen> {
         onSave: _save,
       );
     }
-    return _RecordView(
-      camera: _cameraOn ? _engine.preview() : null,
-      cameraAsked: _cameraAsked,
-      pet: pet,
-      step: _step,
-      ready: _ready,
-      left: _left,
-      pets: s.activePets,
-      onRecord: () => _record(pet),
-      onStop: () => _stop(pet),
-      onPick: () => _pick(pet),
-    );
+    return const SizedBox.shrink();
   }
 }
 
 String _speciesWord(Species s) => s == Species.cat ? 'cat' : 'dog';
 
-class _RecordView extends StatelessWidget {
-  const _RecordView({
+/// Full-screen camera (Check). The picture fills the screen; along the bottom, the
+/// carer's pets sit in a swipe row with the record ring in the middle, so changing
+/// who is being checked is one swipe, like picking a lens in a camera app.
+class _CameraView extends StatefulWidget {
+  const _CameraView({
     required this.camera,
     required this.cameraAsked,
     required this.pet,
@@ -238,6 +254,7 @@ class _RecordView extends StatelessWidget {
     required this.ready,
     required this.left,
     required this.pets,
+    required this.onPet,
     required this.onRecord,
     required this.onStop,
     required this.onPick,
@@ -249,192 +266,244 @@ class _RecordView extends StatelessWidget {
   final bool ready;
   final int left;
   final List<Pet> pets;
+  final ValueChanged<Pet> onPet;
   final VoidCallback onRecord, onStop, onPick;
 
   @override
-  Widget build(BuildContext context) {
-    final t = Theme.of(context);
-    final recording = step == _Step.recording;
-    final checking = step == _Step.checking;
-    final elapsed = recording ? CheckScreen.seconds - left : 0;
-    final canStop = elapsed >= CheckScreen.minSeconds;
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(Tokens.space4, Tokens.space2, Tokens.space4, Tokens.space4),
-      children: [
-        if (pets.length > 1 && step == _Step.record) ...[
-          PetStrip(pets: pets, selected: pet.id, onSelect: () {}),
-          const SizedBox(height: Tokens.space4),
-        ],
-        // Camera panel with viewfinder corners (the old app's Check screen).
-        _Viewfinder(
-          camera: camera,
-          label: recording ? 'Recording · $left s' : 'Fit ${pet.name} in the frame',
-          child: camera != null
-              ? null
-              : Column(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(Icons.videocam_rounded, size: 56, color: Colors.white),
-                  const SizedBox(height: Tokens.space2),
-                  Text(checking ? 'Checking' : cameraAsked ? 'No camera here' : 'Opening camera',
-                      style: t.textTheme.titleSmall!.copyWith(color: Colors.white)),
-                ]),
-        ),
-        const SizedBox(height: Tokens.space4),
-        MyCard(
-          child: Row(children: [
-            Expanded(
-              child: Semantics(
-                liveRegion: recording,
-                child: Text('0:${elapsed.toString().padLeft(2, '0')} / 0:${CheckScreen.seconds}',
-                    style: t.textTheme.titleSmall),
-              ),
-            ),
-            checking
-                ? const SizedBox(
-                    width: 96, height: 96, child: Padding(padding: EdgeInsets.all(28), child: CircularProgressIndicator()))
-                : _BigButton(
-                    recording: recording,
-                    enabled: recording ? canStop : ready,
-                    onPressed: recording ? onStop : onRecord,
-                  ),
-            Expanded(
-              child: Text(
-                checking
-                    ? 'Checking'
-                    : recording
-                        ? (canStop ? 'Tap to stop' : '${CheckScreen.minSeconds - elapsed} s more')
-                        : ready
-                            ? '${CheckScreen.minSeconds} to ${CheckScreen.seconds} s'
-                            : 'Getting ready',
-                textAlign: TextAlign.end,
-                style: t.textTheme.bodySmall,
-              ),
-            ),
-          ]),
-        ),
-        const SizedBox(height: Tokens.space4),
-        OutlinedButton.icon(
-          onPressed: ready && step == _Step.record ? onPick : null,
-          icon: const Icon(Icons.video_library_rounded),
-          label: const Text('Choose a video'),
-        ),
-        const SizedBox(height: Tokens.space3),
-        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Icon(Icons.lock_outline_rounded, size: 16, color: t.colorScheme.onSurfaceVariant),
-          const SizedBox(width: Tokens.space1),
-          Flexible(child: Text('Only when you tap. Deleted after the check.', style: t.textTheme.bodySmall)),
-        ]),
-      ],
-    );
-  }
+  State<_CameraView> createState() => _CameraViewState();
 }
 
-class _Viewfinder extends StatelessWidget {
-  const _Viewfinder({required this.label, this.child, this.camera});
-  final String label;
-  final Widget? child;
-  final Widget? camera;
+class _CameraViewState extends State<_CameraView> {
+  late final PageController _pages = PageController(
+    viewportFraction: 0.24,
+    initialPage: math.max(0, widget.pets.indexWhere((p) => p.id == widget.pet.id)),
+  );
 
   @override
-  Widget build(BuildContext context) {
-    final t = Theme.of(context);
-    return Container(
-      height: 340,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(Tokens.radiusHero),
-        gradient: const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF232525), Color(0xFF1F6F6E)],
-        ),
-      ),
-      child: CustomPaint(
-        foregroundPainter: _Corners(),
-        child: Stack(fit: StackFit.expand, children: [
-          if (camera != null) ExcludeSemantics(child: FittedBox(fit: BoxFit.cover, clipBehavior: Clip.hardEdge, child: SizedBox(width: 300, height: 400, child: camera))),
-          Positioned(
-            top: Tokens.space4,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: Tokens.space3, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.45),
-                  borderRadius: BorderRadius.circular(Tokens.radiusButton),
-                ),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(Icons.videocam_rounded, size: 16, color: Colors.white),
-                  const SizedBox(width: Tokens.space1),
-                  Text(label, style: t.textTheme.labelLarge!.copyWith(color: Colors.white)),
-                ]),
-              ),
-            ),
-          ),
-          if (child != null) Center(child: Padding(padding: const EdgeInsets.only(top: 40), child: child)),
-        ]),
-      ),
-    );
-  }
-}
-
-class _Corners extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final p = Paint()
-      ..color = Colors.white.withValues(alpha: 0.85)
-      ..strokeWidth = 3
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-    const m = 20.0, l = 28.0;
-    final w = size.width, h = size.height;
-    for (final (x, y, dx, dy) in [(m, m, 1.0, 1.0), (w - m, m, -1.0, 1.0), (m, h - m, 1.0, -1.0), (w - m, h - m, -1.0, -1.0)]) {
-      canvas.drawLine(Offset(x, y), Offset(x + dx * l, y), p);
-      canvas.drawLine(Offset(x, y), Offset(x, y + dy * l), p);
+  void didUpdateWidget(_CameraView old) {
+    super.didUpdateWidget(old);
+    final i = widget.pets.indexWhere((p) => p.id == widget.pet.id);
+    if (i >= 0 && _pages.hasClients && (_pages.page?.round() ?? i) != i) {
+      _pages.animateToPage(i, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
     }
   }
 
   @override
-  bool shouldRepaint(_Corners old) => false;
-}
-
-/// The 96 px record button; becomes Stop with a ring while recording (Figma 07, 08).
-class _BigButton extends StatelessWidget {
-  const _BigButton({required this.recording, required this.enabled, required this.onPressed});
-  final bool recording;
-  final bool enabled;
-  final VoidCallback onPressed;
+  void dispose() {
+    _pages.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final s = Theme.of(context).colorScheme;
-    return Semantics(
-      button: true,
-      enabled: enabled,
-      label: recording ? 'Stop recording' : 'Record a clip',
-      excludeSemantics: true,
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: recording ? MyPetColors.of(context).brandContainer : Colors.transparent,
+    final t = Theme.of(context);
+    final c = MyPetColors.of(context);
+    final w = widget;
+    final recording = w.step == _Step.recording;
+    final checking = w.step == _Step.checking;
+    final elapsed = recording ? CheckScreen.seconds - w.left : 0;
+    final canStop = elapsed >= CheckScreen.minSeconds;
+    final white = t.textTheme.titleSmall!.copyWith(color: Colors.white);
+    Widget pill(Widget child) => Container(
+          padding: const EdgeInsets.symmetric(horizontal: Tokens.space3, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.45),
+            borderRadius: BorderRadius.circular(Tokens.radiusButton),
+          ),
+          child: child,
+        );
+
+    return Stack(fit: StackFit.expand, children: [
+      // The picture, or a dark gradient when there is no camera.
+      if (w.camera != null)
+        ExcludeSemantics(
+          child: FittedBox(fit: BoxFit.cover, clipBehavior: Clip.hardEdge, child: SizedBox(width: 300, height: 400, child: w.camera)),
+        )
+      else
+        Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xFF232525), Color(0xFF2C2440)],
+            ),
+          ),
+          child: Center(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.videocam_rounded, size: 56, color: Colors.white),
+              const SizedBox(height: Tokens.space2),
+              Text(w.cameraAsked ? 'No camera here' : 'Opening camera', style: white),
+            ]),
+          ),
         ),
-        child: Material(
-          color: enabled ? MyPetColors.of(context).brandStrong : s.onSurface.withValues(alpha: 0.12),
-          shape: const CircleBorder(),
-          child: InkWell(
-            customBorder: const CircleBorder(),
-            onTap: enabled ? onPressed : null,
-            child: SizedBox(
-              width: 72,
-              height: 72,
-              child: Icon(recording ? Icons.stop_rounded : Icons.videocam_rounded,
-                  size: 36, color: enabled ? Colors.white : s.onSurface.withValues(alpha: 0.38)),
+      // Soft dark fades so white text stays readable on any picture.
+      const IgnorePointer(
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              stops: [0, 0.18, 0.62, 1],
+              colors: [Color(0x99000000), Color(0x00000000), Color(0x00000000), Color(0xB3000000)],
             ),
           ),
         ),
       ),
-    );
+      if (checking)
+        Container(
+          color: Colors.black.withValues(alpha: 0.4),
+          child: Center(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              const CircularProgressIndicator(color: Colors.white),
+              const SizedBox(height: Tokens.space3),
+              Text('Checking', style: white),
+            ]),
+          ),
+        ),
+      SafeArea(
+        child: Column(children: [
+          // Top: what is happening, and a way to use a video instead.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(Tokens.space4, Tokens.space2, Tokens.space2, 0),
+            child: Row(children: [
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Semantics(
+                    liveRegion: recording,
+                    child: pill(Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(recording ? Icons.fiber_manual_record_rounded : Icons.center_focus_strong_rounded,
+                          size: 16, color: recording ? c.brand : Colors.white),
+                      const SizedBox(width: Tokens.space1),
+                      Flexible(
+                        child: Text(recording ? 'Recording · ${w.left} s' : 'Fit ${w.pet.name} in the frame',
+                            style: white, overflow: TextOverflow.ellipsis),
+                      ),
+                    ])),
+                  ),
+                ),
+              ),
+              if (!recording && !checking)
+                IconButton(
+                  tooltip: 'Choose a video',
+                  onPressed: w.ready ? () { Feel.tap(); w.onPick(); } : null,
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.black.withValues(alpha: 0.45),
+                    minimumSize: const Size(Tokens.minTarget, Tokens.minTarget),
+                  ),
+                  icon: const Icon(Icons.video_library_rounded, color: Colors.white),
+                ),
+            ]),
+          ),
+          const Spacer(),
+          // Bottom: pet row with the record ring in the middle.
+          if (!checking) ...[
+            Text(
+              recording
+                  ? (canStop ? 'Tap to stop' : '${CheckScreen.minSeconds - elapsed} s more')
+                  : '${w.pet.name} · ${_speciesWord(w.pet.species)}',
+              style: white,
+            ),
+            const SizedBox(height: Tokens.space3),
+            SizedBox(
+              height: 104,
+              child: Stack(alignment: Alignment.center, children: [
+                if (!recording)
+                  PageView.builder(
+                    controller: _pages,
+                    itemCount: w.pets.length,
+                    onPageChanged: (i) {
+                      Feel.tap();
+                      w.onPet(w.pets[i]);
+                    },
+                    itemBuilder: (_, i) {
+                      final p = w.pets[i];
+                      final on = p.id == w.pet.id;
+                      return Center(
+                        child: Semantics(
+                          button: true,
+                          selected: on,
+                          label: on ? 'Record a clip of ${p.name}' : 'Check ${p.name}',
+                          excludeSemantics: true,
+                          child: GestureDetector(
+                            onTap: () {
+                              if (on) {
+                                if (w.ready) w.onRecord();
+                              } else {
+                                _pages.animateToPage(i,
+                                    duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
+                              }
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              width: on ? 72 : 52,
+                              height: on ? 72 : 52,
+                              decoration: BoxDecoration(
+                                color: c.petAccent(p.id),
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: on ? 0 : 2),
+                              ),
+                              child: Icon(on ? Icons.videocam_rounded : Icons.pets_rounded,
+                                  color: MyPetColors.onAccent(c.petAccent(p.id)), size: on ? 32 : 24),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                // The ring: white around the chosen pet; while recording it fills as time passes.
+                IgnorePointer(
+                  ignoring: !recording,
+                  child: Semantics(
+                    button: recording,
+                    enabled: canStop,
+                    label: recording ? 'Stop recording' : null,
+                    excludeSemantics: true,
+                    child: GestureDetector(
+                      onTap: recording && canStop ? w.onStop : null,
+                      child: SizedBox(
+                        width: 96,
+                        height: 96,
+                        child: Stack(alignment: Alignment.center, children: [
+                          CircularProgressIndicator(
+                            value: recording ? elapsed / CheckScreen.seconds : 1,
+                            strokeWidth: 5,
+                            color: recording ? c.brand : Colors.white,
+                            backgroundColor: Colors.white.withValues(alpha: 0.35),
+                            constraints: const BoxConstraints.tightFor(width: 96, height: 96),
+                          ),
+                          if (recording)
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              width: canStop ? 34 : 28,
+                              height: canStop ? 34 : 28,
+                              decoration: BoxDecoration(
+                                color: canStop ? c.brand : Colors.white.withValues(alpha: 0.5),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                        ]),
+                      ),
+                    ),
+                  ),
+                ),
+              ]),
+            ),
+            const SizedBox(height: Tokens.space3),
+            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              const Icon(Icons.lock_outline_rounded, size: 14, color: Colors.white),
+              const SizedBox(width: Tokens.space1),
+              Flexible(
+                child: Text('Only when you tap. Deleted after the check.',
+                    textAlign: TextAlign.center,
+                    style: t.textTheme.bodySmall!.copyWith(color: Colors.white)),
+              ),
+            ]),
+            const SizedBox(height: Tokens.space3),
+          ],
+        ]),
+      ),
+    ]);
   }
 }
 

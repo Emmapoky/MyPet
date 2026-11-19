@@ -158,9 +158,9 @@ class AppState extends ChangeNotifier {
 
   Future<void> updatePet(Pet pet) => backend.savePet(pet);
 
-  Future<void> addEntry(String petId, EntryKind kind, Map<String, dynamic> data,
-      {Day? day, String? supersedes, bool voided = false}) {
-    return backend.addEntry(CareEntry(
+  Future<CareEntry> addEntry(String petId, EntryKind kind, Map<String, dynamic> data,
+      {Day? day, String? supersedes, bool voided = false}) async {
+    final e = CareEntry(
       id: backend.newId(),
       petId: petId,
       kind: kind,
@@ -170,14 +170,16 @@ class AppState extends ChangeNotifier {
       supersedes: supersedes,
       voided: voided,
       data: data,
-    ));
+    );
+    await backend.addEntry(e);
+    return e;
   }
 
   /// Editing writes a new version (FR-N04).
-  Future<void> editEntry(CareEntry old, Map<String, dynamic> data, {Day? day}) =>
+  Future<CareEntry> editEntry(CareEntry old, Map<String, dynamic> data, {Day? day}) =>
       addEntry(old.petId, old.kind, data, day: day ?? old.day, supersedes: old.id);
 
-  Future<void> deleteEntry(CareEntry old) =>
+  Future<CareEntry> deleteEntry(CareEntry old) =>
       addEntry(old.petId, old.kind, old.data, day: old.day, supersedes: old.id, voided: true);
 
   Future<void> saveReminder(Reminder r) => backend.saveReminder(r);

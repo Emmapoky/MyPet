@@ -31,10 +31,10 @@ class RemindersScreen extends StatelessWidget {
     final pet = s.selectedPet;
     return Scaffold(
       appBar: AppBar(
-        title: Text(pet == null ? 'Reminders' : 'Reminders · ${pet.name}'),
+        title: const Text('Reminders'),
         actions: [
           const SyncBadge(),
-          MoreMenu(extra: [if (s.activePets.length > 1) ('Switch pet', () => showPetSwitcher(context))]),
+          const MoreMenu(),
         ],
       ),
       floatingActionButton: pet == null
@@ -53,6 +53,10 @@ class RemindersScreen extends StatelessWidget {
               final missed = Schedule.missedBeforeToday(
                   reminders, s.timelineOf(pet.id), s.now());
               return ListView(padding: const EdgeInsets.all(Tokens.space4), children: [
+                if (s.activePets.length > 1) ...[
+                  PetStrip(pets: s.activePets, selected: pet.id, onSelect: () {}),
+                  const SizedBox(height: Tokens.space4),
+                ],
                 if (reminders.isEmpty)
                   EmptyState(
                     icon: Icons.alarm,

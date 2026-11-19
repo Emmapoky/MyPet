@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>MyPet records 10 seconds of your pet's sound for the behaviour check. The clip is checked on this phone and deleted.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Pick a video of your pet. Only its sound is used, and it is not kept.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

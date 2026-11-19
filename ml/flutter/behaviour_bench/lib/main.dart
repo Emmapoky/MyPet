@@ -19,6 +19,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_onnxruntime/flutter_onnxruntime.dart';
 
 import 'test_library.dart';
+import 'try_live.dart';
 
 const modelAsset = 'assets/models/clap_audio_quantized.onnx';
 const signals = ['short_tone', 'chirp_10s', 'long_12s'];
@@ -83,6 +84,14 @@ class HomePage extends StatelessWidget {
               title: const Text('Test library'),
               subtitle: const Text('Run the cat and dog model on real clips and compare with the true labels'),
               onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TestLibraryPage())),
+            ),
+          ),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.mic),
+              title: const Text('Try it on a pet'),
+              subtitle: const Text('Record 10 s, or pick a video or sound on this phone'),
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TryLivePage())),
             ),
           ),
           Card(

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
@@ -211,7 +213,10 @@ class _TodayBody extends StatelessWidget {
               const SizedBox(width: Tokens.space2),
               HeroStat(value: '$tasksDone/${tasks.length}', caption: 'done'),
               const SizedBox(width: Tokens.space2),
-              HeroStat(value: '${flags.length}', caption: 'to look at'),
+              result?.ready == true
+                  ? HeroStat(value: '${flags.length}', caption: 'to look at')
+                  // Learning what's usual: days logged out of the 7 needed (NFR07).
+                  : HeroStat(value: '${math.min(result?.loggedDays ?? 0, 7)}/7', caption: 'days to learn'),
             ]),
           ]),
         ),

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../models/care_entry.dart';
 import '../models/pet.dart';
 import '../state/app_state.dart';
+import 'check_screen.dart';
 import 'health_record_screen.dart';
 import 'pet_edit_screen.dart';
 import 'quick_log_screen.dart';
@@ -66,7 +67,7 @@ class PetDetailScreen extends StatelessWidget {
       if (pet.breed.isNotEmpty) pet.breed,
       if (pet.birthDate != null) _age(pet, s.now()),
       if (pet.weightKg != null) '${pet.weightKg} kg',
-      if (!pet.isActive) pet.status.name,
+      if (!pet.isActive) statusWord(pet.status),
     ].join(' · ');
 
     return Scaffold(
@@ -157,6 +158,26 @@ class PetDetailScreen extends StatelessWidget {
 /// Edit or delete one entry (used by Today and the pet page). Delete can be undone.
 void openEntrySheet(BuildContext context, Pet pet, CareEntry e) {
   final s = context.read<AppState>();
+  if (e.kind == EntryKind.behaviourResult) {
+    // A saved check opens as its result, to look back on or compare.
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (c) => SavedCheckScreen(
+        pet: pet,
+        entry: e,
+        onDelete: () {
+          Navigator.pop(c);
+          final messenger = ScaffoldMessenger.of(context);
+          s.deleteEntry(e).then((gone) => messenger
+            ..hideCurrentSnackBar()
+            ..showSnackBar(SnackBar(
+              content: const Text('Deleted'),
+              action: SnackBarAction(label: 'Undo', onPressed: () => s.editEntry(gone, e.data)),
+            )));
+        },
+      ),
+    ));
+    return;
+  }
   final canEdit = e.kind == EntryKind.dailyLog || e.kind == EntryKind.healthRecord;
   showModalBottomSheet<void>(
     context: context,

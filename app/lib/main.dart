@@ -20,6 +20,10 @@ Future<void> main() async {
       state.look = ThemeMode.values.firstWhere((m) => m.name == saved, orElse: () => ThemeMode.light);
     }
     state.onLookChanged = (m) => f.writeAsString(m.name);
+    // First-run tour: shown once, remembered with a small file.
+    final tour = File('${(await getApplicationSupportDirectory()).path}/tour.txt');
+    state.tourSeen = await tour.exists();
+    state.onTourSeen = () => tour.writeAsString('seen');
     // Pet photos stay on this phone only.
     state.photoDir = '${(await getApplicationDocumentsDirectory()).path}/pet_photos';
   } catch (_) {}

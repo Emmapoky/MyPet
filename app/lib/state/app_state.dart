@@ -29,6 +29,7 @@ class AppState extends ChangeNotifier {
   /// Tests turn this off; the app always runs the detector in an isolate (NFR03).
   final bool detectInBackground;
   final DateTime Function() _clock;
+  DateTime Function() get clock => _clock;
   StreamSubscription<Carer?>? _carerSub;
   StreamSubscription<bool>? _syncSub;
   StreamSubscription<List<Pet>>? _petsSub;
@@ -51,6 +52,51 @@ class AppState extends ChangeNotifier {
   /// Saved with [onLookChanged] by main.dart.
   ThemeMode look = ThemeMode.light;
   void Function(ThemeMode)? onLookChanged;
+
+  /// The walkthrough showing now (first-run tour or the story demo), if any.
+  Guide? guide;
+
+  /// False until the first-run tour was shown once (main.dart remembers it on the phone).
+  bool tourSeen = true;
+  void Function()? onTourSeen;
+
+  void startGuide(Guide g) {
+    guide = g;
+    _applyGuideStep();
+    notifyListeners();
+  }
+
+  void guideStep(int delta) {
+    final g = guide;
+    if (g == null) return;
+    final i = g.at + delta;
+    if (i >= g.steps.length) return endGuide();
+    if (i < 0) return;
+    g.at = i;
+    _applyGuideStep();
+    notifyListeners();
+  }
+
+  void endGuide() {
+    final done = guide?.onDone;
+    guide = null;
+    if (!tourSeen) {
+      tourSeen = true;
+      onTourSeen?.call();
+    }
+    notifyListeners();
+    done?.call();
+  }
+
+  void _applyGuideStep() {
+    final st = guide!.steps[guide!.at];
+    tab = st.tab;
+    final name = st.petName;
+    if (name != null) {
+      final p = activePets.where((p) => p.name == name).firstOrNull;
+      if (p != null) _selectedPetId = p.id;
+    }
+  }
 
   void setLook(ThemeMode m) {
     look = m;
@@ -218,3 +264,25 @@ class AppState extends ChangeNotifier {
 
 DetectionResult _runDetector((List<CareEntry>, Day) args) =>
     const ChangeDetector().run(args.$1, args.$2);
+
+/// One bubble of a walkthrough: which tab to show, who is talking, and what they say.
+class GuideStep {
+  const GuideStep(this.tab, this.text, {this.petName});
+  final int tab;
+  final String text;
+
+  /// Pet to show on the tab (story mode).
+  final String? petName;
+}
+
+/// A walkthrough: the first-run tour (told by Pip, a guide dog) or the story demo
+/// (told by the demo pet itself).
+class Guide {
+  Guide({required this.steps, this.narrator, this.onDone});
+  final List<GuideStep> steps;
+
+  /// Pet who tells the story; null means Pip, the guide dog.
+  final String? narrator;
+  final void Function()? onDone;
+  int at = 0;
+}

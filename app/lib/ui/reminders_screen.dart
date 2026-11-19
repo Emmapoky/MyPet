@@ -1,6 +1,8 @@
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
+import 'feedback.dart';
+import '../models/care_entry.dart';
 
 import '../models/reminder.dart';
 import '../models/schedule.dart';
@@ -91,6 +93,26 @@ class RemindersScreen extends StatelessWidget {
                           leading: Icon(Icons.schedule, color: MyPetColors.of(context).onChangeContainer),
                           title: Text(o.reminder.title),
                           subtitle: Text(DateFormat('EEE d MMM, h:mm a').format(o.at)),
+                          // Done late still counts: tick it off, with Undo.
+                          trailing: IconButton(
+                            tooltip: 'Mark ${o.reminder.title} done',
+                            icon: const Icon(Icons.check_circle_outline_rounded),
+                            onPressed: () async {
+                              Feel.tap();
+                              final messenger = ScaffoldMessenger.of(context);
+                              final e = await s.addEntry(pet.id, EntryKind.taskDone, {
+                                'reminderId': o.reminder.id,
+                                'occurrence': o.at.toIso8601String(),
+                                'title': o.reminder.title,
+                              });
+                              messenger
+                                ..hideCurrentSnackBar()
+                                ..showSnackBar(SnackBar(
+                                  content: Text('${o.reminder.title} done'),
+                                  action: SnackBarAction(label: 'Undo', onPressed: () => s.deleteEntry(e)),
+                                ));
+                            },
+                          ),
                         ),
                     ]),
                   ),

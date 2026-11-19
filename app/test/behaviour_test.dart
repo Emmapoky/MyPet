@@ -385,7 +385,8 @@ void main() {
       expect(saved.first.topLabel, 'Likely happy or playful');
     expect(engine.discarded, ['clip.mov']);
     expect(saved.first.data['moments'], hasLength(3));
-      expect(s.tab, 0);
+      expect(s.tab, 2); // stays on Check for the next pet
+      expect(find.text("Saved to Milo's timeline"), findsOneWidget);
     },
   );
 

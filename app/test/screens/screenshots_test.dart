@@ -8,7 +8,13 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart' show Scrollable;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart' show ThemeMode;
+import 'package:material_ui/material_ui.dart' show Brightness, MaterialApp, ThemeMode;
+import 'package:mypet/ui/health_record_screen.dart';
+import 'package:mypet/ui/pet_edit_screen.dart';
+import 'package:mypet/ui/theme.dart';
+import 'package:provider/provider.dart';
+
+import '../fixtures/vet_samples.dart';
 import 'package:mypet/ui/feedback.dart';
 import 'package:mypet/data/local_backend.dart';
 import 'package:mypet/models/pet.dart';
@@ -97,6 +103,66 @@ void main() {
     );
     await t.tap(find.bySemanticsLabel('Stop recording'));
     await shot(t, '09-result');
+  });
+
+  testWidgets('walkthroughs', (t) async {
+    await setUp(t);
+    final s = await state(demo: false);
+    await s.addPet(name: 'Mao', species: Species.cat);
+    await s.addPet(name: 'Woof', species: Species.dog);
+    s.tourSeen = false;
+    await t.pumpWidget(MyPetApp(state: s, engine: FakeEngine(bark)));
+    await shot(t, '13-tour-1');
+    await t.tap(find.text('Next'));
+    await t.tap(find.text('Next'));
+    await shot(t, '13-tour-3');
+    await t.tap(find.text('Skip'));
+    s.goToTab(0);
+    await t.pumpAndSettle();
+    await t.tap(find.byTooltip('More').first);
+    await t.pumpAndSettle();
+    await t.tap(find.text("Story: Biscuit's week"));
+    await t.pump(const Duration(seconds: 1));
+    await shot(t, '14-story-1');
+    await t.tap(find.text('Next'));
+    await t.tap(find.text('Next'));
+    await shot(t, '14-story-3');
+    await t.tap(find.text('Next'));
+    await shot(t, '14-story-4');
+  });
+
+  testWidgets('health record from a vet PDF', (t) async {
+    await setUp(t);
+    final s = await state(demo: false);
+    final pet = await s.addPet(name: 'Biscuit', species: Species.dog);
+    final text = vetSamples['vaccination-certificate']!.replaceFirst('Sunway Paws Veterinary Clinic\n', '');
+    await t.pumpWidget(ChangeNotifierProvider.value(
+      value: s,
+      child: MaterialApp(
+        theme: buildTheme(Brightness.light),
+        debugShowCheckedModeBanner: false,
+        home: HealthRecordScreen(pet: pet, pickPdf: () async => '/x/biscuit-vaccines.pdf', readPdf: (_) async => text),
+      ),
+    ));
+    await t.tap(find.text('Fill from a vet PDF'));
+    await t.pumpAndSettle();
+    await expectLater(find.byType(HealthRecordScreen), matchesGoldenFile('out/15-vet-pdf.png'));
+  });
+
+  testWidgets('pet editor with photo and colours', (t) async {
+    await setUp(t);
+    final s = await state(demo: false);
+    final pet = await s.addPet(name: 'Mao', species: Species.cat);
+    await t.pumpWidget(ChangeNotifierProvider.value(
+      value: s,
+      child: MaterialApp(
+        theme: buildTheme(Brightness.light),
+        debugShowCheckedModeBanner: false,
+        home: PetEditScreen(pet: pet),
+      ),
+    ));
+    await t.pumpAndSettle();
+    await expectLater(find.byType(PetEditScreen), matchesGoldenFile('out/16-pet-edit.png'));
   });
 
   testWidgets('dark mode', (t) async {

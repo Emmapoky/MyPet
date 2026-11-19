@@ -105,6 +105,7 @@ List<Moment> mergeMoments(List<Moment> raw) {
 /// at least [orMaybe] likely (ML thread's rule).
 String soundGuess(List<(String, double)> sounds, {double orMaybe = 0.15}) {
   if (sounds.isEmpty) return '';
+  if (sounds.first.$2 <= 0) return sounds.first.$1; // older saved checks kept names only
   String pct(double p) => '${(100 * p).round()}%';
   final top = '${sounds.first.$1} ${pct(sounds.first.$2)}';
   if (sounds.length < 2 || sounds[1].$2 < orMaybe) return top;
@@ -162,11 +163,44 @@ class CheckOutcome {
         if (feelings.isNotEmpty) 'likelihoods': {for (final (n, p) in feelings) n: p},
         'unsure': kind == OutcomeKind.notSure,
         'soundEvidence': [for (final (n, _) in sounds.take(3)) n],
+        'sounds': {for (final (n, p) in sounds.take(3)) n: p},
         'ms': ms,
         'source': source,
         'picture': picture.name,
         if (moments.isNotEmpty) 'moments': [for (final m in moments) m.toJson()],
       };
+}
+
+/// A saved check read back from the timeline (no clip: it was deleted).
+CheckOutcome outcomeFromEntry(Map<String, dynamic> d) {
+  List<(String, double)> ranked(Map? m) =>
+      [for (final e in (m ?? const {}).entries) (e.key as String, (e.value as num).toDouble())]
+        ..sort((a, b) => b.$2.compareTo(a.$2));
+  final feelings = ranked(d['likelihoods'] as Map?);
+  var sounds = ranked(d['sounds'] as Map?);
+  if (sounds.isEmpty) sounds = [for (final n in (d['soundEvidence'] as List? ?? const [])) (n as String, 0.0)];
+  if (sounds.isEmpty) sounds = [(d['heard'] as String? ?? '', 0.0)];
+  final kind = d['heard'] != null
+      ? OutcomeKind.heardOnly
+      : feelings.isEmpty
+          ? OutcomeKind.notHeard
+          : d['unsure'] == true
+              ? OutcomeKind.notSure
+              : OutcomeKind.feeling;
+  return CheckOutcome(
+    kind: kind,
+    species: Species.values.asNameMap()[d['species']] ?? Species.dog,
+    feelings: feelings,
+    sounds: sounds,
+    picture: PictureUse.values.asNameMap()[d['picture']] ?? PictureUse.none,
+    moments: [
+      for (final m in (d['moments'] as List? ?? const []))
+        Moment(MomentSource.values.asNameMap()[m['src']] ?? MomentSource.sound, m['label'] as String,
+            (m['s'] as num).toDouble(), (m['e'] as num).toDouble(),
+            p: (m['p'] as num?)?.toDouble() ?? 0),
+    ],
+    seconds: [for (final m in (d['moments'] as List? ?? const [])) (m['e'] as num).toDouble()].fold(0.0, math.max),
+  );
 }
 
 /// The picture's reading of a clip: which species it saw, and (dogs) feeling likelihoods

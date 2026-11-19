@@ -26,7 +26,7 @@ class PetsScreen extends StatelessWidget {
           subtitle: Text([
             p.species == Species.cat ? 'Cat' : 'Dog',
             if (p.breed.isNotEmpty) p.breed,
-            if (!p.isActive) p.status.name,
+            if (!p.isActive) statusWord(p.status),
           ].join(' · ')),
           trailing: p.isActive && s.loggedToday(p.id)
               ? Icon(Icons.check_circle_rounded,

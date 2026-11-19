@@ -15,6 +15,14 @@ enum Species { cat, dog }
 /// FR01 archive and FR19 lifecycle states.
 enum PetStatus { active, archived, rehomed, deceased }
 
+/// How a pet's status reads to a person.
+String statusWord(PetStatus s) => switch (s) {
+      PetStatus.active => 'Active',
+      PetStatus.archived => 'Archived',
+      PetStatus.rehomed => 'Rehomed',
+      PetStatus.deceased => 'Passed away',
+    };
+
 /// A pet profile (FR01): species, breed, birth date, weight.
 class Pet {
   final String id;

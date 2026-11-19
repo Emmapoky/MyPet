@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
@@ -171,10 +172,17 @@ class _CheckScreenState extends State<CheckScreen> {
     _saved = true;
     final s = context.read<AppState>();
     unawaited(Feel.saved());
-    await s.addEntry(pet.id, EntryKind.behaviourResult,
+    final e = await s.addEntry(pet.id, EntryKind.behaviourResult,
         o.toEntryData(ms: _ms, source: _picked ? 'file' : 'recording'));
     _reset();
-    s.goToTab(0);
+    // Stay on Check, ready for the next pet; Undo if it was a mistake.
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Text("Saved to ${pet.name}'s timeline"),
+        action: SnackBarAction(label: 'Undo', onPressed: () => s.deleteEntry(e)),
+      ));
   }
 
   void _say(String text) {
@@ -577,14 +585,16 @@ class ResultView extends StatelessWidget {
     required this.outcome,
     required this.pet,
     required this.ms,
-    required this.onRetake,
-    required this.onSave,
+    this.onRetake,
+    this.onSave,
   });
   final CheckOutcome outcome;
   final Pet pet;
   final int ms;
-  final VoidCallback onRetake;
-  final VoidCallback onSave;
+
+  /// Null when showing a saved check from the timeline (read only).
+  final VoidCallback? onRetake;
+  final VoidCallback? onSave;
 
   @override
   Widget build(BuildContext context) {
@@ -685,7 +695,7 @@ class ResultView extends StatelessWidget {
           MyCard(
             title: 'Sounds heard',
             child: Wrap(spacing: Tokens.space2, runSpacing: Tokens.space2, children: [
-              for (final (n, p) in o.sounds.take(3)) _SoundChip('$n ${_pct(p)}'),
+              for (final (n, p) in o.sounds.take(3)) _SoundChip(p > 0 ? '$n ${_pct(p)}' : n),
             ]),
           ),
           if (o.kind == OutcomeKind.heardOnly) ...[
@@ -696,6 +706,7 @@ class ResultView extends StatelessWidget {
         gap,
         _Note(icon: Icons.info_outline_rounded, text: Wording.notDiagnosisBehaviour, color: c.surfaceTint),
         gap,
+        if (onSave != null) ...[
         Row(children: [
           Expanded(
             child: OutlinedButton.icon(
@@ -738,9 +749,39 @@ class ResultView extends StatelessWidget {
                 style: t.textTheme.bodySmall),
           ),
         ]),
+        ],
       ],
     );
   }
+}
+
+/// A saved check, opened from the timeline: the same result, read only, with the
+/// moments' times (the clip itself was deleted).
+class SavedCheckScreen extends StatelessWidget {
+  const SavedCheckScreen({super.key, required this.pet, required this.entry, this.onDelete});
+  final Pet pet;
+  final CareEntry entry;
+  final VoidCallback? onDelete;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(
+          title: Row(children: [
+            PetAvatar(pet: pet, size: 36),
+            const SizedBox(width: Tokens.space3),
+            Flexible(
+              child: Text(DateFormat('EEE d MMM').format(entry.createdAt.toLocal()), overflow: TextOverflow.ellipsis),
+            ),
+          ]),
+          actions: [
+            if (onDelete != null)
+              IconButton(tooltip: 'Delete', icon: const Icon(Icons.delete_outline_rounded), onPressed: onDelete),
+          ],
+        ),
+        body: PageWash(
+          child: SafeArea(child: ResultView(outcome: outcomeFromEntry(entry.data), pet: pet, ms: 0)),
+        ),
+      );
 }
 
 String _pct(double p) => '${(100 * p).round()}%';

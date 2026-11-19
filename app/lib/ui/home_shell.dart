@@ -10,6 +10,7 @@ import 'settings_screen.dart';
 import 'theme.dart';
 import 'today_screen.dart';
 import 'feedback.dart';
+import 'guide.dart';
 
 /// Bottom tabs, the same on every screen (report Fig 4.4 item 5; Figma "Bottom tabs").
 class HomeShell extends StatelessWidget {
@@ -27,38 +28,77 @@ class HomeShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = context.watch<AppState>();
     final t = Theme.of(context);
-    return Scaffold(
-      body: IndexedStack(index: s.tab, children: _pages),
-      bottomNavigationBar: SafeArea(
-        minimum: const EdgeInsets.fromLTRB(Tokens.space3, 0, Tokens.space3, Tokens.space2),
-        child: Container(
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            color: t.colorScheme.surface.withValues(alpha: 0.96),
-            borderRadius: BorderRadius.circular(32),
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.10), blurRadius: 16, offset: const Offset(0, 4))],
-          ),
-          child: NavigationBar(
-          selectedIndex: s.tab,
-          onDestinationSelected: (i) {
-            Feel.tap();
-            s.goToTab(i);
-          },
-          // Very large text: icons only (each still has its name for screen readers),
-          // so labels never get cut off.
-          labelBehavior: MediaQuery.textScalerOf(context).scale(1) > 1.3
-              ? NavigationDestinationLabelBehavior.alwaysHide
-              : NavigationDestinationLabelBehavior.alwaysShow,
-          destinations: const [
-            NavigationDestination(icon: Icon(Icons.grid_view_rounded), label: 'Today'),
-            NavigationDestination(icon: Icon(Icons.pets_rounded), label: 'Pets'),
-            NavigationDestination(icon: Icon(Icons.center_focus_strong_rounded), label: 'Check'),
-            NavigationDestination(icon: Icon(Icons.show_chart_rounded), label: 'Insights'),
-            NavigationDestination(icon: Icon(Icons.checklist_rounded), label: 'Reminders'),
-          ],
+    // First time in the app: Pip the guide dog shows each tab once.
+    if (!s.tourSeen && s.guide == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!s.tourSeen && s.guide == null) {
+          s.startGuide(Guide(steps: tourSteps()));
+        }
+      });
+    }
+    return Stack(
+      children: [
+        Scaffold(
+          body: IndexedStack(index: s.tab, children: _pages),
+          bottomNavigationBar: SafeArea(
+            minimum: const EdgeInsets.fromLTRB(
+              Tokens.space3,
+              0,
+              Tokens.space3,
+              Tokens.space2,
+            ),
+            child: Container(
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: t.colorScheme.surface.withValues(alpha: 0.96),
+                borderRadius: BorderRadius.circular(32),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.10),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: NavigationBar(
+                selectedIndex: s.tab,
+                onDestinationSelected: (i) {
+                  Feel.tap();
+                  s.goToTab(i);
+                },
+                // Very large text: icons only (each still has its name for screen readers),
+                // so labels never get cut off.
+                labelBehavior: MediaQuery.textScalerOf(context).scale(1) > 1.3
+                    ? NavigationDestinationLabelBehavior.alwaysHide
+                    : NavigationDestinationLabelBehavior.alwaysShow,
+                destinations: const [
+                  NavigationDestination(
+                    icon: Icon(Icons.grid_view_rounded),
+                    label: 'Today',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.pets_rounded),
+                    label: 'Pets',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.center_focus_strong_rounded),
+                    label: 'Check',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.show_chart_rounded),
+                    label: 'Insights',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.checklist_rounded),
+                    label: 'Reminders',
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
-      ),
+        if (s.guide != null) const Positioned.fill(child: GuideOverlay()),
+      ],
     );
   }
 }
@@ -70,20 +110,33 @@ class MoreMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => PopupMenuButton<int>(
-        tooltip: 'More',
-        icon: Icon(Icons.more_vert_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant),
-        onSelected: (i) {
-          if (i == -1) {
-            Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
-          } else {
-            extra[i].$2();
-          }
-        },
-        itemBuilder: (_) => [
-          for (var i = 0; i < extra.length; i++) PopupMenuItem(value: i, child: Text(extra[i].$1)),
-          const PopupMenuItem(value: -1, child: Text('Settings')),
-        ],
-      );
+    tooltip: 'More',
+    icon: Icon(
+      Icons.more_vert_rounded,
+      color: Theme.of(context).colorScheme.onSurfaceVariant,
+    ),
+    onSelected: (i) {
+      if (i == -1) {
+        Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
+      } else if (i == -2) {
+        final s = context.read<AppState>();
+        s.goToTab(0);
+        s.startGuide(Guide(steps: tourSteps()));
+      } else if (i == -3) {
+        startStory(context);
+      } else {
+        extra[i].$2();
+      }
+    },
+    itemBuilder: (_) => [
+      for (var i = 0; i < extra.length; i++)
+        PopupMenuItem(value: i, child: Text(extra[i].$1)),
+      const PopupMenuItem(value: -2, child: Text('Show me around')),
+      const PopupMenuItem(value: -3, child: Text("Story: Biscuit's week")),
+      const PopupMenuItem(value: -1, child: Text('Settings')),
+    ],
+  );
 }
 
 /// One-tap light/dark switch. Opens light the first time; the choice is remembered.
@@ -96,8 +149,10 @@ class LookToggle extends StatelessWidget {
     final dark = Theme.of(context).brightness == Brightness.dark;
     return IconButton(
       tooltip: dark ? 'Light mode' : 'Dark mode',
-      icon: Icon(dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
-          color: Theme.of(context).colorScheme.onSurfaceVariant),
+      icon: Icon(
+        dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
       onPressed: () {
         Feel.tap();
         s.setLook(dark ? ThemeMode.light : ThemeMode.dark);

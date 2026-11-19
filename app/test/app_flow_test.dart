@@ -28,7 +28,7 @@ Future<void> settle(WidgetTester t) async {
 
 void main() {
   Feel.sounds = false;
-  testWidgets('NFR01: a routine day is logged in 2 taps from opening the app', (
+  testWidgets('NFR01: a routine day is logged in 3 taps: Log now, energy, Save', (
     t,
   ) async {
     final s = await signedInState();
@@ -46,6 +46,10 @@ void main() {
     taps++;
     await settle(t);
     expect(find.text('Same as last entry'), findsOneWidget);
+    // Ate and toilet carry over; energy is asked fresh so a drop is not hidden.
+    await t.tap(find.bySemanticsLabel('Energy: 4'));
+    taps++;
+    await t.pump();
     await t.tap(find.text('Save'));
     taps++;
     await settle(t);

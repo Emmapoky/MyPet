@@ -13,8 +13,8 @@ import 'widgets/common.dart';
 import 'widgets/pet_bar.dart';
 
 /// Quick log (report Table 4.4 screen 3; Figma screen 03): same as last entry, three
-/// numbered questions, optional weight and voice note, Save. A routine day takes 2 taps
-/// from Today, Log now then Save (NFR01: 3 taps or fewer).
+/// numbered questions, optional weight and voice note, Save. A routine day takes 3 taps
+/// from Today: Log now, energy, Save (NFR01: 3 taps or fewer).
 class QuickLogScreen extends StatefulWidget {
   const QuickLogScreen({super.key, required this.pet, this.editing, this.day});
   final Pet pet;
@@ -65,7 +65,8 @@ class _QuickLogScreenState extends State<QuickLogScreen> {
 
   void _fill(CareEntry e, {required bool withExtras}) {
     ate = e.ate;
-    energy = e.energy;
+    // Energy is the change MyPet watches most, so a new log asks for it fresh.
+    energy = withExtras ? e.energy : null;
     toilet = e.toiletingNormal;
     if (withExtras) {
       weight.text = e.weightKg?.toString() ?? '';
@@ -86,8 +87,7 @@ class _QuickLogScreenState extends State<QuickLogScreen> {
 
   void _pick(VoidCallback f) => setState(() {
         f();
-        if (last != null &&
-            (ate != last!.ate || energy != last!.energy || toilet != last!.toiletingNormal)) {
+        if (last != null && (ate != last!.ate || toilet != last!.toiletingNormal)) {
           sameAsLast = false;
         }
       });

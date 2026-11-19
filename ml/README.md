@@ -9,7 +9,7 @@ Rules these follow (Dr Yam, 18 Sep 2026; proposal report): machine learning, not
 |---|---|---|
 | 1 | `01_clap_catmeows_spike.ipynb`: CLAP zero-shot vs CLAP embeddings + logistic regression on CatMeows | Done 19 Nov 2026 |
 | 2 | `02_onnx_matches_pytorch.ipynb`: the planned on-device ONNX files give the same embeddings and the same result as step 1 | Done 19 Nov 2026 |
-| 2b | Compute the same log-mel `input_features` in Dart and check them against Python on a few clips | Next |
+| 2b | Compute the same log-mel `input_features` in the app (Swift in this repo now; Dart if the team moves to Flutter as the report plans) and check them against Python on a few clips | Next |
 | 3 | Dogs: same test on EmotionalCanines | Later |
 | 4 | YAMNet embeddings on the same splits (the fallback) | Later |
 
@@ -50,7 +50,7 @@ Same 440 clips, same input features fed to both. Xenova ships the same preproces
 - The ONNX files are a faithful copy of the model. The full file is identical; the quantized one is within 1% and scores the same (0.50 vs 0.49 is noise).
 - Use the **quantized 34.3 MB file** in the app: a quarter of the size, same result.
 - ONNX in: `input_features`, float, shape [1, 1, 1001, 64] for one 10 s clip (48 kHz, FFT 1024, hop 480, 64 mel bins from 50 Hz, repeat-padded). ONNX out: `audio_embeds`, 512 numbers. The classifier then runs on those 512 numbers.
-- The model itself is no longer a risk. The open risk is step 2b: the app must compute those 1001 x 64 features in Dart exactly like Python does, or the embeddings will drift. The CLAP vs YAMNet decision hangs on that.
+- The model itself is no longer a risk. The open risk is step 2b: the app must compute those 1001 x 64 features exactly like Python does (in Swift or Dart), or the embeddings will drift. The CLAP vs YAMNet decision hangs on that.
 
 **Honest wording for the app and report:** show likelihoods with "not a diagnosis", and say the behaviour check is an early estimate. This matches Dr Yam's line that logging is the minimum and AI is the best case.
 

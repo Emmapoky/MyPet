@@ -13,8 +13,8 @@ Rules these follow (Dr Yam, 18 Sep 2026; proposal report): machine learning, not
 | 2c | `dart/clap_features`: Dart (Flutter) version of the model input, tested against the 2b test files | Done 19 Nov 2026 |
 | 3 | `flutter/behaviour_bench`: run the whole check in Flutter on a real iPhone and time it | Done 19 Nov 2026 (iPhone); Android not yet, no Android SDK on the Mac |
 | 4 | `04_clap_dogs_emotionalcanines.ipynb`: same test as step 1 on EmotionalCanines dog barks | Done 19 Nov 2026 |
-| 5 | `flutter/behaviour_bench/tool/build_test_library.py`: train the classifiers the phone uses (cats, dog energy, dog mood) with the exact phone pipeline, and pack the held-out clips | In progress |
-| 6 | `flutter/behaviour_bench` Test library screen: run every held-out clip on the iPhone, true label vs result, play, score | In progress |
+| 5 | `flutter/behaviour_bench/tool/build_test_library.py`: train the classifiers the phone uses (cats, dog energy, dog mood) with the exact phone pipeline, and pack the held-out clips | Done 19 Nov 2026 |
+| 6 | `flutter/behaviour_bench` Test library screen: run every held-out clip on the iPhone, true label vs result, play, score | Done 19 Nov 2026 (iPhone) |
 | later | Android timing on a borrowed phone; YAMNet only if needed | Later |
 
 ## Step 1 result (CatMeows, 440 meows, 21 cats, 3 contexts)
@@ -109,5 +109,25 @@ All numbers are macro F1. Full numbers and confusion matrices: `results/04_dogs.
 - Barks are short (median 1 s) and were repeat-padded to 10 s, as with cats. A few clips are longer than 10 s (longest 30 s); for those, transformers took a random 10 s window while the phone takes the first 10 s. With a median of 1 s this affects only a small share of clips, but the count was not printed.
 
 **Licence:** CC BY-NC-SA 4.0 (non-commercial, share-alike). Fine for a university project; a model trained on it should not ship in a commercial app. This repo only downloads it and does not store the audio.
+
+## Steps 5 and 6 result (test library on the iPhone, 19 Nov 2026)
+
+`tool/build_test_library.py` trained the three classifiers the app will use, with the exact phone pipeline (first 10 s, `reference/` features, quantized ONNX), on training animals only. It then packed 294 held-out clips: 94 meows from 4 cats it never saw, and 200 barks from the dogs in EmotionalCanines' test set. The **Test library** screen in `flutter/behaviour_bench` runs them all on the phone, shows each result next to the true label, plays the clip, and scores the set.
+
+| Classifier | Held-out clips | Right | Macro F1 |
+|---|---|---|---|
+| Cat situation (food / brushed / alone) | 94 (4 cats) | 34 (36%) | 0.35 |
+| Dog energy (calm / medium / excited) | 200 | 100 (50%) | 0.50 |
+| Dog mood (negative / neutral / positive) | 200 | 89 (45%) | 0.42 |
+
+On the iPhone: median 112 ms per clip, fully offline, and the largest gap between the phone's likelihoods and Python's was 0.0. The phone gives exactly the training script's answers.
+
+**What this means**
+
+- This is a demo set, not the headline number. The cat test holds only 4 cats, so it lands below step 1's 7-fold 0.49. Quote 0.49 for cats. In this split the cat model mostly misses "waiting for food" (2 of 14 right).
+- Dogs match step 4 (0.50 energy, 0.42 mood). Negative barks are still the weak spot: 14 of 66 were called negative, and most of the rest were called positive. The app must not sound sure about mood.
+- Dataset clips are 1 to 4 s. Next, check a few of our own 10 s recordings of real pets.
+
+Full numbers and confusion matrices: `results/05_test_library.json`.
 
 Data: CatMeows, Ludovico et al. 2020, Zenodo record 4008297. Check the licence on the record before redistributing; this repo only downloads it.

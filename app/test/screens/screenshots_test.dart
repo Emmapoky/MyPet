@@ -121,7 +121,10 @@ void main() {
     await t.pumpAndSettle();
     await t.tap(find.byTooltip('More').first);
     await t.pumpAndSettle();
-    await t.tap(find.text("Story: Biscuit's week"));
+    await t.tap(find.text('Try a demo'));
+    await t.pumpAndSettle();
+    await shot(t, '14-demo-picker');
+    await t.tap(find.text('A dog not feeling well'));
     await t.pump(const Duration(seconds: 1));
     await shot(t, '14-story-1');
     await t.tap(find.text('Next'));

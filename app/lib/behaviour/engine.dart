@@ -73,6 +73,11 @@ abstract class BehaviourEngine {
   /// Deletes a clip kept for the result screen (FR-N02).
   Future<void> discard(String? clipPath);
 
+  /// On Save: keeps the clip in [dir] as the person chose in Settings (the video, only its
+  /// sound, or nothing) and returns the kept file's name, or null when nothing was kept.
+  /// The recording itself is deleted either way.
+  Future<String?> keep(String clipPath, String dir, String id, ClipKeep how);
+
   Future<void> dispose();
 }
 
@@ -308,6 +313,29 @@ class PhoneBehaviourEngine implements BehaviourEngine {
     try {
       await File(clipPath).delete();
     } catch (_) {}
+  }
+
+  @override
+  Future<String?> keep(String clipPath, String dir, String id, ClipKeep how) async {
+    try {
+      if (how == ClipKeep.none || !await File(clipPath).exists()) return null;
+      await Directory(dir).create(recursive: true);
+      if (how == ClipKeep.video) {
+        final dot = clipPath.lastIndexOf('.');
+        final name = 'check_$id${dot > clipPath.lastIndexOf('/') ? clipPath.substring(dot) : '.mp4'}';
+        await File(clipPath).copy('$dir/$name');
+        return name;
+      }
+      // Sound only: the soundtrack as a small AAC file; the picture is dropped.
+      final name = 'check_$id.m4a';
+      final s = await FFmpegKit.execute('-y -i "$clipPath" -vn -ac 1 -c:a aac -b:a 64k "$dir/$name"');
+      if ((await s.getReturnCode())?.isValueSuccess() == true && await File('$dir/$name').exists()) return name;
+      return null;
+    } catch (_) {
+      return null;
+    } finally {
+      await discard(clipPath);
+    }
   }
 
   @override

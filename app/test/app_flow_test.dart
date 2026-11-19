@@ -99,19 +99,19 @@ void main() {
   });
 
   testWidgets(
-    'demo pets: Biscuit shows a change with evidence, Mochi does not',
+    'demo pets: Biscuit shows a change with evidence, Pepper does not',
     (t) async {
       final s = await signedInState();
       await addDemoPets(s);
       await t.pumpWidget(MyPetApp(state: s));
       await settle(t);
       final biscuit = s.pets.firstWhere((p) => p.name == 'Biscuit');
-      final mochi = s.pets.firstWhere((p) => p.name == 'Mochi');
+      final pepper = s.pets.firstWhere((p) => p.name == 'Pepper');
       expect(
         s.detectionOf(biscuit.id)!.flags.map((f) => f.measure),
         contains(Measure.energy),
       );
-      expect(s.detectionOf(mochi.id)!.flags, isEmpty);
+      expect(s.detectionOf(pepper.id)!.flags, isEmpty);
 
       s.selectPet(biscuit.id);
       await t.tap(find.text('Insights'));

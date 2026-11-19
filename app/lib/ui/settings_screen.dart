@@ -5,6 +5,7 @@ import '../state/app_state.dart';
 import '../state/demo_data.dart';
 import 'theme.dart';
 import 'widgets/common.dart';
+import 'widgets/clip_keep.dart';
 import 'wording.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -30,6 +31,12 @@ class SettingsScreen extends StatelessWidget {
           selected: {s.look},
           onSelectionChanged: (v) => s.setLook(v.first),
         ),
+        const SectionTitle('Saved clips'),
+        const Card(child: ClipKeepChoices()),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(Tokens.space2, Tokens.space2, Tokens.space2, 0),
+          child: Text('Clips stay on this phone and are never uploaded.', style: t.textTheme.bodySmall),
+        ),
         const SectionTitle('Account'),
         Card(
           child: Column(children: [
@@ -54,7 +61,7 @@ class SettingsScreen extends StatelessWidget {
           child: ListTile(
             leading: const Icon(Icons.science_outlined),
             title: const Text('Add demo pets'),
-            subtitle: const Text('Mochi and Biscuit with 30 days of made-up logs'),
+            subtitle: const Text('Example pets with a month of made-up logs and checks'),
             onTap: () async {
               final messenger = ScaffoldMessenger.of(context);
               await addDemoPets(s);
@@ -91,8 +98,8 @@ class AboutMyPet extends StatelessWidget {
         row(Icons.touch_app_outlined, 'A daily log in about 3 taps: ate, energy, toileting.'),
         row(Icons.insights, 'After a week, MyPet learns what is normal for your pet and '
             'tells you when something changes, with the evidence.'),
-        row(Icons.graphic_eq, 'A 10 second sound check gives a likely emotion. The sound '
-            'is analysed on your phone and deleted straight away.'),
+        row(Icons.videocam_outlined, 'A 10 second clip gives a likely feeling. Sound and picture '
+            'are read on your phone. You choose whether Save keeps the video, only the sound, or nothing.'),
         row(Icons.money_off_outlined, 'Free. No collar, no hardware, no AI account.'),
         row(Icons.local_hospital_outlined, Wording.notDiagnosis),
       ]),

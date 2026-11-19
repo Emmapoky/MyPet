@@ -6,6 +6,7 @@ import '../models/care_entry.dart';
 import '../models/pet.dart';
 import '../state/app_state.dart';
 import 'check_screen.dart';
+import 'widgets/clip_keep.dart';
 import 'health_record_screen.dart';
 import 'pet_edit_screen.dart';
 import 'quick_log_screen.dart';
@@ -172,7 +173,10 @@ void openEntrySheet(BuildContext context, Pet pet, CareEntry e) {
             ..showSnackBar(SnackBar(
               content: const Text('Deleted'),
               action: SnackBarAction(label: 'Undo', onPressed: () => s.editEntry(gone, e.data)),
-            )));
+            )).closed.then((why) {
+              // Its kept clip goes too, unless the delete was undone.
+              if (why != SnackBarClosedReason.action) deleteKeptClip(s, e);
+            }));
         },
       ),
     ));

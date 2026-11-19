@@ -124,7 +124,7 @@ class MoreMenu extends StatelessWidget {
         s.goToTab(0);
         s.startGuide(Guide(steps: tourSteps()));
       } else if (i == -3) {
-        startStory(context);
+        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DemoPickerScreen()));
       } else {
         extra[i].$2();
       }
@@ -133,7 +133,7 @@ class MoreMenu extends StatelessWidget {
       for (var i = 0; i < extra.length; i++)
         PopupMenuItem(value: i, child: Text(extra[i].$1)),
       const PopupMenuItem(value: -2, child: Text('Show me around')),
-      const PopupMenuItem(value: -3, child: Text("Story: Biscuit's week")),
+      const PopupMenuItem(value: -3, child: Text('Try a demo')),
       const PopupMenuItem(value: -1, child: Text('Settings')),
     ],
   );

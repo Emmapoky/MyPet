@@ -12,6 +12,7 @@ import '../models/pet.dart';
 import '../state/app_state.dart';
 import 'home_shell.dart';
 import 'theme.dart';
+import 'widgets/clip_keep.dart';
 import 'widgets/clip_replay.dart';
 import 'widgets/common.dart';
 import 'widgets/pet_bar.dart';
@@ -157,8 +158,9 @@ class _CheckScreenState extends State<CheckScreen> {
 
   void _reset() {
     if (!mounted) return;
-    // The clip was only kept for the replay: delete it now (FR-N02).
-    _engine.discard(_outcome?.clip);
+    // A clip not saved is deleted now (FR-N02); Save already kept what Settings asks for.
+    final clip = _outcome?.clip;
+    if (clip != null) _engine.discard(clip);
     setState(() {
       _step = _Step.record;
       _outcome = null;
@@ -172,8 +174,16 @@ class _CheckScreenState extends State<CheckScreen> {
     _saved = true;
     final s = context.read<AppState>();
     unawaited(Feel.saved());
-    final e = await s.addEntry(pet.id, EntryKind.behaviourResult,
-        o.toEntryData(ms: _ms, source: _picked ? 'file' : 'recording'));
+    final data = o.toEntryData(ms: _ms, source: _picked ? 'file' : 'recording');
+    // Keep the video, its sound or nothing, as picked in Settings (on this phone only).
+    final clip = o.clip, dir = s.clipDir;
+    String? kept;
+    if (clip != null && dir != null) {
+      kept = await _engine.keep(clip, dir, s.backend.newId(), s.clipKeep);
+      _outcome = o.withClip(clip: null, seconds: o.seconds, moments: o.moments);
+    }
+    if (kept != null) data['clip'] = kept;
+    final e = await s.addEntry(pet.id, EntryKind.behaviourResult, data);
     _reset();
     // Stay on Check, ready for the next pet; Undo if it was a mistake.
     if (!mounted) return;
@@ -181,7 +191,13 @@ class _CheckScreenState extends State<CheckScreen> {
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(
         content: Text("Saved to ${pet.name}'s timeline"),
-        action: SnackBarAction(label: 'Undo', onPressed: () => s.deleteEntry(e)),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () {
+            s.deleteEntry(e);
+            deleteKeptClip(s, e);
+          },
+        ),
       ));
   }
 
@@ -598,6 +614,7 @@ class ResultView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final keep = context.watch<AppState>().clipKeep;
     final t = Theme.of(context);
     final c = MyPetColors.of(context);
     final o = outcome;
@@ -742,11 +759,12 @@ class ResultView extends StatelessWidget {
         ]),
         const SizedBox(height: Tokens.space1),
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Icon(Icons.delete_outline_rounded, size: 16, color: t.colorScheme.onSurfaceVariant),
+          Icon(clipKeepIcon(keep), size: 16, color: t.colorScheme.onSurfaceVariant),
           const SizedBox(width: Tokens.space1),
-          Flexible(
-            child: Text('Clip deleted on Save or Retake · took ${(ms / 1000).toStringAsFixed(1)} s',
-                style: t.textTheme.bodySmall),
+          Flexible(child: Text(clipKeepOnSave(keep), style: t.textTheme.bodySmall)),
+          TextButton(
+            onPressed: () => showClipKeepSheet(context),
+            child: Semantics(label: 'Change what Save keeps', excludeSemantics: true, child: const Text('Change')),
           ),
         ]),
         ],
@@ -755,8 +773,8 @@ class ResultView extends StatelessWidget {
   }
 }
 
-/// A saved check, opened from the timeline: the same result, read only, with the
-/// moments' times (the clip itself was deleted).
+/// A saved check, opened from the timeline: the same result, read only, with its kept
+/// video or sound to replay (or just the moments' times when no clip was kept).
 class SavedCheckScreen extends StatelessWidget {
   const SavedCheckScreen({super.key, required this.pet, required this.entry, this.onDelete});
   final Pet pet;
@@ -779,7 +797,11 @@ class SavedCheckScreen extends StatelessWidget {
           ],
         ),
         body: PageWash(
-          child: SafeArea(child: ResultView(outcome: outcomeFromEntry(entry.data), pet: pet, ms: 0)),
+          child: SafeArea(child: ResultView(
+            outcome: outcomeFromEntry(entry.data, clip: context.read<AppState>().clipOf(entry)),
+            pet: pet,
+            ms: 0,
+          )),
         ),
       );
 }

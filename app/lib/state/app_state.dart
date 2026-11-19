@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 
 import '../data/backend.dart';
 import '../detection/change_detector.dart';
+import '../behaviour/analysis.dart' show ClipKeep;
 import '../models/care_entry.dart';
 import '../models/pet.dart';
 import '../models/reminder.dart';
@@ -52,6 +53,28 @@ class AppState extends ChangeNotifier {
   /// Saved with [onLookChanged] by main.dart.
   ThemeMode look = ThemeMode.light;
   void Function(ThemeMode)? onLookChanged;
+
+  /// What a saved check keeps besides its results: the video (default), only the sound,
+  /// or nothing. Saved with [onClipKeepChanged] by main.dart.
+  ClipKeep clipKeep = ClipKeep.video;
+  void Function(ClipKeep)? onClipKeepChanged;
+
+  void setClipKeep(ClipKeep k) {
+    clipKeep = k;
+    onClipKeepChanged?.call(k);
+    notifyListeners();
+  }
+
+  /// Folder on this phone holding the clips of saved checks (set by main.dart; null in
+  /// tests, which then keep no clips).
+  String? clipDir;
+
+  /// Path of a saved check's kept clip, or null if none was kept or the file is gone.
+  String? clipOf(CareEntry e) {
+    final name = e.data['clip'];
+    final dir = clipDir;
+    return name is String && dir != null ? '$dir/$name' : null;
+  }
 
   /// The walkthrough showing now (first-run tour or the story demo), if any.
   Guide? guide;
@@ -181,6 +204,7 @@ class AppState extends ChangeNotifier {
   String get _me => carer!.id;
 
   Future<Pet> addPet({
+    String? id,
     required String name,
     required Species species,
     String breed = '',
@@ -190,7 +214,7 @@ class AppState extends ChangeNotifier {
     String? photo,
   }) async {
     final pet = Pet(
-      id: backend.newId(),
+      id: id ?? backend.newId(),
       name: name,
       species: species,
       breed: breed,

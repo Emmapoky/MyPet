@@ -111,6 +111,14 @@ class FakeEngine implements BehaviourEngine {
   @override
   Future<void> discard(String? clipPath) async => discarded.add(clipPath);
 
+  final kept = <(String, ClipKeep)>[];
+  @override
+  Future<String?> keep(String clipPath, String dir, String id, ClipKeep how) async {
+    kept.add((clipPath, how));
+    discarded.add(clipPath);
+    return how == ClipKeep.none ? null : 'check_$id.${how == ClipKeep.video ? 'mov' : 'm4a'}';
+  }
+
   @override
   Future<void> dispose() async {}
 }
@@ -345,6 +353,7 @@ void main() {
     (t) async {
       final s = await signedInState();
       final pet = await s.addPet(name: 'Milo', species: Species.dog);
+      s.clipDir = '/phone/check_clips';
       phoneSize(t);
       final engine = FakeEngine(bark);
       await t.pumpWidget(MyPetApp(state: s, engine: engine));
@@ -375,8 +384,15 @@ void main() {
       expect(find.text('0:01 Barking'), findsOneWidget);
     expect(find.text('0:00 Dog in view'), findsOneWidget);
       expect(find.text(Wording.notDiagnosisBehaviour), findsOneWidget);
-      await t.scrollUntilVisible(find.textContaining('Clip deleted'), 200);
-      expect(find.textContaining('Clip deleted'), findsOneWidget);
+      await t.scrollUntilVisible(find.textContaining('Save keeps the video'), 200);
+      expect(find.textContaining('Save keeps the video'), findsOneWidget);
+      // Keep only the sound this time (also in Settings).
+      await t.tap(find.text('Change'));
+      await settle(t);
+      await t.tap(find.text('Sound only'));
+      await settle(t);
+      expect(s.clipKeep, ClipKeep.sound);
+      expect(find.textContaining('Save keeps only the sound'), findsOneWidget);
 
       await t.tap(find.text('Save'));
       await settle(t);
@@ -385,6 +401,9 @@ void main() {
       expect(saved.first.topLabel, 'Likely happy or playful');
     expect(engine.discarded, ['clip.mov']);
     expect(saved.first.data['moments'], hasLength(3));
+      expect(engine.kept, [('clip.mov', ClipKeep.sound)]);
+      expect(saved.first.data['clip'], endsWith('.m4a'));
+      expect(s.clipOf(saved.first), startsWith('/phone/check_clips/'));
       expect(s.tab, 2); // stays on Check for the next pet
       expect(find.text("Saved to Milo's timeline"), findsOneWidget);
     },

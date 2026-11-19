@@ -10,7 +10,9 @@ import '../state/demo_data.dart';
 import 'feedback.dart';
 import 'home_shell.dart';
 import 'theme.dart';
+import 'widgets/common.dart';
 import 'widgets/pet_bar.dart';
+import 'widgets/pet_portrait.dart';
 
 /// First-run tour, told by Pip the guide dog. One bubble per tab.
 List<GuideStep> tourSteps() => const [
@@ -21,37 +23,51 @@ List<GuideStep> tourSteps() => const [
       GuideStep(4, "Reminders for food, medicine and walks. Anything missed shows on Today. That's it, have fun!"),
     ];
 
-/// The story demo: Biscuit, a demo dog, tells what MyPet noticed when his energy dropped.
-/// Runs on its own demo data, so the person's pets are never touched.
-List<GuideStep> storySteps(AppState s) {
-  final biscuit = s.activePets.where((p) => p.name == 'Biscuit').firstOrNull;
-  final days = biscuit == null
+/// Story bubbles for one demo pet, told by the pet itself.
+List<GuideStep> storySteps(AppState s, DemoPet d) {
+  final pet = s.activePets.where((p) => p.name == d.name).firstOrNull;
+  final days = pet == null
       ? 0
-      : {for (final e in s.timelineOf(biscuit.id).ofKind(EntryKind.dailyLog)) e.day}.length;
-  return [
-    const GuideStep(0, "Woof! I'm Biscuit. Every evening my carer logs 3 things: did I eat, my energy, my toilet. Three taps.",
-        petName: 'Biscuit'),
-    GuideStep(0,
-        "They've logged $days days for me. MyPet needs at least 7 to learn what's usual for me. Before that it stays quiet.",
-        petName: 'Biscuit'),
-    const GuideStep(0,
-        'Lately I had low energy on 2 of the last 3 days. MyPet shows it in amber: a change from my usual, not a diagnosis.',
-        petName: 'Biscuit'),
-    const GuideStep(3,
-        'Insights compares me only with my own usual range, the shaded band. The low bars are my flat days.',
-        petName: 'Biscuit'),
-    const GuideStep(2,
-        'My carer can film me for 10 seconds. My sounds and my picture are read separately, then combined.',
-        petName: 'Biscuit'),
-    const GuideStep(1,
-        'Before the vet, they open my page and tap the PDF icon to share my record. Vet letters can be added too.',
-        petName: 'Biscuit'),
-    const GuideStep(4, "And I never miss dinner. That's my story! Now try it with your own pet.", petName: 'Biscuit'),
-  ];
+      : {for (final e in s.timelineOf(pet.id).ofKind(EntryKind.dailyLog)) e.day}.length;
+  GuideStep step(int tab, String text) => GuideStep(tab, text, petName: d.name);
+  return switch (d.id) {
+    'demo-biscuit' => [
+        step(0, "Woof! I'm Biscuit. Every evening my carer logs 3 things: did I eat, my energy, my toilet. Three taps."),
+        step(0, "They've logged $days days for me. MyPet needs at least 7 to learn what's usual for me. Before that it stays quiet."),
+        step(0, 'This week I had low energy on 2 of the last 3 days. MyPet shows it in amber: a change from my usual, not a diagnosis.'),
+        step(3, 'Insights compares me only with my own usual range, the shaded band. The low bars are my flat days.'),
+        step(1, 'My carer filmed me yesterday. On my page, tap the check to replay it and hear each whimper MyPet found.'),
+        step(1, 'Before the vet, they tap the PDF icon on my page to share my record. Vet letters can be added too.'),
+        step(4, "And I never miss dinner. That's my story! Try another pet, or start with your own."),
+      ],
+    'demo-mochi' => [
+        step(0, "Meow, I'm Mochi. I usually clear my bowl. This week I left my dinner on 2 of the last 3 days."),
+        step(3, "For me that's rare, so MyPet points it out, with the days it saw. It's a change, not a diagnosis. A vet can tell why."),
+        step(2, 'My carer filmed me hissing at the vacuum. Sound and picture are read on the phone, never uploaded.'),
+        step(1, 'My page keeps every check. Tap one to replay my hiss, or my purr from last week.'),
+        step(1, 'Settings decides what Save keeps: the video, only the sound, or just the results.'),
+        step(4, "Reminders keep my meals on time. That's my story!"),
+      ],
+    'demo-pepper' => [
+        step(0, "Hi, I'm Pepper, a puppy! $days days of logs, and everything looks normal for me, so Today stays calm."),
+        step(3, 'Insights shows my usual range. My days sit inside the band, so there is nothing to flag.'),
+        step(2, "Checks aren't only for worries. My carer films me playing, and MyPet finds each bark and when I'm in view."),
+        step(1, 'My page keeps those clips, so we can replay my good days too.'),
+        step(4, "Walks and meals are on Reminders. That's my story!"),
+      ],
+    _ => [
+        step(0, "Mew, I'm Bean. I came home $days days ago, so I only have $days days of logs."),
+        step(3, "MyPet needs 7 days to learn what's usual for me. Until then Insights waits, and says how many days are left."),
+        step(2, 'Checks work from day one. My carer filmed me meowing for dinner.'),
+        step(1, 'My page already has my first check and logs. In a few more days, MyPet can start spotting changes.'),
+        step(4, "That's my story! Your pet's story starts with one log."),
+      ],
+  };
 }
 
-/// Opens the story demo on fresh demo data, over the app. Ends back where it started.
-Future<void> startStory(BuildContext context) async {
+/// Opens one demo pet's story on fresh demo data, over the app. Your own pets are never
+/// touched. Ends back where it started.
+Future<void> startStory(BuildContext context, DemoPet pet) async {
   final engine = context.read<BehaviourEngine>();
   final nav = Navigator.of(context);
   final parent = context.read<AppState>();
@@ -60,12 +76,15 @@ Future<void> startStory(BuildContext context) async {
   for (var i = 0; i < 50 && !demo.carerKnown; i++) {
     await Future<void>.delayed(const Duration(milliseconds: 20));
   }
-  await addDemoPets(demo);
-  for (var i = 0; i < 50 && demo.activePets.length < 2; i++) {
+  final clips = await unpackDemoClips();
+  demo.clipDir = clips;
+  await addDemoPets(demo, fixedIds: true, clipDir: clips);
+  for (var i = 0; i < 50 && demo.activePets.length < demoPets.length; i++) {
     await Future<void>.delayed(const Duration(milliseconds: 20));
   }
   demo.look = parent.look;
-  demo.startGuide(Guide(steps: storySteps(demo), narrator: 'Biscuit', onDone: () => nav.pop()));
+  demo.clipKeep = parent.clipKeep;
+  demo.startGuide(Guide(steps: storySteps(demo, pet), narrator: pet.name, onDone: () => nav.pop()));
   await nav.push(MaterialPageRoute<void>(
     fullscreenDialog: true,
     builder: (c) => MultiProvider(
@@ -77,6 +96,55 @@ Future<void> startStory(BuildContext context) async {
     ),
   ));
   demo.dispose();
+}
+
+/// "Try a demo": example pets, each with a month of logs and real clips, told as a story.
+class DemoPickerScreen extends StatelessWidget {
+  const DemoPickerScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    return Scaffold(
+      appBar: AppBar(title: const Text('Try a demo')),
+      body: PageWash(
+        child: ListView(padding: const EdgeInsets.all(Tokens.space4), children: [
+          Text('Example pets with a month of logs and real clips. Your own pets are not touched.',
+              style: t.textTheme.bodyMedium!.copyWith(color: t.colorScheme.onSurfaceVariant)),
+          const SizedBox(height: Tokens.space4),
+          for (final (i, d) in demoPets.indexed) ...[
+            MyCard(
+              padding: EdgeInsets.zero,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(Tokens.radiusCard),
+                onTap: () {
+                  Feel.tap();
+                  startStory(context, d);
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(Tokens.space4),
+                  child: Row(children: [
+                    PetPortrait.of(d.pet, background: MyPetColors.of(context).petAccents[i], size: 64),
+                    const SizedBox(width: Tokens.space4),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(d.title, style: t.textTheme.titleMedium),
+                        const SizedBox(height: Tokens.space1),
+                        Text(d.subtitle,
+                            style: t.textTheme.bodyMedium!.copyWith(color: t.colorScheme.onSurfaceVariant)),
+                      ]),
+                    ),
+                    Icon(Icons.chevron_right_rounded, color: t.colorScheme.onSurfaceVariant),
+                  ]),
+                ),
+              ),
+            ),
+            const SizedBox(height: Tokens.space3),
+          ],
+        ]),
+      ),
+    );
+  }
 }
 
 /// The speech bubble over the app, pointing at the tab it talks about.

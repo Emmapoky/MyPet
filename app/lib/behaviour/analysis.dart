@@ -41,6 +41,20 @@ enum PictureUse {
   notSeen,
 }
 
+/// What a saved check keeps on the phone besides its results (Settings, "Saved clips").
+/// Nothing is ever uploaded. The results, including every moment found in the picture,
+/// are saved whichever is picked.
+enum ClipKeep {
+  /// The video, with its sound.
+  video,
+
+  /// Only the sound; the picture is not kept.
+  sound,
+
+  /// Neither: the clip is deleted on Save (the original FR-N02 behaviour).
+  none,
+}
+
 /// Where a moment in the clip was found.
 enum MomentSource { sound, picture }
 
@@ -127,7 +141,8 @@ class CheckOutcome {
   /// Moments found in the clip, for the replay on the result screen.
   final List<Moment> moments;
 
-  /// The clip, kept on the phone only while the result is open (deleted on Save or Retake).
+  /// The clip: while a result is open, the recording; for a saved check, the video or
+  /// sound kept on the phone (see [ClipKeep]), or null when none was kept.
   final String? clip;
 
   /// Length of the clip in seconds.
@@ -155,7 +170,8 @@ class CheckOutcome {
 
   String get topSound => sounds.first.$1;
 
-  /// What a saved entry holds. The clip itself is never stored (FR-N02).
+  /// What a saved entry holds. The clip itself is not in here: when one is kept, check_screen
+  /// adds its file name under 'clip' (a file on this phone, never uploaded).
   Map<String, dynamic> toEntryData({required int ms, required String source}) => {
         'species': species.name,
         if (kind == OutcomeKind.heardOnly) 'heard': topSound,
@@ -167,12 +183,13 @@ class CheckOutcome {
         'ms': ms,
         'source': source,
         'picture': picture.name,
+        if (seconds > 0) 'seconds': seconds,
         if (moments.isNotEmpty) 'moments': [for (final m in moments) m.toJson()],
       };
 }
 
-/// A saved check read back from the timeline (no clip: it was deleted).
-CheckOutcome outcomeFromEntry(Map<String, dynamic> d) {
+/// A saved check read back from the timeline, with the path of its kept clip if any.
+CheckOutcome outcomeFromEntry(Map<String, dynamic> d, {String? clip}) {
   List<(String, double)> ranked(Map? m) =>
       [for (final e in (m ?? const {}).entries) (e.key as String, (e.value as num).toDouble())]
         ..sort((a, b) => b.$2.compareTo(a.$2));
@@ -199,7 +216,9 @@ CheckOutcome outcomeFromEntry(Map<String, dynamic> d) {
             (m['s'] as num).toDouble(), (m['e'] as num).toDouble(),
             p: (m['p'] as num?)?.toDouble() ?? 0),
     ],
-    seconds: [for (final m in (d['moments'] as List? ?? const [])) (m['e'] as num).toDouble()].fold(0.0, math.max),
+    clip: clip,
+    seconds: (d['seconds'] as num?)?.toDouble() ??
+        [for (final m in (d['moments'] as List? ?? const [])) (m['e'] as num).toDouble()].fold(0.0, math.max),
   );
 }
 

@@ -16,8 +16,8 @@ String clock(double s) => '${s ~/ 60}:${(s.floor() % 60).toString().padLeft(2, '
 
 /// The checked clip with what was found in it: a dark player, a timeline with
 /// coloured stretches (pink = sound, blue = picture), and one pill per moment.
-/// Tapping a pill plays just that part of the clip. The clip is never uploaded and
-/// is deleted when the result closes.
+/// Tapping a pill plays just that part of the clip. The clip is never uploaded; after
+/// Save it is kept as video, sound only, or not at all (Settings).
 class ClipReplay extends StatefulWidget {
   const ClipReplay({super.key, required this.clip, required this.seconds, required this.moments});
   final String? clip;
@@ -121,7 +121,13 @@ class _ClipReplayState extends State<ClipReplay> {
                     ),
                   )
                 else
-                  const Center(child: Icon(Icons.graphic_eq_rounded, size: 64, color: Colors.white24)),
+                  Column(mainAxisAlignment: MainAxisAlignment.end, children: [
+                    Text(v == null ? 'Clip not kept · moments below' : 'Sound only',
+                        style: t.textTheme.labelMedium!.copyWith(color: Colors.white70)),
+                    const SizedBox(height: Tokens.space3),
+                  ]),
+                if (!hasPicture) const Center(child: Icon(Icons.graphic_eq_rounded, size: 120, color: Colors.white10)),
+                if (v != null)
                 Center(
                   child: Semantics(
                     button: true,

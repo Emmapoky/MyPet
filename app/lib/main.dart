@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:material_ui/material_ui.dart';
 import 'package:path_provider/path_provider.dart';
 
+import 'behaviour/analysis.dart' show ClipKeep;
 import 'data/bootstrap.dart';
 import 'notify/reminder_notifications.dart';
 import 'state/app_state.dart';
@@ -24,8 +25,17 @@ Future<void> main() async {
     final tour = File('${(await getApplicationSupportDirectory()).path}/tour.txt');
     state.tourSeen = await tour.exists();
     state.onTourSeen = () => tour.writeAsString('seen');
-    // Pet photos stay on this phone only.
-    state.photoDir = '${(await getApplicationDocumentsDirectory()).path}/pet_photos';
+    // Pet photos and the clips of saved checks stay on this phone only.
+    final docs = (await getApplicationDocumentsDirectory()).path;
+    state.photoDir = '$docs/pet_photos';
+    state.clipDir = '$docs/check_clips';
+    // Saved clips: video, sound or none, remembered like the look.
+    final keep = File('${(await getApplicationSupportDirectory()).path}/clips.txt');
+    if (await keep.exists()) {
+      final saved = (await keep.readAsString()).trim();
+      state.clipKeep = ClipKeep.values.firstWhere((k) => k.name == saved, orElse: () => ClipKeep.video);
+    }
+    state.onClipKeepChanged = (k) => keep.writeAsString(k.name);
   } catch (_) {}
   runApp(MyPetApp(state: state));
   // Pet data arrives a moment after start; the first log opens once it is there.

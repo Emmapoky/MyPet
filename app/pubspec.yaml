@@ -97,6 +97,8 @@ flutter:
     - assets/behaviour/
     - assets/sounds/
     - assets/illustrations/
+    # Free-licence demo clips for More > Try a demo (credits in clips.json).
+    - assets/demo_clips/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

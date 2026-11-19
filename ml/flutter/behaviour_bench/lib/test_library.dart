@@ -9,6 +9,8 @@
 //   WAV (48 kHz mono 16-bit, at most 10 s) -> clap_features (Dart, isolate)
 //   -> quantized CLAP ONNX -> 512 numbers scaled to length 1
 //   -> logistic regression (classifiers.json) -> likelihood per label.
+// Video clips (step 13) also have 3 frames (.rgb): the CLIP image model checks a
+// dog or cat is in view, and for dogs the picture's feeling is combined with the sound's.
 // It also compares the phone's likelihoods with Python's (manifest.json), so we
 // know the phone gives the same answers as the training script.
 import 'dart:convert';
@@ -21,8 +23,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_onnxruntime/flutter_onnxruntime.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'analysis.dart' show PhotoCheck;
+
 const _dir = 'assets/test_library';
 const _modelAsset = 'assets/models/clap_audio_quantized.onnx';
+const _visionAsset = 'assets/models/clip_vision_quantized.onnx';
 
 const taskTitles = {
   'cat_context': 'Likely feeling',
@@ -98,10 +103,11 @@ class Clip {
         group = j['group'] ?? 'dataset',
         soundTruth = j['sound_truth'],
         source = j['source'] ?? '',
+        frames = j['frames'],
         tasks = {...Map<String, String>.from(j['truth']).keys, ...List<String>.from(j['tasks'] ?? const [])}.toList(),
         python = (j['python'] as Map).map((k, v) => MapEntry(k as String, (v as List).map((x) => (x as num).toDouble()).toList()));
   final String file, species, animal, group, source;
-  final String? soundTruth;
+  final String? soundTruth, frames;
   final List<String> tasks;
   final double seconds;
   final Map<String, String> truth;
@@ -160,6 +166,7 @@ class TestLibraryPage extends StatefulWidget {
 class _TestLibraryPageState extends State<TestLibraryPage> {
   Map<String, Classifier> _clf = {};
   SoundEvidence? _sound;
+  PhotoCheck? _photo;
   List<String> get _soundKeys => _sound?.keys ?? const [];
   List<Clip> _clips = [];
   String _filter = 'all';
@@ -189,7 +196,12 @@ class _TestLibraryPageState extends State<TestLibraryPage> {
       try {
         sound = SoundEvidence(jsonDecode(await rootBundle.loadString('$_dir/sound_evidence.json')));
       } catch (_) {}
+      PhotoCheck? photo;
+      try {
+        photo = PhotoCheck(jsonDecode(await rootBundle.loadString('$_dir/photo_classifiers.json')));
+      } catch (_) {}
       setState(() {
+        _photo = photo;
         _sound = sound;
         _clf = c.map((k, v) => MapEntry(k, Classifier(v)));
         _clips = m.map((j) => Clip(j)).toList();
@@ -209,6 +221,10 @@ class _TestLibraryPageState extends State<TestLibraryPage> {
       }
     });
     final session = await OnnxRuntime().createSessionFromAsset(_modelAsset);
+    final ph = _photo;
+    final vision = ph != null && _clips.any((c) => c.frames != null)
+        ? await OnnxRuntime().createSessionFromAsset(_visionAsset)
+        : null;
     try {
       for (final clip in _clips) {
         final sw = Stopwatch()..start();
@@ -227,16 +243,48 @@ class _TestLibraryPageState extends State<TestLibraryPage> {
           for (final t in clip.tasks) t: _clf[t]!.probs(emb),
           if (_sound != null) 'sound': _sound!.probs(emb),
         };
+        if (clip.frames != null && vision != null && ph != null) {
+          final v = await _pictureEmbedding(vision, ph, (await rootBundle.load('$_dir/${clip.frames}')).buffer.asUint8List());
+          clip.phone!['picture_gate'] = ph.gate.probs(v);
+          if (clip.species == 'dog') {
+            final pp = ph.dog.probs(v);
+            clip.phone!['dog_photo'] = pp;
+            final ps = clip.phone!['dog_report']!;
+            clip.phone!['combined'] = ph.gate.speciesOf(clip.phone!['picture_gate']!) == 'dog'
+                ? [for (var i = 0; i < ps.length; i++) ph.soundWeight * ps[i] + (1 - ph.soundWeight) * pp[i]]
+                : ps;
+          }
+        }
         clip.ms = sw.elapsedMilliseconds;
         if (mounted) setState(() => _done++);
       }
     } finally {
       await session.close();
+      await vision?.close();
     }
     final s = _summary();
     // ignore: avoid_print
     print('LIBRARY_JSON ${jsonEncode(s)}');
     if (mounted) setState(() => _running = false);
+  }
+
+  /// 3 raw 224x224 RGB frames -> CLIP image embeddings, averaged and scaled to length 1.
+  Future<List<double>> _pictureEmbedding(OrtSession s, PhotoCheck ph, Uint8List raw) async {
+    const size = 224 * 224 * 3;
+    List<double>? sum;
+    for (var f = 0; f + size <= raw.length; f += size) {
+      final input = await OrtValue.fromList(ph.toInput(Uint8List.sublistView(raw, f, f + size)), [1, 3, 224, 224]);
+      final out = await s.run({ph.inputName: input});
+      final e = (await out[ph.outputName]!.asFlattenedList()).map((v) => (v as num).toDouble()).toList();
+      await input.dispose();
+      for (final v in out.values) {
+        await v.dispose();
+      }
+      final n = math.sqrt(e.fold(0.0, (a, v) => a + v * v));
+      sum = sum == null ? [for (final v in e) v / n] : [for (var i = 0; i < e.length; i++) sum[i] + e[i] / n];
+    }
+    final n = math.sqrt(sum!.fold(0.0, (a, v) => a + v * v));
+    return [for (final v in sum) v / n];
   }
 
   /// Scores per task on the clips that have been run, plus the largest gap to Python's likelihoods.
@@ -287,6 +335,27 @@ class _TestLibraryPageState extends State<TestLibraryPage> {
         };
       }
     }
+    final ph = _photo;
+    if (ph != null) {
+      final vids = _clips.where((c) => c.phone?['picture_gate'] != null).toList();
+      if (vids.isNotEmpty) {
+        out['videos'] = {
+          'clips': vids.length,
+          'species_from_picture_right': vids.where((c) => ph.gate.speciesOf(c.phone!['picture_gate']!) == c.species).length,
+          'species_from_sound_right':
+              vids.where((c) => _sound != null && _sound!.speciesOf(c.phone!['sound']!) == c.species).length,
+        };
+        for (final c in vids) {
+          for (final k in ['picture_gate', 'dog_photo']) {
+            final a = c.phone![k], b = c.python[k];
+            if (a == null || b == null) continue;
+            for (var i = 0; i < a.length; i++) {
+              maxGap = math.max(maxGap, (a[i] - b[i]).abs());
+            }
+          }
+        }
+      }
+    }
     for (final c in _clips) {
       if (c.ms != null) ms.add(c.ms!);
     }
@@ -328,7 +397,8 @@ class _TestLibraryPageState extends State<TestLibraryPage> {
       rows.add(Text('${_clips.length} clips ready: '
           '${_clips.where((c) => c.species == 'cat' && c.group != 'online').length} cat meows, '
           '${_clips.where((c) => c.species == 'dog' && c.group != 'online').length} dog barks from animals the model never saw, '
-          '${_clips.where((c) => c.group == 'online').length} online clips and videos.'));
+          '${_clips.where((c) => c.group == 'online').length} online clips, '
+          '${_clips.where((c) => c.group == 'video').length} videos (picture and sound).'));
     } else {
       final sp = s['species_from_sound'];
       if (sp != null) {
@@ -336,6 +406,11 @@ class _TestLibraryPageState extends State<TestLibraryPage> {
       }
       final ot = s['online_sound_type'];
       if (ot != null) rows.add(Text('Online clips: right sound type on ${ot['right']} of ${ot['clips']}'));
+      final vd = s['videos'];
+      if (vd != null) {
+        rows.add(Text('Videos: the picture names the right animal on ${vd['species_from_picture_right']} of ${vd['clips']}, '
+            'the sound on ${vd['species_from_sound_right']}'));
+      }
       rows.add(Text('Chance is about 33% for three labels and 25% for four. '
           'Median ${s['median_ms_per_clip']} ms per clip. '
           'Largest difference from Python: ${s['max_gap_vs_python']}'));
@@ -390,6 +465,20 @@ class _TestLibraryPageState extends State<TestLibraryPage> {
       lines.add(Text('Sounds like: ${order.take(2).map((i) => '${_sound!.names[i]} ${(100 * sp[i]).round()}%').join(', ')}',
           style: Theme.of(context).textTheme.bodySmall));
     }
+    final pg = c.phone?['picture_gate'];
+    final ph = _photo;
+    if (pg != null && ph != null) {
+      final seen = ph.gate.speciesOf(pg);
+      final ord = List.generate(pg.length, (i) => i)..sort((a, b) => pg[b].compareTo(pg[a]));
+      lines.add(Text('Picture ${seen == c.species ? '✓' : '✗'}: ${ph.gate.keys[ord.first]} ${(100 * pg[ord.first]).round()}%, '
+          'or ${ph.gate.keys[ord[1]]} ${(100 * pg[ord[1]]).round()}%',
+          style: Theme.of(context).textTheme.bodySmall));
+      final cb = c.phone?['combined'];
+      if (cb != null) {
+        final k = argmax(cb);
+        lines.add(Text('Sound and picture together: ${_clf['dog_report']!.names[k]} ${(100 * cb[k]).round()}%'));
+      }
+    }
     return Card(
       child: ExpansionTile(
         leading: IconButton(
@@ -429,7 +518,9 @@ class _TestLibraryPageState extends State<TestLibraryPage> {
   @override
   Widget build(BuildContext context) {
     final shown = _clips
-        .where((c) => _filter == 'all' || (_filter == 'online' ? c.group == 'online' : c.group != 'online' && c.species == _filter))
+        .where((c) =>
+            _filter == 'all' ||
+            (_filter == 'online' || _filter == 'video' ? c.group == _filter : c.group == 'dataset' && c.species == _filter))
         .toList();
     return Scaffold(
       appBar: AppBar(title: const Text('Test library')),
@@ -438,7 +529,7 @@ class _TestLibraryPageState extends State<TestLibraryPage> {
           : ListView(
               padding: const EdgeInsets.all(12),
               children: [
-                const Text('Real cat and dog sounds the model never trained on. '
+                const Text('Real cat and dog sounds and videos the model never trained on. '
                     'Likelihoods only, not a diagnosis.'),
                 const SizedBox(height: 8),
                 FilledButton(
@@ -449,9 +540,9 @@ class _TestLibraryPageState extends State<TestLibraryPage> {
                 const SizedBox(height: 8),
                 _summaryCard(),
                 Wrap(spacing: 8, children: [
-                  for (final f in ['all', 'cat', 'dog', 'online'])
+                  for (final f in ['all', 'cat', 'dog', 'online', 'video'])
                     ChoiceChip(
-                      label: Text({'all': 'All', 'cat': 'Cats', 'dog': 'Dogs', 'online': 'Online clips'}[f]!),
+                      label: Text({'all': 'All', 'cat': 'Cats', 'dog': 'Dogs', 'online': 'Online clips', 'video': 'Videos'}[f]!),
                       selected: _filter == f,
                       onSelected: (_) => setState(() => _filter = f),
                     ),

@@ -20,6 +20,8 @@ Rules these follow (Dr Yam, 18 Sep 2026; proposal report): machine learning, not
 | 9 | `09_compare_free_models.ipynb`: is another free audio model better than CLAP? (AST, YAMNet, PANNs) | Done 19 Nov 2026 |
 | 10 | ML Lab "Try a clip": record near a pet or pick a video on the phone | Done 19 Nov 2026 (iPhone) |
 | 11 | `build_photo_check.py`, `check_short_clips.py`: the picture half of the clip check, and 5 s vs 10 s clips | Done 19 Nov 2026 (Mac); picture on the iPhone not yet run |
+| 12 | `12_how_many_clips.ipynb`: learning curves, how many labelled clips the check needs, and whether more animals or more clips help | Running |
+| 13 | `build_video_library.py`: real Commons videos of dogs and cats in the Test library, checked by picture and sound | Running |
 | later | Android timing on a borrowed phone; YAMNet only if needed | Later |
 
 ## For Li Shen: how to retrain and test
@@ -36,6 +38,7 @@ python3 -m venv .venv
 .venv/bin/python tool/build_online_test.py                     # step 8: adds 144 online clips
 .venv/bin/python tool/build_photo_check.py                     # step 11: picture model, gate, combine weight
 .venv/bin/python tool/check_short_clips.py                     # step 11b: 5 s vs 10 s clips
+.venv/bin/python tool/build_video_library.py                   # step 13: videos (picture + sound) in the Test library
 
 flutter pub get
 flutter run -d <iphone-id> --profile                           # ML Lab home: Test library, Try a clip, Timing

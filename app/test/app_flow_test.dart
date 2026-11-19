@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart' show AxisDirection, Offset, Scrollable;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mypet/data/local_backend.dart';
 import 'package:mypet/detection/change_detector.dart';
@@ -103,6 +104,9 @@ void main() {
     final s = await signedInState();
     await addDemoPets(s);
     await t.pumpWidget(MyPetApp(state: s));
+    await settle(t);
+    await t.drag(find.byWidgetPredicate((w) => w is Scrollable && w.axisDirection == AxisDirection.down).first,
+        const Offset(0, -500));
     await settle(t);
     expect(find.textContaining('Missed'), findsWidgets);
   });

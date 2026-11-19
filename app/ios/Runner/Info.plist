@@ -4,6 +4,8 @@
 <dict>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Pick a video of your pet for the behaviour check. Only its sound is used, and it is not kept.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>MyPet films a 5 to 10 second clip only when you tap Record. It is checked on this phone and then deleted.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>MyPet uses the microphone only when you tap Record (10 seconds of your pet's sounds) or the mic on a note. Sound is checked on this phone and then deleted.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>

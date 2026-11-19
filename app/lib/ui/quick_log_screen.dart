@@ -161,7 +161,6 @@ class _QuickLogScreenState extends State<QuickLogScreen> {
     final t = Theme.of(context);
     final c = MyPetColors.of(context);
     final pet = widget.pet;
-    final fromLast = last != null && sameAsLast;
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.editing == null ? 'Log for ${pet.name}' : 'Edit log'),
@@ -288,14 +287,6 @@ class _QuickLogScreenState extends State<QuickLogScreen> {
             FilledButton(
               onPressed: complete && !saving ? _save : null,
               child: Text(complete ? 'Save' : 'Answer 1, 2 and 3 to save'),
-            ),
-            const SizedBox(height: Tokens.space2),
-            Text(
-              fromLast
-                  ? 'Filled in from your last entry. Change anything that is different.'
-                  : 'Missed days stay blank. They are never counted as zero.',
-              style: t.textTheme.bodySmall,
-              textAlign: TextAlign.center,
             ),
           ]),
         ),

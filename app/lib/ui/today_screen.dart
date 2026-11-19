@@ -2,7 +2,6 @@ import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
-import '../config/thresholds.dart';
 import '../models/care_entry.dart';
 import '../models/pet.dart';
 import '../models/schedule.dart';
@@ -17,6 +16,7 @@ import 'theme.dart';
 import 'widgets/common.dart';
 import 'widgets/entry_tile.dart';
 import 'widgets/flag_card.dart';
+import 'widgets/logo.dart';
 import 'widgets/pet_bar.dart';
 
 /// The time the missed-day reminder fires if a pet is not logged (FR21; Figma "Due by 9:00 pm").
@@ -33,10 +33,15 @@ class TodayScreen extends StatelessWidget {
     final pet = s.selectedPet;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Today'),
+        titleSpacing: Tokens.space4,
+        title: const Row(children: [
+          LogoMark(size: 32),
+          SizedBox(width: Tokens.space2),
+          Text('MyPet'),
+        ]),
         actions: const [SyncBadge(), MoreMenu()],
       ),
-      body: pet == null ? const _NoPets() : _TodayBody(pet: pet),
+      body: PageWash(child: pet == null ? const _NoPets() : _TodayBody(pet: pet)),
     );
   }
 }
@@ -51,8 +56,7 @@ class _NoPets extends StatelessWidget {
           EmptyState(
             icon: Icons.pets_rounded,
             title: 'Add your cat or dog',
-            body: 'MyPet keeps a quick daily log, learns what is normal for your pet, '
-                'and tells you when something changes.',
+            body: 'Log a few taps a day. MyPet learns their normal.',
             action: FilledButton.icon(
               icon: const Icon(Icons.add_rounded),
               onPressed: () => Navigator.of(context)
@@ -78,20 +82,6 @@ class _TodayBody extends StatelessWidget {
   const _TodayBody({required this.pet});
   final Pet pet;
 
-  String _caption(AppState s) {
-    final parts = <String>[pet.species == Species.cat ? 'Cat' : 'Dog'];
-    final b = pet.birthDate;
-    if (b != null) {
-      final now = s.now();
-      var months = (now.year - b.year) * 12 + now.month - b.month;
-      if (now.day < b.dayOfMonth) months--;
-      parts.add(months >= 24 ? '${months ~/ 12} years' : '$months months');
-    }
-    final logged = s.detectionOf(pet.id)?.loggedDays ?? 0;
-    if (logged > 0) parts.add('day $logged of logging');
-    return parts.join(' · ');
-  }
-
   List<_CareRow> _rows(BuildContext context, AppState s) {
     final now = s.now();
     final today = s.today;
@@ -104,9 +94,9 @@ class _TodayBody extends StatelessWidget {
     final todayLog = logs.where((e) => e.day == today).firstOrNull;
     final due = DateTime(now.year, now.month, now.day, dailyLogDueMinutes ~/ 60, dailyLogDueMinutes % 60);
     rows.add(todayLog != null
-        ? _CareRow('Daily log', _RowState.done, 'Logged ${time(todayLog.createdAt)}')
+        ? _CareRow('Daily log', _RowState.done, time(todayLog.createdAt))
         : _CareRow('Daily log', now.isAfter(due) ? _RowState.missed : _RowState.todo,
-            'Due by ${time(due)}', () => _openLog(context)));
+            'By ${time(due)}', () => _openLog(context)));
 
     // Days in the last week with no log, since the pet was added (FR21 shown on Today).
     final loggedDays = {for (final e in logs) e.day};
@@ -117,7 +107,7 @@ class _TodayBody extends StatelessWidget {
       final d = today.addDays(-i);
       if (d.isBefore(start)) break;
       if (!loggedDays.contains(d)) {
-        rows.add(_CareRow('Daily log', _RowState.missed, 'Missed · ${date(d.asDateTime)}'));
+        rows.add(_CareRow('Daily log', _RowState.missed, 'Missed ${date(d.asDateTime)}'));
       }
     }
 
@@ -140,18 +130,17 @@ class _TodayBody extends StatelessWidget {
           });
       rows.add(switch (o.state) {
         OccurrenceState.done =>
-          _CareRow(o.reminder.title, _RowState.done, 'Logged ${time(done[key]!)}'),
-        OccurrenceState.due => _CareRow(o.reminder.title, _RowState.todo, 'Due by ${time(o.at)}', tick),
+          _CareRow(o.reminder.title, _RowState.done, time(done[key]!)),
+        OccurrenceState.due => _CareRow(o.reminder.title, _RowState.todo, 'By ${time(o.at)}', tick),
         OccurrenceState.missed => _CareRow(
             o.reminder.title,
             _RowState.missed,
-            DateUtils.isSameDay(o.at, now) ? 'Missed · ${time(o.at)}' : 'Missed · ${date(o.at)}',
+            DateUtils.isSameDay(o.at, now) ? 'Missed ${time(o.at)}' : 'Missed ${date(o.at)}',
             tick),
       });
     }
     if (older.length > 2) {
-      rows.add(_CareRow('${older.length - 2} more missed', _RowState.missed,
-          'See Reminders', () => s.goToTab(4)));
+      rows.add(_CareRow('${older.length - 2} more missed', _RowState.missed, '', () => s.goToTab(4)));
     }
     return rows;
   }
@@ -175,10 +164,48 @@ class _TodayBody extends StatelessWidget {
     final recent = timeline.current.take(6).toList();
     final rows = _rows(context, s);
 
+    final pets = s.activePets;
+    final loggedCount = pets.where((p) => s.loggedToday(p.id)).length;
+    final tasks = rows.where((r) => r.state != _RowState.missed || r.detail.isNotEmpty).toList();
+    final tasksDone = rows.where((r) => r.state == _RowState.done).length;
+    final accent = c.petAccent(pet.id);
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(Tokens.space4, Tokens.space2, Tokens.space4, Tokens.space5),
       children: [
-        if (logged) ...[
+        HeroCard(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(_greeting(s.now()),
+                      style: t.textTheme.headlineSmall!.copyWith(color: Colors.white)),
+                  Text(DateFormat('EEEE d MMMM').format(s.now()),
+                      style: t.textTheme.titleSmall!.copyWith(color: Colors.white)),
+                ]),
+              ),
+              PetAvatar(pet: pet, size: 52, onHero: true),
+            ]),
+            const SizedBox(height: Tokens.space4),
+            Row(children: [
+              HeroStat(value: '$loggedCount/${pets.length}', caption: 'logged'),
+              const SizedBox(width: Tokens.space2),
+              HeroStat(value: '$tasksDone/${tasks.length}', caption: 'done'),
+              const SizedBox(width: Tokens.space2),
+              HeroStat(value: '${flags.length}', caption: 'to look at'),
+            ]),
+          ]),
+        ),
+        const SizedBox(height: Tokens.space4),
+        if (pets.length > 1) ...[
+          PetStrip(pets: pets, selected: pet.id),
+          const SizedBox(height: Tokens.space4),
+        ],
+        for (final f in flags) ...[
+          FlagCard(flag: f, pet: pet, compact: true, onTap: () => s.goToTab(3)),
+          const SizedBox(height: Tokens.space4),
+        ],
+        if (logged)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: Tokens.space4, vertical: Tokens.space3),
             decoration: BoxDecoration(
@@ -186,54 +213,27 @@ class _TodayBody extends StatelessWidget {
               borderRadius: BorderRadius.circular(Tokens.radiusInput),
             ),
             child: Row(children: [
-              Icon(Icons.check_circle_outline_rounded, color: c.onLoggedContainer),
+              Icon(Icons.check_circle_rounded, color: c.loggedEdge),
               const SizedBox(width: Tokens.space3),
               Expanded(
-                child: Text('${justSaved ? 'Saved. ' : ''}${pet.name} is logged for today.',
+                child: Text(justSaved ? 'Saved' : '${pet.name} is logged',
                     style: t.textTheme.titleSmall!.copyWith(color: c.onLoggedContainer)),
               ),
             ]),
-          ),
-          const SizedBox(height: Tokens.space4),
-        ],
-        for (final f in flags) ...[
-          FlagCard(flag: f, pet: pet, onTap: () => s.goToTab(3)),
-          const SizedBox(height: Tokens.space4),
-        ],
-        if (!logged) ...[
-          Row(children: [
-            const PetAvatar(),
-            const SizedBox(width: Tokens.space4),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(pet.name, style: t.textTheme.titleLarge),
-                Text(_caption(s), style: t.textTheme.bodySmall),
-              ]),
-            ),
-            IconButton.filledTonal(
-                tooltip: 'Switch pet',
-                style: IconButton.styleFrom(
-                  backgroundColor: t.colorScheme.surfaceContainer,
-                  minimumSize: const Size(48, 48),
-                ),
-                icon: const Icon(Icons.swap_horiz_rounded),
-                onPressed: () => showPetSwitcher(context),
-              ),
-          ]),
-          const SizedBox(height: Tokens.space4),
-        ],
-        MyCard(
-          title: logged ? "${pet.name}'s care today" : "Today's care",
-          padding: const EdgeInsets.fromLTRB(Tokens.space4, Tokens.space4, Tokens.space4, Tokens.space2),
-          child: Column(children: [for (final r in rows) _CareRowTile(row: r)]),
-        ),
-        const SizedBox(height: Tokens.space4),
-        if (!logged)
+          )
+        else
           FilledButton.icon(
             icon: const Icon(Icons.edit_note_rounded),
             label: const Text('Log now'),
             onPressed: () => _openLog(context),
           ),
+        const SizedBox(height: Tokens.space4),
+        MyCard(
+          title: "${pet.name}'s day",
+          accent: accent,
+          padding: const EdgeInsets.fromLTRB(Tokens.space4, Tokens.space4, Tokens.space4, Tokens.space2),
+          child: Column(children: [for (final r in rows) _CareRowTile(row: r)]),
+        ),
         SectionTitle(
           'Timeline',
           trailing: TextButton(
@@ -243,9 +243,12 @@ class _TodayBody extends StatelessWidget {
           ),
         ),
         if (recent.isEmpty)
-          Text('Nothing logged yet.', style: t.textTheme.bodyMedium)
+          Text('Nothing yet', style: t.textTheme.bodyMedium)
         else
-          for (final e in recent) EntryTile(entry: e, today: s.today),
+          MyCard(
+            padding: const EdgeInsets.symmetric(horizontal: Tokens.space3, vertical: Tokens.space2),
+            child: Column(children: [for (final e in recent) EntryTile(entry: e, today: s.today, dot: accent)]),
+          ),
         if (logged) ...[
           const SizedBox(height: Tokens.space4),
           OutlinedButton.icon(
@@ -254,17 +257,15 @@ class _TodayBody extends StatelessWidget {
             onPressed: () => _openLog(context),
           ),
         ],
-        if (result != null && !result.ready && result.loggedDays > 0) ...[
-          const SizedBox(height: Tokens.space4),
-          Text(
-            'Insights unlock after ${Thresholds.minLoggedDays} logged days. '
-            '${result.loggedDays} of ${Thresholds.minLoggedDays} so far.',
-            style: t.textTheme.bodySmall,
-          ),
-        ],
       ],
     );
   }
+
+  static String _greeting(DateTime now) => switch (now.hour) {
+        >= 5 && < 12 => 'Good morning',
+        >= 12 && < 18 => 'Good afternoon',
+        _ => 'Good evening',
+      };
 }
 
 class _CareRowTile extends StatelessWidget {
@@ -277,7 +278,7 @@ class _CareRowTile extends StatelessWidget {
     final c = MyPetColors.of(context);
     final (icon, color, label) = switch (row.state) {
       _RowState.todo => (Icons.radio_button_unchecked_rounded, t.colorScheme.outline, 'To do'),
-      _RowState.done => (Icons.check_circle_outline_rounded, c.onLoggedContainer, 'Done'),
+      _RowState.done => (Icons.check_circle_rounded, c.loggedEdge, 'Done'),
       _RowState.missed => (Icons.error_outline_rounded, c.onChangeContainer, 'Missed'),
     };
     final detailColor = switch (row.state) {
@@ -300,12 +301,10 @@ class _CareRowTile extends StatelessWidget {
               const SizedBox(width: Tokens.space2),
               Icon(icon, color: color),
               const SizedBox(width: Tokens.space4),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(row.title, style: t.textTheme.titleSmall),
-                  Text(row.detail, style: t.textTheme.bodySmall!.copyWith(color: detailColor)),
-                ]),
-              ),
+              Expanded(child: Text(row.title, style: t.textTheme.titleSmall)),
+              if (row.detail.isNotEmpty)
+                Text(row.detail, style: t.textTheme.bodySmall!.copyWith(color: detailColor)),
+              const SizedBox(width: Tokens.space2),
             ]),
           ),
         ),

@@ -70,9 +70,9 @@ void main() {
     await shot(t, '11-pets');
     s.goToTab(2);
     await shot(t, '07-record');
-    await t.tap(find.bySemanticsLabel('Record 10 seconds'));
+    await t.tap(find.bySemanticsLabel('Record a clip'));
     await t.pump();
-    await t.pump(const Duration(seconds: 3));
+    await t.pump(const Duration(seconds: 6));
     await expectLater(find.byType(MyPetApp), matchesGoldenFile('out/08-recording.png'));
     await t.tap(find.bySemanticsLabel('Stop recording'));
     await shot(t, '09-result');
@@ -90,7 +90,7 @@ void main() {
       s.goToTab(2);
       await t.pumpWidget(MyPetApp(state: s, engine: FakeEngine(emb)));
       await t.pumpAndSettle();
-      await t.tap(find.text('Choose a video or audio file'));
+      await t.tap(find.text('Choose a video'));
       await shot(t, name);
     });
   }

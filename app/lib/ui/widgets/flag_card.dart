@@ -9,8 +9,11 @@ import '../wording.dart';
 /// much and over what window (FR15), softer when the baseline is thin (FR16), and the
 /// no-diagnosis line (FR-N01). Amber, never red.
 class FlagCard extends StatelessWidget {
-  const FlagCard({super.key, required this.flag, required this.pet, this.onTap});
+  const FlagCard({super.key, required this.flag, required this.pet, this.onTap, this.compact = false});
   final ChangeFlag flag;
+
+  /// Today shows the short version; Insights shows the evidence line (FR15).
+  final bool compact;
   final Pet pet;
   final VoidCallback? onTap;
 
@@ -34,10 +37,12 @@ class FlagCard extends StatelessWidget {
         ]),
         const SizedBox(height: Tokens.space2),
         Text(Wording.flagBody(flag, pet), style: t.textTheme.bodyLarge),
+        if (!compact) ...[
+          const SizedBox(height: Tokens.space2),
+          Text(early ? Wording.flagThinLine(flag) : Wording.flagEvidenceLine(flag), style: caption),
+        ],
         const SizedBox(height: Tokens.space2),
-        Text(early ? Wording.flagThinLine(flag) : Wording.flagEvidenceLine(flag), style: caption),
-        const SizedBox(height: Tokens.space2),
-        Text(Wording.notDiagnosis, style: caption),
+        Text(compact ? 'Not a diagnosis · tap for details' : Wording.notDiagnosis, style: caption),
       ]),
     );
     return Semantics(
@@ -45,12 +50,18 @@ class FlagCard extends StatelessWidget {
       child: Material(
         color: early ? t.colorScheme.surface : c.changeContainer,
         borderRadius: BorderRadius.circular(Tokens.radiusCard),
+        clipBehavior: Clip.antiAlias,
         child: InkWell(
           borderRadius: BorderRadius.circular(Tokens.radiusCard),
           onTap: onTap,
           child: early
               ? CustomPaint(painter: _DashedBorder(on), child: content)
-              : content,
+              : IntrinsicHeight(
+                  child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    Container(width: Tokens.accentEdge, color: c.changeEdge),
+                    Expanded(child: content),
+                  ]),
+                ),
         ),
       ),
     );

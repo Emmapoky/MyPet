@@ -22,8 +22,11 @@ class CheckScreen extends StatefulWidget {
   /// The Check tab's index in the bottom tabs.
   static const tabIndex = 2;
 
-  /// Length of a recording (report Table 4.1).
+  /// Longest clip (report Table 4.1: 10 s; shorter clips are repeat-padded).
   static const seconds = 10;
+
+  /// Shortest clip before Stop is allowed.
+  static const minSeconds = 5;
 
   @override
   State<CheckScreen> createState() => _CheckScreenState();
@@ -37,8 +40,8 @@ class _CheckScreenState extends State<CheckScreen> {
   bool _ready = false;
   String? _problem;
   int _left = CheckScreen.seconds;
-  final List<double> _levels = [];
-  StreamSubscription<double>? _levelSub;
+  bool _cameraOn = false;
+  bool _cameraAsked = false;
   Timer? _timer;
   CheckOutcome? _outcome;
   Pet? _checkedPet;
@@ -51,7 +54,6 @@ class _CheckScreenState extends State<CheckScreen> {
   @override
   void dispose() {
     _timer?.cancel();
-    _levelSub?.cancel();
     super.dispose();
   }
 
@@ -59,6 +61,7 @@ class _CheckScreenState extends State<CheckScreen> {
   void _loadOnce() {
     if (_loadStarted) return;
     _loadStarted = true;
+    _openCamera();
     _engine.load().then((_) {
       if (mounted) setState(() => _ready = true);
     }, onError: (Object e) {
@@ -66,23 +69,28 @@ class _CheckScreenState extends State<CheckScreen> {
     });
   }
 
+  Future<void> _openCamera() async {
+    final ok = await _engine.openCamera();
+    if (mounted) {
+      setState(() {
+        _cameraOn = ok;
+        _cameraAsked = true;
+      });
+    }
+  }
+
   Future<void> _record(Pet pet) async {
-    if (!await _engine.micAllowed()) {
-      _say('Microphone access is off. Turn it on in Settings, then try again.');
-      return;
+    if (!_cameraOn) {
+      await _openCamera();
+      if (!_cameraOn) {
+        _say('Camera or microphone access is off. Turn them on in Settings, or choose a video.');
+        return;
+      }
     }
     await _engine.startRecording();
     setState(() {
       _step = _Step.recording;
       _left = CheckScreen.seconds;
-      _levels.clear();
-    });
-    _levelSub = _engine.level.listen((v) {
-      if (!mounted) return;
-      setState(() {
-        _levels.add(v);
-        if (_levels.length > _Wave.bars) _levels.removeAt(0);
-      });
     });
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (_left <= 1) {
@@ -95,8 +103,6 @@ class _CheckScreenState extends State<CheckScreen> {
 
   Future<void> _stop(Pet pet) async {
     _timer?.cancel();
-    unawaited(_levelSub?.cancel());
-    _levelSub = null;
     if (_step != _Step.recording) return;
     final path = await _engine.stopRecording();
     await _check(pet, path, picked: false);
@@ -141,7 +147,6 @@ class _CheckScreenState extends State<CheckScreen> {
       _step = _Step.record;
       _outcome = null;
       _left = CheckScreen.seconds;
-      _levels.clear();
     });
   }
 
@@ -170,10 +175,10 @@ class _CheckScreenState extends State<CheckScreen> {
     return Scaffold(
       appBar: AppBar(
         leading: onResult ? BackButton(onPressed: _reset) : null,
-        title: Text(onResult ? 'Result' : 'Behaviour check'),
+        title: Text(onResult ? 'Result' : 'Check'),
         actions: const [MoreMenu()],
       ),
-      body: SafeArea(child: _body(context, s, pet)),
+      body: PageWash(child: SafeArea(child: _body(context, s, pet))),
     );
   }
 
@@ -208,12 +213,13 @@ class _CheckScreenState extends State<CheckScreen> {
       );
     }
     return _RecordView(
+      camera: _cameraOn ? _engine.preview() : null,
+      cameraAsked: _cameraAsked,
       pet: pet,
       step: _step,
       ready: _ready,
       left: _left,
-      levels: _levels,
-      canSwitch: s.activePets.length > 1,
+      pets: s.activePets,
       onRecord: () => _record(pet),
       onStop: () => _stop(pet),
       onPick: () => _pick(pet),
@@ -225,112 +231,171 @@ String _speciesWord(Species s) => s == Species.cat ? 'cat' : 'dog';
 
 class _RecordView extends StatelessWidget {
   const _RecordView({
+    required this.camera,
+    required this.cameraAsked,
     required this.pet,
     required this.step,
     required this.ready,
     required this.left,
-    required this.levels,
-    required this.canSwitch,
+    required this.pets,
     required this.onRecord,
     required this.onStop,
     required this.onPick,
   });
+  final Widget? camera;
+  final bool cameraAsked;
   final Pet pet;
   final _Step step;
   final bool ready;
   final int left;
-  final List<double> levels;
-  final bool canSwitch;
+  final List<Pet> pets;
   final VoidCallback onRecord, onStop, onPick;
 
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context);
-    final c = MyPetColors.of(context);
     final recording = step == _Step.recording;
     final checking = step == _Step.checking;
-    final sounds = pet.species == Species.cat ? 'meowing' : 'barking, whining or growling';
+    final elapsed = recording ? CheckScreen.seconds - left : 0;
+    final canStop = elapsed >= CheckScreen.minSeconds;
     return ListView(
       padding: const EdgeInsets.fromLTRB(Tokens.space4, Tokens.space2, Tokens.space4, Tokens.space4),
       children: [
-        Material(
-          color: c.surfaceTint,
-          borderRadius: BorderRadius.circular(Tokens.radiusCard),
-          child: Padding(
-            padding: const EdgeInsets.all(Tokens.space4),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Row(children: [
-                    Icon(Icons.pets_rounded, size: 20, color: t.colorScheme.onPrimaryContainer),
-                    const SizedBox(width: Tokens.space2),
-                    Text('${pet.name} · ${_speciesWord(pet.species)}',
-                        style: t.textTheme.titleSmall!.copyWith(color: t.colorScheme.onPrimaryContainer)),
-                  ]),
+        if (pets.length > 1 && step == _Step.record) ...[
+          PetStrip(pets: pets, selected: pet.id, onSelect: () {}),
+          const SizedBox(height: Tokens.space4),
+        ],
+        // Camera panel with viewfinder corners (the old app's Check screen).
+        _Viewfinder(
+          camera: camera,
+          label: recording ? 'Recording · $left s' : 'Fit ${pet.name} in the frame',
+          child: camera != null
+              ? null
+              : Column(mainAxisSize: MainAxisSize.min, children: [
+                  const Icon(Icons.videocam_rounded, size: 56, color: Colors.white),
                   const SizedBox(height: Tokens.space2),
-                  Text(
-                    recording
-                        ? 'Keep the phone near ${pet.name}.'
-                        : 'Record about ${CheckScreen.seconds} seconds of ${pet.name} $sounds.',
-                    style: t.textTheme.bodyLarge,
-                  ),
+                  Text(checking ? 'Checking' : cameraAsked ? 'No camera here' : 'Opening camera',
+                      style: t.textTheme.titleSmall!.copyWith(color: Colors.white)),
                 ]),
-              ),
-              if (canSwitch && step == _Step.record)
-                IconButton(
-                  tooltip: 'Switch pet',
-                  onPressed: () => showPetSwitcher(context),
-                  icon: const Icon(Icons.swap_horiz_rounded),
-                ),
-            ]),
-          ),
         ),
-        const SizedBox(height: Tokens.space6),
-        _Wave(levels: recording ? levels : const [], live: recording),
         const SizedBox(height: Tokens.space4),
-        Semantics(
-          liveRegion: recording,
-          child: Text(
-            recording ? '$left s left' : checking ? 'Checking' : '${CheckScreen.seconds} s',
-            textAlign: TextAlign.center,
-            style: t.textTheme.displaySmall,
-          ),
+        MyCard(
+          child: Row(children: [
+            Expanded(
+              child: Semantics(
+                liveRegion: recording,
+                child: Text('0:${elapsed.toString().padLeft(2, '0')} / 0:${CheckScreen.seconds}',
+                    style: t.textTheme.titleSmall),
+              ),
+            ),
+            checking
+                ? const SizedBox(
+                    width: 96, height: 96, child: Padding(padding: EdgeInsets.all(28), child: CircularProgressIndicator()))
+                : _BigButton(
+                    recording: recording,
+                    enabled: recording ? canStop : ready,
+                    onPressed: recording ? onStop : onRecord,
+                  ),
+            Expanded(
+              child: Text(
+                checking
+                    ? 'Checking'
+                    : recording
+                        ? (canStop ? 'Tap to stop' : '${CheckScreen.minSeconds - elapsed} s more')
+                        : ready
+                            ? '${CheckScreen.minSeconds} to ${CheckScreen.seconds} s'
+                            : 'Getting ready',
+                textAlign: TextAlign.end,
+                style: t.textTheme.bodySmall,
+              ),
+            ),
+          ]),
         ),
-        const SizedBox(height: Tokens.space5),
-        Center(
-          child: checking
-              ? const SizedBox(width: 96, height: 96, child: Padding(
-                  padding: EdgeInsets.all(24), child: CircularProgressIndicator()))
-              : _BigButton(
-                  recording: recording,
-                  enabled: ready || recording,
-                  onPressed: recording ? onStop : onRecord,
-                ),
-        ),
-        const SizedBox(height: Tokens.space2),
-        Text(
-          recording ? 'Stop' : (ready ? 'Record' : 'Getting ready'),
-          textAlign: TextAlign.center,
-          style: t.textTheme.labelLarge,
-        ),
-        const SizedBox(height: Tokens.space6),
-        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Icon(Icons.lock_outline_rounded, size: 20, color: t.colorScheme.onSurfaceVariant),
-          const SizedBox(width: Tokens.space2),
-          Expanded(
-            child: Text('Only records when you tap. The clip is checked on this phone and then deleted.',
-                style: t.textTheme.bodySmall),
-          ),
-        ]),
         const SizedBox(height: Tokens.space4),
         OutlinedButton.icon(
           onPressed: ready && step == _Step.record ? onPick : null,
-          icon: const Icon(Icons.upload_file_rounded),
-          label: const Text('Choose a video or audio file'),
+          icon: const Icon(Icons.video_library_rounded),
+          label: const Text('Choose a video'),
         ),
+        const SizedBox(height: Tokens.space3),
+        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Icon(Icons.lock_outline_rounded, size: 16, color: t.colorScheme.onSurfaceVariant),
+          const SizedBox(width: Tokens.space1),
+          Flexible(child: Text('Only when you tap. Deleted after the check.', style: t.textTheme.bodySmall)),
+        ]),
       ],
     );
   }
+}
+
+class _Viewfinder extends StatelessWidget {
+  const _Viewfinder({required this.label, this.child, this.camera});
+  final String label;
+  final Widget? child;
+  final Widget? camera;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    return Container(
+      height: 340,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(Tokens.radiusHero),
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF232525), Color(0xFF1F6F6E)],
+        ),
+      ),
+      child: CustomPaint(
+        foregroundPainter: _Corners(),
+        child: Stack(fit: StackFit.expand, children: [
+          if (camera != null) ExcludeSemantics(child: FittedBox(fit: BoxFit.cover, clipBehavior: Clip.hardEdge, child: SizedBox(width: 300, height: 400, child: camera))),
+          Positioned(
+            top: Tokens.space4,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: Tokens.space3, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.45),
+                  borderRadius: BorderRadius.circular(Tokens.radiusButton),
+                ),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  const Icon(Icons.videocam_rounded, size: 16, color: Colors.white),
+                  const SizedBox(width: Tokens.space1),
+                  Text(label, style: t.textTheme.labelLarge!.copyWith(color: Colors.white)),
+                ]),
+              ),
+            ),
+          ),
+          if (child != null) Center(child: Padding(padding: const EdgeInsets.only(top: 40), child: child)),
+        ]),
+      ),
+    );
+  }
+}
+
+class _Corners extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()
+      ..color = Colors.white.withValues(alpha: 0.85)
+      ..strokeWidth = 3
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+    const m = 20.0, l = 28.0;
+    final w = size.width, h = size.height;
+    for (final (x, y, dx, dy) in [(m, m, 1.0, 1.0), (w - m, m, -1.0, 1.0), (m, h - m, 1.0, -1.0), (w - m, h - m, -1.0, -1.0)]) {
+      canvas.drawLine(Offset(x, y), Offset(x + dx * l, y), p);
+      canvas.drawLine(Offset(x, y), Offset(x, y + dy * l), p);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_Corners old) => false;
 }
 
 /// The 96 px record button; becomes Stop with a ring while recording (Figma 07, 08).
@@ -346,60 +411,27 @@ class _BigButton extends StatelessWidget {
     return Semantics(
       button: true,
       enabled: enabled,
-      label: recording ? 'Stop recording' : 'Record ${CheckScreen.seconds} seconds',
+      label: recording ? 'Stop recording' : 'Record a clip',
       excludeSemantics: true,
       child: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: recording ? s.primaryContainer : Colors.transparent,
+          color: recording ? MyPetColors.of(context).brandContainer : Colors.transparent,
         ),
         child: Material(
-          color: enabled ? s.primary : s.onSurface.withValues(alpha: 0.12),
+          color: enabled ? MyPetColors.of(context).brandStrong : s.onSurface.withValues(alpha: 0.12),
           shape: const CircleBorder(),
           child: InkWell(
             customBorder: const CircleBorder(),
             onTap: enabled ? onPressed : null,
             child: SizedBox(
-              width: 96,
-              height: 96,
-              child: Icon(recording ? Icons.stop_rounded : Icons.mic_rounded,
-                  size: 44, color: enabled ? s.onPrimary : s.onSurface.withValues(alpha: 0.38)),
+              width: 72,
+              height: 72,
+              child: Icon(recording ? Icons.stop_rounded : Icons.videocam_rounded,
+                  size: 36, color: enabled ? Colors.white : s.onSurface.withValues(alpha: 0.38)),
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Dot waveform: flat in outlineVariant before recording, live in primary while recording.
-class _Wave extends StatelessWidget {
-  const _Wave({required this.levels, required this.live});
-  static const bars = 32;
-  final List<double> levels;
-  final bool live;
-
-  @override
-  Widget build(BuildContext context) {
-    final s = Theme.of(context).colorScheme;
-    final pad = List<double>.filled(bars - levels.length, 0) + levels;
-    return ExcludeSemantics(
-      child: SizedBox(
-        height: 64,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            for (final v in pad)
-              Container(
-                width: 4,
-                height: 4 + 56 * v,
-                decoration: BoxDecoration(
-                  color: live ? s.primary : s.outlineVariant,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-          ],
         ),
       ),
     );
@@ -543,6 +575,22 @@ class ResultView extends StatelessWidget {
           ),
         ]),
         const SizedBox(height: Tokens.space3),
+        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Icon(o.picture == PictureUse.combined ? Icons.videocam_rounded : Icons.graphic_eq_rounded,
+              size: 16, color: t.colorScheme.onSurfaceVariant),
+          const SizedBox(width: Tokens.space1),
+          Flexible(
+            child: Text(
+                switch (o.picture) {
+                  PictureUse.combined => 'From picture and sound',
+                  PictureUse.confirmed => 'From sound · ${_speciesWord(o.species)} seen in picture',
+                  PictureUse.notSeen => 'From sound · ${_speciesWord(o.species)} not clear in picture',
+                  PictureUse.none => 'From sound · picture check coming soon',
+                },
+                style: t.textTheme.bodySmall),
+          ),
+        ]),
+        const SizedBox(height: Tokens.space1),
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           Icon(Icons.delete_outline_rounded, size: 16, color: t.colorScheme.onSurfaceVariant),
           const SizedBox(width: Tokens.space1),

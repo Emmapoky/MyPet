@@ -2,29 +2,114 @@ import 'package:material_ui/material_ui.dart';
 
 import '../theme.dart';
 
-/// A card with the design's padding and shadow, and an optional heading.
+/// A white card with a thin border (the SwiftUI app's petCard), an optional heading,
+/// and an optional coloured left edge that ties it to a pet or a status.
 class MyCard extends StatelessWidget {
-  const MyCard({super.key, this.title, required this.child, this.padding});
+  const MyCard({super.key, this.title, required this.child, this.padding, this.accent, this.trailing});
   final String? title;
   final Widget child;
   final EdgeInsets? padding;
+  final Color? accent;
+  final Widget? trailing;
 
   @override
-  Widget build(BuildContext context) => Card(
-        child: Padding(
-          padding: padding ?? const EdgeInsets.all(Tokens.space4),
-          child: title == null
-              ? child
-              : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  Semantics(
+  Widget build(BuildContext context) {
+    final body = Padding(
+      padding: padding ?? const EdgeInsets.all(Tokens.space4),
+      child: title == null
+          ? child
+          : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Row(children: [
+                Expanded(
+                  child: Semantics(
                     header: true,
                     child: Text(title!, style: Theme.of(context).textTheme.titleMedium),
                   ),
-                  const SizedBox(height: Tokens.space3),
-                  child,
-                ]),
+                ),
+                ?trailing,
+              ]),
+              const SizedBox(height: Tokens.space3),
+              child,
+            ]),
+    );
+    return Card(
+      // Keep buttons inside a card as their own screen-reader items.
+      semanticContainer: false,
+      child: accent == null
+          ? body
+          : IntrinsicHeight(
+              child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                Container(width: Tokens.accentEdge, color: accent),
+                Expanded(child: body),
+              ]),
+            ),
+    );
+  }
+}
+
+/// The soft peach-to-mint page wash, so screens are never flat white.
+class PageWash extends StatelessWidget {
+  const PageWash({super.key, required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) =>
+      DecoratedBox(decoration: BoxDecoration(gradient: MyPetColors.of(context).pageGradient), child: child);
+}
+
+/// Coral gradient card used for the Today header and the Check recorder.
+class HeroCard extends StatelessWidget {
+  const HeroCard({super.key, required this.child, this.padding = const EdgeInsets.all(18)});
+  final Widget child;
+  final EdgeInsets padding;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = MyPetColors.of(context);
+    return Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        gradient: c.heroGradient,
+        borderRadius: BorderRadius.circular(Tokens.radiusHero),
+        boxShadow: [BoxShadow(color: c.brand.withValues(alpha: 0.3), blurRadius: 14, offset: const Offset(0, 8))],
+      ),
+      child: DefaultTextStyle.merge(
+        style: const TextStyle(color: Colors.white),
+        child: IconTheme.merge(data: const IconThemeData(color: Colors.white), child: child),
+      ),
+    );
+  }
+}
+
+/// A number and a short word on the hero card ("1/2 logged").
+class HeroStat extends StatelessWidget {
+  const HeroStat({super.key, required this.value, required this.caption});
+  final String value;
+  final String caption;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    return Expanded(
+      child: Semantics(
+        label: '$caption: $value',
+        excludeSemantics: true,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: Tokens.space2, horizontal: Tokens.space1),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(children: [
+            Text(value, style: t.textTheme.titleLarge!.copyWith(color: Colors.white)),
+            Text(caption,
+                textAlign: TextAlign.center,
+                style: t.textTheme.labelMedium!.copyWith(color: Colors.white)),
+          ]),
         ),
-      );
+      ),
+    );
+  }
 }
 
 class SectionTitle extends StatelessWidget {

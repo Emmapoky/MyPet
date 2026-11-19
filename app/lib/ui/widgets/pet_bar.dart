@@ -6,20 +6,28 @@ import '../../state/app_state.dart';
 import '../pet_edit_screen.dart';
 import '../theme.dart';
 
-/// Pet avatar: apricot circle with a paw (Figma Today, pet row).
+/// Pet avatar: a paw in the pet's own colour, as in the SwiftUI app.
 class PetAvatar extends StatelessWidget {
-  const PetAvatar({super.key, this.size = 56});
+  const PetAvatar({super.key, this.pet, this.size = 56, this.onHero = false});
+  final Pet? pet;
   final double size;
+
+  /// White circle for use on the coral hero card.
+  final bool onHero;
 
   @override
   Widget build(BuildContext context) {
-    final s = Theme.of(context).colorScheme;
+    final c = MyPetColors.of(context);
+    final accent = pet == null ? c.brandStrong : c.petAccent(pet!.id);
     return ExcludeSemantics(
       child: Container(
         width: size,
         height: size,
-        decoration: BoxDecoration(color: s.secondary, shape: BoxShape.circle),
-        child: Icon(Icons.pets_rounded, color: s.onSecondary, size: size * 0.45),
+        decoration: BoxDecoration(
+          color: onHero ? Colors.white : accent,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(Icons.pets_rounded, color: onHero ? accent : Colors.white, size: size * 0.48),
       ),
     );
   }
@@ -35,7 +43,7 @@ Future<void> showPetSwitcher(BuildContext context) {
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         for (final p in s.activePets)
           ListTile(
-            leading: const PetAvatar(size: 40),
+            leading: PetAvatar(pet: p, size: 40),
             title: Text(p.name),
             subtitle: Text(p.species == Species.cat ? 'Cat' : 'Dog'),
             trailing: p.id == s.selectedPet?.id ? const Icon(Icons.check_rounded) : null,
@@ -75,3 +83,65 @@ class SyncBadge extends StatelessWidget {
     );
   }
 }
+
+/// One coloured chip per pet; tap to switch (each pet keeps its colour everywhere).
+class PetStrip extends StatelessWidget {
+  const PetStrip({super.key, required this.pets, required this.selected, this.onSelect});
+  final List<Pet> pets;
+  final String selected;
+
+  /// Called after a pet is picked; also hides the add button when set.
+  final VoidCallback? onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    final c = MyPetColors.of(context);
+    final s = context.read<AppState>();
+    return SizedBox(
+      height: Tokens.minTarget,
+      child: ListView(scrollDirection: Axis.horizontal, children: [
+        for (final p in pets) ...[
+          Semantics(
+            selected: p.id == selected,
+            button: true,
+            label: p.name,
+            excludeSemantics: true,
+            child: Material(
+              color: p.id == selected ? c.petAccent(p.id) : t.colorScheme.surface,
+              shape: StadiumBorder(side: BorderSide(color: c.petAccent(p.id), width: 1.5)),
+              child: InkWell(
+                customBorder: const StadiumBorder(),
+                onTap: () {
+                  s.selectPet(p.id);
+                  onSelect?.call();
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: Tokens.space4),
+                  child: Row(children: [
+                    Icon(Icons.pets_rounded,
+                        size: 18, color: p.id == selected ? Colors.white : c.petAccent(p.id)),
+                    const SizedBox(width: Tokens.space2),
+                    Text(p.name,
+                        style: t.textTheme.titleSmall!
+                            .copyWith(color: p.id == selected ? Colors.white : t.colorScheme.onSurface)),
+                  ]),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: Tokens.space2),
+        ],
+        if (onSelect == null)
+        Center(
+          child: IconButton(
+            tooltip: 'Add a pet',
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PetEditScreen())),
+            icon: const Icon(Icons.add_rounded),
+          ),
+        ),
+      ]),
+    );
+  }
+}
+

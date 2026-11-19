@@ -1,15 +1,17 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../theme.dart';
 
-/// Logo mark (Figma Components, top right): a teal tile with a white paw and an apricot
-/// dot on the pad.
+
+/// Logo mark: a white paw on the coral gradient, as in the SwiftUI app's BrandLogo,
+/// with a sun-yellow dot on the pad.
 class LogoMark extends StatelessWidget {
   const LogoMark({super.key, this.size = 96});
   final double size;
 
   @override
   Widget build(BuildContext context) {
-    final s = Theme.of(context).colorScheme;
+    final c = MyPetColors.of(context);
     return Semantics(
       label: 'MyPet',
       image: true,
@@ -17,10 +19,10 @@ class LogoMark extends StatelessWidget {
         width: size,
         height: size,
         decoration: BoxDecoration(
-          color: const Color(0xFF0E6B73),
+          gradient: c.heroGradient,
           borderRadius: BorderRadius.circular(size * 28 / 96),
         ),
-        child: CustomPaint(painter: PawPainter(dot: s.secondary)),
+        child: CustomPaint(painter: PawPainter(dot: c.sun)),
       ),
     );
   }

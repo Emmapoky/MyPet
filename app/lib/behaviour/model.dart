@@ -21,10 +21,11 @@ int argmax(List<double> v) {
   return best;
 }
 
-/// CLAP zero-shot sound labels shown as evidence (report 4.2), from sound_evidence.json.
+/// CLAP zero-shot labels: the sound evidence (report 4.2, sound_evidence.json), and
+/// the picture's "is it a dog or a cat" gate (photo_classifiers.json "gate").
 class SoundEvidence {
   SoundEvidence(Map<String, dynamic> j)
-      : names = List<String>.from(j['names']),
+      : names = List<String>.from(j['names'] ?? j['keys']),
         keys = List<String>.from(j['keys']),
         species = List<String>.from(j['species']),
         scale = (j['scale'] as num).toDouble(),
@@ -103,4 +104,49 @@ List<double> loudest10s(List<double> x) {
     }
   }
   return x.sublist(best, best + nSamples);
+}
+
+/// The picture side of the check (ML step 11, photo_classifiers.json).
+class PictureModel {
+  PictureModel(Map<String, dynamic> j)
+      : inputName = j['input_name'] as String? ?? 'pixel_values',
+        output = j['output'] as String? ?? 'image_embeds',
+        size = (j['input'] as List?)?.last as int? ?? 224,
+        mean = [for (final v in (j['mean'] as List)) (v as num).toDouble()],
+        std = [for (final v in (j['std'] as List)) (v as num).toDouble()],
+        frames = j['frames'] is int ? j['frames'] as int : 3,
+        gate = SoundEvidence(j['gate'] as Map<String, dynamic>),
+        dog = j['dog_photo'] == null ? null : Classifier(j['dog_photo'] as Map<String, dynamic>),
+        cat = j['cat_photo'] == null ? null : Classifier(j['cat_photo'] as Map<String, dynamic>),
+        soundWeight = ((j['combine'] as Map?)?['sound_weight'] as num?)?.toDouble() ?? 0.5;
+  final String inputName, output;
+  final int size, frames;
+  final List<double> mean, std;
+  final SoundEvidence gate;
+  final Classifier? dog, cat;
+  final double soundWeight;
+
+  /// One frame of [size] x [size] RGB bytes -> normalised NCHW floats.
+  Float32List pixels(Uint8List rgb) {
+    final n = size * size;
+    final out = Float32List(3 * n);
+    for (var i = 0; i < n; i++) {
+      for (var c = 0; c < 3; c++) {
+        out[c * n + i] = (rgb[3 * i + c] / 255.0 - mean[c]) / std[c];
+      }
+    }
+    return out;
+  }
+}
+
+/// Averages embeddings and scales the result to length 1.
+List<double> meanUnit(List<List<double>> xs) {
+  final m = List<double>.filled(xs.first.length, 0);
+  for (final x in xs) {
+    for (var i = 0; i < m.length; i++) {
+      m[i] += x[i];
+    }
+  }
+  final n = math.sqrt(m.fold(0.0, (s, v) => s + v * v));
+  return [for (final v in m) n == 0 ? 0.0 : v / n];
 }

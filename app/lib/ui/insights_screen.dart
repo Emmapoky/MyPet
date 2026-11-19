@@ -47,8 +47,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
         EmptyState(
           icon: Icons.hourglass_top_rounded,
           title: 'Insights unlock after ${Thresholds.minLoggedDays} days',
-          body: '$have of ${Thresholds.minLoggedDays} days logged. '
-              'Keep logging so MyPet can learn ${pet.name}\'s usual.',
+          body: '$have of ${Thresholds.minLoggedDays} days logged',
           extra: ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
@@ -77,9 +76,11 @@ class _InsightsScreenState extends State<InsightsScreen> {
           MoreMenu(extra: [if (s.activePets.length > 1) ('Switch pet', () => showPetSwitcher(context))]),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(Tokens.space4, Tokens.space2, Tokens.space4, Tokens.space5),
-        children: children,
+      body: PageWash(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(Tokens.space4, Tokens.space2, Tokens.space4, Tokens.space5),
+          children: children,
+        ),
       ),
     );
   }
@@ -124,11 +125,8 @@ class _InsightsScreenState extends State<InsightsScreen> {
         ],
         selected: {range},
         onSelectionChanged: (v) => setState(() => range = v.first),
-        style: SegmentedButton.styleFrom(
-          minimumSize: const Size.fromHeight(Tokens.minTarget),
-          selectedBackgroundColor: t.colorScheme.primaryContainer,
-          selectedForegroundColor: t.colorScheme.onPrimaryContainer,
-        ),
+        showSelectedIcon: false,
+        style: SegmentedButton.styleFrom(minimumSize: const Size.fromHeight(Tokens.minTarget)),
       ),
       const SizedBox(height: Tokens.space4),
       if (result.flags.isEmpty)
@@ -137,12 +135,13 @@ class _InsightsScreenState extends State<InsightsScreen> {
           decoration: BoxDecoration(
             color: c.loggedContainer,
             borderRadius: BorderRadius.circular(Tokens.radiusCard),
+            border: Border(left: BorderSide(color: c.loggedEdge, width: Tokens.accentEdge)),
           ),
           child: Row(children: [
-            Icon(Icons.check_circle_outline_rounded, color: c.onLoggedContainer),
+            Icon(Icons.verified_rounded, color: c.loggedEdge),
             const SizedBox(width: Tokens.space3),
             Expanded(
-              child: Text("No change noticed. ${pet.name}'s last 3 days look like their usual.",
+              child: Text('Everything looks like usual',
                   style: t.textTheme.bodyLarge!.copyWith(color: c.onLoggedContainer)),
             ),
           ]),
@@ -155,6 +154,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
       if (result.flags.isEmpty) const SizedBox(height: Tokens.space4),
       MyCard(
         title: "${pet.name}'s usual and today",
+        accent: c.petAccent(pet.id),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           _EnergyBars(
             days: days,
@@ -170,7 +170,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
               width: 20,
               height: 12,
               decoration: BoxDecoration(
-                color: c.surfaceTint,
+                color: t.colorScheme.primaryContainer,
                 border: Border.all(color: t.colorScheme.primary),
                 borderRadius: BorderRadius.circular(2),
               ),
@@ -199,8 +199,8 @@ class _InsightsScreenState extends State<InsightsScreen> {
       ),
       const SizedBox(height: Tokens.space3),
       Text(
-        'Compared only with ${pet.name}\'s own logs, '
-        '${DateFormat('d MMM').format(baseFrom.asDateTime)} to ${DateFormat('d MMM').format(baseTo.asDateTime)}.',
+        'Only compared with ${pet.name}, '
+        '${DateFormat('d MMM').format(baseFrom.asDateTime)} to ${DateFormat('d MMM').format(baseTo.asDateTime)}',
         style: t.textTheme.bodySmall,
       ),
       const SizedBox(height: Tokens.space4),
@@ -270,7 +270,7 @@ class _EnergyBars extends StatelessWidget {
               band: band,
               bar: t.colorScheme.primary,
               lowBar: c.onChangeContainer,
-              bandColor: c.surfaceTint,
+              bandColor: Theme.of(context).colorScheme.primaryContainer,
               empty: t.colorScheme.outlineVariant,
               barWidth: few ? 28 : null,
             ),

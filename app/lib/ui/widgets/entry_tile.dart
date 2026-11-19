@@ -6,10 +6,13 @@ import '../../util/day.dart';
 import '../theme.dart';
 import '../wording.dart';
 
-/// Timeline row (Figma Components): time column, primary dot, title, detail.
+/// Timeline row: time column, a dot in the pet's colour, title, detail.
 class EntryTile extends StatelessWidget {
-  const EntryTile({super.key, required this.entry, required this.today, this.onTap});
+  const EntryTile({super.key, required this.entry, required this.today, this.onTap, this.dot});
   final CareEntry entry;
+
+  /// The pet's colour; teal when not given.
+  final Color? dot;
   final Day today;
   final VoidCallback? onTap;
 
@@ -47,7 +50,7 @@ class EntryTile extends StatelessWidget {
                 child: Container(
                   width: 10,
                   height: 10,
-                  decoration: BoxDecoration(color: t.colorScheme.primary, shape: BoxShape.circle),
+                  decoration: BoxDecoration(color: dot ?? t.colorScheme.primary, shape: BoxShape.circle),
                 ),
               ),
             ),

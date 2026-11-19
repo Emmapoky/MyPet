@@ -1,10 +1,13 @@
 // Runs the behaviour check on the phone (FR02, FR20, FR-N02, NFR03).
 //
-// Pipeline, the same one tested in ml/flutter/behaviour_bench (ML steps 3 to 10):
-//   10 s WAV, 48 kHz mono -> clap_features (Dart, background isolate)
-//   -> quantized CLAP ONNX -> 512 numbers scaled to length 1 -> Analysis rules.
-// Only the sound is used. A picked video's soundtrack is extracted and the
-// picture is never read. Every clip is deleted straight after the check.
+// One tap records a short video clip (5 to 10 s, report FR02: "record a short
+// video using phone on spot"), or the carer picks a video or audio file.
+// The picture and the sound are read separately and combined into one result:
+//   sound:   soundtrack -> 48 kHz mono WAV (ffmpeg) -> clap_features (isolate)
+//            -> quantized CLAP ONNX -> Analysis rules (ML steps 3 to 10).
+//   picture: frames from the clip -> image model (ML step 11, not trained yet;
+//            until its files exist the result says it used sound only).
+// The clip and everything taken from it are deleted straight after (FR-N02).
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -12,12 +15,14 @@ import 'dart:math' as math;
 
 import 'package:clap_features/clap_features.dart';
 import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
+import 'package:ffmpeg_kit_flutter_new/ffprobe_kit.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_onnxruntime/flutter_onnxruntime.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:record/record.dart';
+import 'package:camera/camera.dart';
+import 'package:material_ui/material_ui.dart' show Widget, SizedBox;
 
 import '../models/pet.dart';
 import 'analysis.dart';
@@ -26,6 +31,10 @@ import 'model.dart';
 const modelAsset = 'assets/models/clap_audio_quantized.onnx';
 const classifiersAsset = 'assets/behaviour/classifiers.json';
 const soundEvidenceAsset = 'assets/behaviour/sound_evidence.json';
+
+/// Picture side (ML step 11). Optional: without these the check uses sound only.
+const visionModelAsset = 'assets/models/clip_vision_quantized.onnx';
+const pictureAsset = 'assets/behaviour/photo_classifiers.json';
 
 /// Why a check could not run. These are plain problems, not results.
 class CheckProblem implements Exception {
@@ -39,21 +48,23 @@ class CheckProblem implements Exception {
 abstract class BehaviourEngine {
   /// Loads the model once. Throws [CheckProblem] if the model files are missing.
   Future<void> load();
-  Future<bool> micAllowed();
-  Future<void> startRecording();
 
-  /// Loudness from 0 to 1 while recording, for the live waveform.
-  Stream<double> get level;
+  /// Opens the back camera with sound. Returns false if there is no camera or no permission.
+  Future<bool> openCamera();
+
+  /// Live camera picture for the panel, once [openCamera] succeeded.
+  Widget preview();
+
+  Future<void> startRecording();
 
   /// Stops and returns the clip's path.
   Future<String> stopRecording();
 
-  /// Lets the person pick a video or audio file and returns a WAV of its sound,
-  /// or null if they cancelled.
+  /// Lets the person pick a video or audio file and returns its path, or null if they cancelled.
   Future<String?> pickFile();
 
-  /// Checks the clip and deletes it, whatever happens.
-  Future<CheckOutcome> check(String wavPath, Species species, {required bool picked});
+  /// Checks the clip (picture and sound) and deletes it, whatever happens.
+  Future<CheckOutcome> check(String clipPath, Species species, {required bool picked});
 
   Future<void> dispose();
 }
@@ -61,11 +72,12 @@ abstract class BehaviourEngine {
 Float32List _features(List<double> x) => clapInputFeatures(x);
 
 class PhoneBehaviourEngine implements BehaviourEngine {
-  late final _rec = AudioRecorder();
+  CameraController? _camera;
   Analysis? _analysis;
   OrtSession? _session;
+  PictureModel? _picture;
+  OrtSession? _vision;
   Future<void>? _loading;
-  String? _recPath;
 
   @override
   Future<void> load() => _loading ??= _load();
@@ -84,48 +96,109 @@ class PhoneBehaviourEngine implements BehaviourEngine {
         .map((k, v) => MapEntry(k, Classifier(v as Map<String, dynamic>)));
     _analysis = Analysis(classifiers: clf, sound: SoundEvidence(jsonDecode(s) as Map<String, dynamic>));
     _session = await OnnxRuntime().createSessionFromAsset(modelAsset);
+    try {
+      _picture = PictureModel(jsonDecode(await rootBundle.loadString(pictureAsset)) as Map<String, dynamic>);
+      await rootBundle.load(visionModelAsset);
+      _vision = await OnnxRuntime().createSessionFromAsset(visionModelAsset);
+    } catch (_) {
+      _picture = null; // Picture model not on this phone yet: sound only.
+    }
+  }
+
+  /// Reads [n] evenly spaced frames of the clip, resized and centre-cropped, as RGB bytes.
+  Future<List<Uint8List>> _frames(String src, int n, int size) async {
+    final info = (await FFprobeKit.getMediaInformation(src)).getMediaInformation();
+    final hasVideo = info?.getStreams().any((s) => s.getType() == 'video') ?? false;
+    final dur = double.tryParse(info?.getDuration() ?? '') ?? 0;
+    if (!hasVideo || dur <= 0) return const [];
+    final out = <Uint8List>[];
+    for (var i = 0; i < n; i++) {
+      final at = dur * (i + 0.5) / n;
+      final raw = await _tmp('frame$i.rgb');
+      await FFmpegKit.execute('-y -ss ${at.toStringAsFixed(2)} -i "$src" -frames:v 1 '
+          '-vf "scale=$size:$size:force_original_aspect_ratio=increase:flags=bicubic,crop=$size:$size" '
+          '-f rawvideo -pix_fmt rgb24 "$raw"');
+      final f = File(raw);
+      if (await f.exists()) {
+        final b = await f.readAsBytes();
+        if (b.length == size * size * 3) out.add(b);
+        await f.delete();
+      }
+    }
+    return out;
+  }
+
+  Future<PictureReading?> _readPicture(String src, Species species) async {
+    final m = _picture, v = _vision;
+    if (m == null || v == null) return null;
+    final frames = await _frames(src, m.frames, m.size);
+    if (frames.isEmpty) return null;
+    final embs = <List<double>>[];
+    for (final f in frames) {
+      final input = await OrtValue.fromList(m.pixels(f), [1, 3, m.size, m.size]);
+      final out = await v.run({m.inputName: input});
+      embs.add((await out[m.output]!.asFlattenedList()).map((x) => (x as num).toDouble()).toList());
+      await input.dispose();
+      for (final o in out.values) {
+        await o.dispose();
+      }
+    }
+    final e = meanUnit(embs);
+    final seen = m.gate.speciesOf(m.gate.probs(e));
+    final clf = species == Species.cat ? m.cat : m.dog;
+    return PictureReading(species: seen, feelings: clf?.probs(e));
   }
 
   Future<String> _tmp(String name) async => '${(await getTemporaryDirectory()).path}/$name';
 
   @override
-  Future<bool> micAllowed() => _rec.hasPermission();
-
-  @override
-  Future<void> startRecording() async {
-    _recPath = await _tmp('check.wav');
-    await _rec.start(const RecordConfig(encoder: AudioEncoder.wav, sampleRate: sampleRate, numChannels: 1),
-        path: _recPath!);
+  Future<bool> openCamera() async {
+    if (_camera?.value.isInitialized == true) return true;
+    try {
+      final cams = await availableCameras();
+      if (cams.isEmpty) return false;
+      final back = cams.firstWhere((c) => c.lensDirection == CameraLensDirection.back, orElse: () => cams.first);
+      final c = CameraController(back, ResolutionPreset.medium, enableAudio: true);
+      await c.initialize();
+      _camera = c;
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   @override
-  Stream<double> get level => _rec
-      .onAmplitudeChanged(const Duration(milliseconds: 100))
-      // dBFS: -50 or quieter is flat, 0 is full height.
-      .map((a) => ((a.current + 50) / 50).clamp(0.0, 1.0).toDouble());
+  Widget preview() => _camera?.value.isInitialized == true ? CameraPreview(_camera!) : const SizedBox.shrink();
 
   @override
-  Future<String> stopRecording() async => (await _rec.stop()) ?? _recPath!;
+  Future<void> startRecording() => _camera!.startVideoRecording();
+
+  @override
+  Future<String> stopRecording() async => (await _camera!.stopVideoRecording()).path;
 
   @override
   Future<String?> pickFile() async {
     final picked = await FilePicker.pickFiles(type: FileType.media);
-    final src = picked.isEmpty ? null : picked.first.path;
-    if (src == null) return null;
-    // Any audio or video file -> 48 kHz mono 16-bit WAV (soundtrack only).
-    final wav = await _tmp('picked.wav');
+    return picked.isEmpty ? null : picked.first.path;
+  }
+
+  /// Any audio or video file -> 48 kHz mono 16-bit WAV (soundtrack only).
+  Future<String> _soundtrack(String src) async {
+    final wav = await _tmp('check.wav');
     final s = await FFmpegKit.execute('-y -i "$src" -vn -ac 1 -ar $sampleRate -c:a pcm_s16le "$wav"');
     if (!await File(wav).exists() || (await s.getReturnCode())?.isValueSuccess() != true) {
-      throw const CheckProblem('Could not read any sound from that file. Try another video or audio file.');
+      throw const CheckProblem('Could not hear any sound in that clip. Try another one.');
     }
     return wav;
   }
 
   @override
-  Future<CheckOutcome> check(String wavPath, Species species, {required bool picked}) async {
+  Future<CheckOutcome> check(String clipPath, Species species, {required bool picked}) async {
+    String? wav;
     try {
       await load();
-      var x = readWav16(ByteData.sublistView(await File(wavPath).readAsBytes()));
+      wav = await _soundtrack(clipPath);
+      var x = readWav16(ByteData.sublistView(await File(wav).readAsBytes()));
       if (x.length < sampleRate) {
         throw const CheckProblem('The clip was under 1 second. Record a little longer.');
       }
@@ -139,18 +212,24 @@ class PhoneBehaviourEngine implements BehaviourEngine {
         await v.dispose();
       }
       final n = math.sqrt(e.fold(0.0, (s, v) => s + v * v));
-      return _analysis!.check([for (final v in e) v / n], species);
+      final sound = _analysis!.check([for (final v in e) v / n], species);
+      final pic = await _readPicture(clipPath, species);
+      final names = _analysis!.classifiers[species == Species.cat ? 'cat_context' : 'dog_report']!.names;
+      return combine(sound, pic, soundWeight: _picture?.soundWeight ?? 1, names: names);
     } finally {
-      // The clip is never kept (FR-N02).
-      try {
-        await File(wavPath).delete();
-      } catch (_) {}
+      // Nothing is kept (FR-N02): not the clip, not the soundtrack.
+      for (final f in [clipPath, ?wav]) {
+        try {
+          await File(f).delete();
+        } catch (_) {}
+      }
     }
   }
 
   @override
   Future<void> dispose() async {
-    if (_recPath != null) await _rec.dispose();
+    await _camera?.dispose();
     await _session?.close();
+    await _vision?.close();
   }
 }

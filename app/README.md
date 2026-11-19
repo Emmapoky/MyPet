@@ -11,7 +11,7 @@ Built in the order of report Table 4.5.
 | 2 Profiles and log | Pet profiles (add, edit, archive, rehomed, passed away), quick log with "same as last entry" (2 taps on a routine day), health records, one timeline with edit and delete, offline queue and "waiting to sync" badge. Voice: keyboard dictation for now | FR01, FR02, FR03, FR05, FR06, FR19 (status part), NFR01 | Done, needs iPhone check |
 | 3 Reminders | Recurring care with start, end and frequency; today's checklist; missed items; phone notifications with Log now and Later | FR10, FR11, FR12, FR21 | Done, needs iPhone check |
 | 4 Baseline and flags | Detector in a background isolate, flags with evidence on Today and Insights, Insights hidden before 7 days, 7 or 30 day energy chart, normal against today | FR13 to FR16, NFR03, NFR07 | Done |
-| 5 Behaviour check | Check tab: record 10 s or choose a video or audio file, CLAP on the phone, result with likelihoods and sounds heard, clip deleted. Rules from `ml/flutter/behaviour_bench` (did not hear the pet, cat non-meow sounds, not sure under 50%) | FR02, FR20, FR-N01, FR-N02, NFR03 | Done, needs iPhone check |
+| 5 Behaviour check | Check tab: one tap films a 5 to 10 s clip (or choose a video). The sound (CLAP) and the picture (CLIP, ML step 11) are read separately and combined; the clip is deleted. Rules from `ml/flutter/behaviour_bench` (did not hear the pet, cat non-meow sounds, not sure under 50%). Without the picture model files the result says it used sound only | FR02, FR20, FR-N01, FR-N02, NFR03 | Done, needs iPhone check |
 
 ## Run it
 
@@ -19,7 +19,7 @@ Built in the order of report Table 4.5.
 cd app
 flutter pub get
 tool/get_behaviour_model.sh        # model files for the Check tab (not in git), see below
-flutter test                       # 39 tests: detector, timeline, synthetic check, behaviour rules, screens
+flutter test                       # 44 tests: detector, timeline, synthetic check, behaviour rules, screens
 flutter run                        # keeps data on the phone (no Firebase needed)
 flutter run --dart-define=BACKEND=firebase   # after docs/firebase-setup.md
 ```
@@ -57,6 +57,14 @@ The five-owner timing for NFR01 still has to happen in FIT3162 with real owners.
 | `lib/config/thresholds.dart` | Every detector number, with its reason (NFR09); see `docs/thresholds.md` |
 | `firebase/` | `firestore.rules` and the emulator rules tests (NFR06-1 to 4, FRN04-1) |
 | `test/` | Unit tests and the synthetic evaluation (`test/results/`) |
+
+## Look (v2, 19 Nov 2026)
+
+Colours and layout come back from the September SwiftUI prototype (`MyPet/Support/Theme.swift` and
+simulator screenshots of it): coral gradient header with a greeting and three counts, warm page,
+white cards with a coloured left edge per pet, one colour per pet everywhere, floating tab bar,
+camera panel on Check. Text colours are darkened where needed to pass WCAG AA. Tokens:
+`mypet/design/mypet-tokens-v2.json` in the project files; code: `lib/ui/theme.dart`.
 
 ## Design decisions
 

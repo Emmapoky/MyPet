@@ -9,7 +9,8 @@ Rules these follow (Dr Yam, 18 Sep 2026; proposal report): machine learning, not
 |---|---|---|
 | 1 | `01_clap_catmeows_spike.ipynb`: CLAP zero-shot vs CLAP embeddings + logistic regression on CatMeows | Done 19 Nov 2026 |
 | 2 | `02_onnx_matches_pytorch.ipynb`: the planned on-device ONNX files give the same embeddings and the same result as step 1 | Done 19 Nov 2026 |
-| 2b | Compute the same log-mel `input_features` in the app (Swift in this repo now; Dart if the team moves to Flutter as the report plans) and check them against Python on a few clips | Next |
+| 2b | `reference/`: plain NumPy version of the model input, checked against transformers, plus test files for any app port | Done 19 Nov 2026 |
+| 2c | Dart (Flutter) version of the model input, tested against the 2b test files | Next |
 | 3 | Dogs: same test on EmotionalCanines | Later |
 | 4 | YAMNet embeddings on the same splits (the fallback) | Later |
 
@@ -51,6 +52,14 @@ Same 440 clips, same input features fed to both. Xenova ships the same preproces
 - Use the **quantized 34.3 MB file** in the app: a quarter of the size, same result.
 - ONNX in: `input_features`, float, shape [1, 1, 1001, 64] for one 10 s clip (48 kHz, FFT 1024, hop 480, 64 mel bins from 50 Hz, repeat-padded). ONNX out: `audio_embeds`, 512 numbers. The classifier then runs on those 512 numbers.
 - The model itself is no longer a risk. The open risk is step 2b: the app must compute those 1001 x 64 features exactly like Python does (in Swift or Dart), or the embeddings will drift. The CLAP vs YAMNet decision hangs on that.
+
+## Step 2b result (turning a recording into the model input)
+
+`reference/clap_features.py` does it in seven plain steps with NumPy only (fix length to 10 s, mirror-pad, 1001 Hann-windowed frames, power spectrum, 64 Slaney mel filters, decibels). It matches transformers' `ClapFeatureExtractor` to within 0.00001 dB on all three test signals, and the mel filter bank matches exactly.
+
+One deliberate difference: transformers takes a *random* 10 s from a longer clip; ours takes the *first* 10 s, so the app gives the same answer for the same recording.
+
+`reference/fixtures/` holds the filter bank and the expected output for three test signals, so the Dart (or Swift) version can be checked number by number. Details in `reference/README.md`.
 
 **Honest wording for the app and report:** show likelihoods with "not a diagnosis", and say the behaviour check is an early estimate. This matches Dr Yam's line that logging is the minimum and AI is the best case.
 

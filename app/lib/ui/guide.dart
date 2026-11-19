@@ -76,9 +76,10 @@ Future<void> startStory(BuildContext context, DemoPet pet) async {
   for (var i = 0; i < 50 && !demo.carerKnown; i++) {
     await Future<void>.delayed(const Duration(milliseconds: 20));
   }
-  final clips = await unpackDemoClips();
-  demo.clipDir = clips;
-  await addDemoPets(demo, fixedIds: true, clipDir: clips);
+  final clips = await loadDemoClips();
+  final dir = await unpackDemoClips(clips);
+  demo.clipDir = dir;
+  await addDemoPets(demo, fixedIds: true, clips: clips, clipDir: dir);
   for (var i = 0; i < 50 && demo.activePets.length < demoPets.length; i++) {
     await Future<void>.delayed(const Duration(milliseconds: 20));
   }
@@ -109,7 +110,7 @@ class DemoPickerScreen extends StatelessWidget {
       appBar: AppBar(title: const Text('Try a demo')),
       body: PageWash(
         child: ListView(padding: const EdgeInsets.all(Tokens.space4), children: [
-          Text('Example pets with a month of logs and real clips. Your own pets are not touched.',
+          Text('Example pets with a month of logs and real clips from Wikimedia Commons. Your own pets are not touched.',
               style: t.textTheme.bodyMedium!.copyWith(color: t.colorScheme.onSurfaceVariant)),
           const SizedBox(height: Tokens.space4),
           for (final (i, d) in demoPets.indexed) ...[

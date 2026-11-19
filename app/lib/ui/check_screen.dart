@@ -797,11 +797,24 @@ class SavedCheckScreen extends StatelessWidget {
           ],
         ),
         body: PageWash(
-          child: SafeArea(child: ResultView(
-            outcome: outcomeFromEntry(entry.data, clip: context.read<AppState>().clipOf(entry)),
-            pet: pet,
-            ms: 0,
-          )),
+          child: SafeArea(
+            child: Column(children: [
+              Expanded(
+                child: ResultView(
+                  outcome: outcomeFromEntry(entry.data, clip: context.read<AppState>().clipOf(entry)),
+                  pet: pet,
+                  ms: 0,
+                ),
+              ),
+              // Demo clips are free-licence videos from Wikimedia Commons, credited here.
+              if (entry.data['credit'] is String)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(Tokens.space4, 0, Tokens.space4, Tokens.space2),
+                  child: Text('Clip: ${entry.data['credit']} (Wikimedia Commons)',
+                      style: Theme.of(context).textTheme.bodySmall, textAlign: TextAlign.center),
+                ),
+            ]),
+          ),
         ),
       );
 }

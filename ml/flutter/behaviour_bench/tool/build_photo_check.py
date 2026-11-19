@@ -110,7 +110,9 @@ def gate_text():
     m = CLIPModel.from_pretrained("openai/clip-vit-base-patch32").eval()
     tok = CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch32")
     with torch.no_grad():
-        t = m.get_text_features(**tok([g[2] for g in GATE], padding=True, return_tensors="pt"))
+        enc = tok([g[2] for g in GATE], padding=True, return_tensors="pt")
+        # written out (not get_text_features) because transformers 5 returns an output object there
+        t = m.text_projection(m.text_model(input_ids=enc["input_ids"], attention_mask=enc["attention_mask"]).pooler_output)
         t = torch.nn.functional.normalize(t, dim=-1).numpy().astype(np.float64)
     return t, float(m.logit_scale.exp())
 

@@ -19,6 +19,17 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(padding: const EdgeInsets.all(Tokens.space4), children: [
         const SectionTitle('What MyPet does'),
         const Card(child: AboutMyPet()),
+        const SectionTitle('Look'),
+        SegmentedButton<ThemeMode>(
+          showSelectedIcon: false,
+          segments: const [
+            ButtonSegment(value: ThemeMode.light, label: Text('Light'), icon: Icon(Icons.light_mode_rounded)),
+            ButtonSegment(value: ThemeMode.dark, label: Text('Dark'), icon: Icon(Icons.dark_mode_rounded)),
+            ButtonSegment(value: ThemeMode.system, label: Text('Phone'), icon: Icon(Icons.phone_iphone_rounded)),
+          ],
+          selected: {s.look},
+          onSelectionChanged: (v) => s.setLook(v.first),
+        ),
         const SectionTitle('Account'),
         Card(
           child: Column(children: [

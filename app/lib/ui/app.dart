@@ -25,13 +25,17 @@ class MyPetApp extends StatelessWidget {
           ChangeNotifierProvider.value(value: state),
           Provider.value(value: engine),
         ],
-        child: MaterialApp(
+        child: Selector<AppState, ThemeMode>(
+          selector: (_, s) => s.look,
+          builder: (_, look, _) => MaterialApp(
           title: 'MyPet',
+          themeMode: look,
           navigatorKey: navigatorKey,
           debugShowCheckedModeBanner: false,
           theme: buildTheme(Brightness.light),
           darkTheme: buildTheme(Brightness.dark),
           home: const _Gate(),
+          ),
         ),
       );
 }

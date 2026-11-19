@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:material_ui/material_ui.dart' show ThemeMode;
+
 import 'package:flutter/foundation.dart';
 
 import '../data/backend.dart';
@@ -44,6 +46,17 @@ class AppState extends ChangeNotifier {
 
   /// Bottom tab shown (0 Today, 1 Pets, 2 Check, 3 Insights, 4 Reminders).
   int tab = 0;
+
+  /// Light by default; dark or "match phone" only if the person picks it in Settings.
+  /// Saved with [onLookChanged] by main.dart.
+  ThemeMode look = ThemeMode.light;
+  void Function(ThemeMode)? onLookChanged;
+
+  void setLook(ThemeMode m) {
+    look = m;
+    onLookChanged?.call(m);
+    notifyListeners();
+  }
 
   void goToTab(int i) {
     tab = i;

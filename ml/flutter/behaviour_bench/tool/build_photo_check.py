@@ -114,7 +114,7 @@ def gate_text():
         # written out (not get_text_features) because transformers 5 returns an output object there
         t = m.text_projection(m.text_model(input_ids=enc["input_ids"], attention_mask=enc["attention_mask"]).pooler_output)
         t = torch.nn.functional.normalize(t, dim=-1).numpy().astype(np.float64)
-    return t, float(m.logit_scale.exp())
+    return t, float(m.logit_scale.exp().detach())
 
 
 def gate_species(T, scale, x):
@@ -153,8 +153,13 @@ def main():
     te_name = "test" if "test" in splits else splits[-1]
     feat = ds[tr_name].features
     img_col = [k for k, v in feat.items() if v.__class__.__name__ == "Image"][0]
-    lab_col = [k for k, v in feat.items() if v.__class__.__name__ == "ClassLabel"][0]
-    names = feat[lab_col].names
+    labs = [k for k, v in feat.items() if v.__class__.__name__ == "ClassLabel"]
+    if labs:
+        lab_col, names = labs[0], feat[labs[0]].names
+    else:  # Dog_Emotion_Dataset_v2 stores an int "label" plus the name in "emotion"
+        lab_col = "label"
+        pairs = dict(zip(ds[tr_name]["label"], ds[tr_name]["emotion"]))
+        names = [pairs[i] for i in sorted(pairs)]
     print("dataset splits", {k: len(v) for k, v in ds.items()}, "labels", names)
     idx_map = [base.DOG_REPORT.index(DOG_MAP[n.lower()]) for n in names]
     Xtr = embed_all("dog_emotion_train", ds[tr_name][img_col], emb)

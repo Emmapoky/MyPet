@@ -1,0 +1,233 @@
+// Behaviour check rules (ML step 10) and the Check tab flow, with small fake
+// model files, so they run without the 34 MB model.
+import 'dart:async';
+import 'dart:typed_data';
+
+import 'dart:ui' show Size;
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mypet/behaviour/analysis.dart';
+import 'package:mypet/behaviour/engine.dart';
+import 'package:mypet/behaviour/model.dart';
+import 'package:mypet/models/care_entry.dart';
+import 'package:mypet/models/pet.dart';
+import 'package:mypet/ui/app.dart';
+import 'package:mypet/ui/wording.dart';
+
+import 'app_flow_test.dart' show settle, signedInState;
+
+// 4-number "embeddings": one direction per sound.
+const bark = [1.0, 0.0, 0.0, 0.0];
+const meow = [0.0, 1.0, 0.0, 0.0];
+const purr = [0.0, 0.0, 1.0, 0.0];
+const talk = [0.0, 0.0, 0.0, 1.0];
+const barkUnclear = [0.8, 0.0, 0.0, 0.6]; // mostly bark, but the dog feelings are flat
+
+final fakeAnalysis = Analysis(
+  sound: SoundEvidence({
+    'keys': ['dog_bark', 'cat_meow', 'cat_purr', 'speech'],
+    'species': ['dog', 'cat', 'cat', 'other'],
+    'names': ['Barking', 'Meowing', 'Purring', 'People talking'],
+    'scale': 10,
+    'T': [bark, meow, purr, talk],
+  }),
+  classifiers: {
+    'dog_report': Classifier({
+      'classes': ['happy', 'calm', 'sad_uneasy', 'upset'],
+      'names': ['Likely happy or playful', 'Likely calm', 'Likely sad or uneasy', 'Likely upset'],
+      'W': [
+        [5.0, 0.0, 0.0, -10.0],
+        [0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0],
+      ],
+      'b': [0.0, 0.0, 0.0, 0.0],
+    }),
+    'cat_context': Classifier({
+      'classes': ['food', 'brushing', 'isolation'],
+      'names': ['Likely hungry', 'Likely reacting to handling', 'Likely stressed in a strange place'],
+      'W': [
+        [0.0, 5.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0],
+      ],
+      'b': [0.0, 0.0, 0.0],
+    }),
+  },
+);
+
+class FakeEngine implements BehaviourEngine {
+  FakeEngine(this.emb);
+  List<double> emb;
+  final checked = <String>[];
+  final _levels = StreamController<double>.broadcast();
+
+  @override
+  Future<void> load() async {}
+  @override
+  Future<bool> micAllowed() async => true;
+  @override
+  Future<void> startRecording() async {}
+  @override
+  Stream<double> get level => _levels.stream;
+  @override
+  Future<String> stopRecording() async => 'rec.wav';
+  @override
+  Future<String?> pickFile() async => 'picked.wav';
+  @override
+  Future<CheckOutcome> check(String wavPath, Species species, {required bool picked}) async {
+    checked.add(wavPath);
+    return fakeAnalysis.check(emb, species);
+  }
+
+  @override
+  Future<void> dispose() async {}
+}
+
+/// The design's phone frame, 390 x 844.
+void phoneSize(WidgetTester t) {
+  t.view.physicalSize = const Size(390 * 3, 844 * 3);
+  t.view.devicePixelRatio = 3;
+  addTearDown(t.view.reset);
+}
+
+void main() {
+  group('decision rules', () {
+    test('a clear bark gives a feeling for a dog', () {
+      final o = fakeAnalysis.check(bark, Species.dog);
+      expect(o.kind, OutcomeKind.feeling);
+      expect(o.feelings.first.$1, 'Likely happy or playful');
+      expect(o.feelings.first.$2, greaterThan(Analysis.unsureBelow));
+      expect(o.sounds.first.$1, 'Barking');
+    });
+
+    test('A: a dog pet but the sound is people talking gives no feeling', () {
+      final o = fakeAnalysis.check(talk, Species.dog);
+      expect(o.kind, OutcomeKind.notHeard);
+      expect(o.feelings, isEmpty);
+      expect(o.topSound, 'People talking');
+    });
+
+    test('A: a bark checked for a cat is "did not clearly hear a cat"', () {
+      expect(fakeAnalysis.check(bark, Species.cat).kind, OutcomeKind.notHeard);
+    });
+
+    test('B: a purring cat shows the sound, not a feeling', () {
+      final o = fakeAnalysis.check(purr, Species.cat);
+      expect(o.kind, OutcomeKind.heardOnly);
+      expect(o.topSound, 'Purring');
+      expect(o.toEntryData(ms: 100, source: 'recording')['heard'], 'Purring');
+    });
+
+    test('a meowing cat gets a cat feeling', () {
+      final o = fakeAnalysis.check(meow, Species.cat);
+      expect(o.kind, OutcomeKind.feeling);
+      expect(o.feelings.first.$1, 'Likely hungry');
+    });
+
+    test('C: no feeling over 50% is "Not sure", with every likelihood kept', () {
+      final o = fakeAnalysis.check(barkUnclear, Species.dog);
+      expect(o.kind, OutcomeKind.notSure);
+      expect(o.feelings.first.$2, lessThan(Analysis.unsureBelow));
+      expect(o.feelings, hasLength(4));
+      final d = o.toEntryData(ms: 90, source: 'file');
+      expect(d['unsure'], isTrue);
+      expect((d['likelihoods'] as Map).length, 4);
+    });
+
+    test('a saved result never holds audio (FR-N02)', () {
+      final d = fakeAnalysis.check(bark, Species.dog).toEntryData(ms: 110, source: 'recording');
+      expect(d.keys, isNot(anyElement(anyOf('audio', 'clip', 'recording'))));
+      expect(d['soundEvidence'], hasLength(3));
+    });
+  });
+
+  group('audio helpers', () {
+    test('readWav16 reads 16-bit PCM', () {
+      final b = BytesBuilder();
+      void u32(int v) => b.add((ByteData(4)..setUint32(0, v, Endian.little)).buffer.asUint8List());
+      b.add('RIFF'.codeUnits);
+      u32(36 + 4);
+      b.add('WAVEfmt '.codeUnits);
+      u32(16);
+      b.add(List.filled(16, 0));
+      b.add('data'.codeUnits);
+      u32(4);
+      b.add((ByteData(4)
+            ..setInt16(0, 16384, Endian.little)
+            ..setInt16(2, -32768, Endian.little))
+          .buffer
+          .asUint8List());
+      expect(readWav16(ByteData.sublistView(b.toBytes())), [0.5, -1.0]);
+    });
+
+    test('loudest10s keeps the loudest 10 s of a longer file', () {
+      const sr = 48000;
+      final x = List<double>.filled(sr * 25, 0.0);
+      for (var i = sr * 12; i < sr * 22; i++) {
+        x[i] = 0.5;
+      }
+      final y = loudest10s(x);
+      expect(y.length, sr * 10);
+      expect(y.every((v) => v == 0.5), isTrue);
+    });
+  });
+
+  test('result title drops "Likely"', () {
+    expect(Wording.feelingHeadline('Likely happy or playful'), 'Happy or playful');
+  });
+
+  testWidgets('record, see the result, save it to the timeline (Figma 07 to 09)', (t) async {
+    final s = await signedInState();
+    final pet = await s.addPet(name: 'Milo', species: Species.dog);
+    phoneSize(t);
+    final engine = FakeEngine(bark);
+    await t.pumpWidget(MyPetApp(state: s, engine: engine));
+    await settle(t);
+    await t.tap(find.text('Check'));
+    await settle(t);
+    expect(find.text('Milo · dog'), findsOneWidget);
+    expect(find.text('Record about 10 seconds of Milo barking, whining or growling.'), findsOneWidget);
+
+    await t.tap(find.bySemanticsLabel('Record 10 seconds'));
+    await t.pump();
+    await t.pump(const Duration(seconds: 1));
+    expect(find.text('9 s left'), findsOneWidget);
+    await t.tap(find.bySemanticsLabel('Stop recording'));
+    await settle(t);
+
+    expect(engine.checked, ['rec.wav']);
+    expect(find.text('Result'), findsOneWidget);
+    expect(find.text('Happy or playful'), findsOneWidget);
+    expect(find.text('Other possibilities'), findsOneWidget);
+    expect(find.text(Wording.notDiagnosisBehaviour), findsOneWidget);
+    await t.scrollUntilVisible(find.textContaining('Clip deleted'), 200);
+    expect(find.textContaining('Clip deleted'), findsOneWidget);
+
+    await t.tap(find.text('Save'));
+    await settle(t);
+    final saved = s.timelineOf(pet.id).ofKind(EntryKind.behaviourResult);
+    expect(saved, hasLength(1));
+    expect(saved.first.topLabel, 'Likely happy or playful');
+    expect(s.tab, 0);
+  });
+
+  testWidgets('A: nothing to save when the dog was not heard', (t) async {
+    final s = await signedInState();
+    await s.addPet(name: 'Milo', species: Species.dog);
+    phoneSize(t);
+    await t.pumpWidget(MyPetApp(state: s, engine: FakeEngine(talk)));
+    await settle(t);
+    await t.tap(find.text('Check'));
+    await settle(t);
+    await t.tap(find.text('Choose a video or audio file'));
+    await settle(t);
+    expect(find.text('Did not clearly hear a dog'), findsOneWidget);
+    expect(find.text('Closest sound: People talking'), findsOneWidget);
+    await t.scrollUntilVisible(find.text('Try again'), 200);
+    expect(find.text('Save'), findsNothing);
+    await t.tap(find.text('Try again'));
+    await settle(t);
+    expect(find.text('Milo · dog'), findsOneWidget);
+  });
+}

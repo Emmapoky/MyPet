@@ -53,3 +53,9 @@ firestore-debug.log
 
 # Screenshots made by test/screens (run on purpose)
 test/screens/out/
+
+# Behaviour check model files (34 MB model; classifiers built from datasets that are not redistributed)
+assets/models/*
+!assets/models/.gitkeep
+assets/behaviour/*
+!assets/behaviour/.gitkeep

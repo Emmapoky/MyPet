@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
+import '../behaviour/engine.dart';
 import '../state/app_state.dart';
 import 'home_shell.dart';
 import 'quick_log_screen.dart';
@@ -11,12 +12,19 @@ import 'theme.dart';
 final navigatorKey = GlobalKey<NavigatorState>();
 
 class MyPetApp extends StatelessWidget {
-  const MyPetApp({super.key, required this.state});
+  MyPetApp({super.key, required this.state, BehaviourEngine? engine})
+      : engine = engine ?? PhoneBehaviourEngine();
   final AppState state;
 
+  /// The on-phone behaviour check. Loaded the first time the Check tab opens.
+  final BehaviourEngine engine;
+
   @override
-  Widget build(BuildContext context) => ChangeNotifierProvider.value(
-        value: state,
+  Widget build(BuildContext context) => MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: state),
+          Provider.value(value: engine),
+        ],
         child: MaterialApp(
           title: 'MyPet',
           navigatorKey: navigatorKey,

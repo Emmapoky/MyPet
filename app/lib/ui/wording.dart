@@ -37,9 +37,8 @@ class Wording {
             if (e.weightKg != null) '${e.weightKg!.toStringAsFixed(1)} kg',
           ].join(', '),
         EntryKind.healthRecord => e.title,
-        EntryKind.behaviourResult => e.topLabel == null
-            ? 'Behaviour check'
-            : 'Behaviour check: ${e.topLabel} ${(e.likelihoods[e.topLabel] ?? 0) * 100 ~/ 1}%',
+        EntryKind.behaviourResult =>
+          behaviourSummary(e).isEmpty ? 'Behaviour check' : 'Behaviour check: ${behaviourSummary(e)}',
         EntryKind.taskDone => (e.data['title'] as String?) ?? 'Task done',
       };
 
@@ -71,6 +70,12 @@ class Wording {
     if (top == null) return '';
     final pct = ((e.likelihoods[top] ?? 0) * 100).round();
     return e.data['unsure'] == true ? 'Not sure · closest $top $pct%' : '$top · $pct%';
+  }
+
+  /// "Likely happy or playful" -> "Happy or playful" for the Result card's title (Figma 09).
+  static String feelingHeadline(String label) {
+    final rest = label.startsWith('Likely ') ? label.substring(7) : label;
+    return rest.isEmpty ? label : rest[0].toUpperCase() + rest.substring(1);
   }
 
   static String entryTitle(EntryKind k) => switch (k) {

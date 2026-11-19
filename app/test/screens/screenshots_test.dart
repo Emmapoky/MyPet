@@ -14,6 +14,8 @@ import 'package:mypet/state/app_state.dart';
 import 'package:mypet/state/demo_data.dart';
 import 'package:mypet/ui/app.dart';
 
+import '../behaviour_test.dart' show FakeEngine, bark, barkUnclear, purr, talk;
+
 Future<void> loadFont(String family, String path) async {
   final bytes = File(path).readAsBytesSync();
   final loader = FontLoader(family)..addFont(Future.value(ByteData.view(bytes.buffer)));
@@ -53,7 +55,7 @@ void main() {
     await setUp(t);
     final s = await state();
     s.selectPet(s.pets.firstWhere((p) => p.name == 'Biscuit').id);
-    await t.pumpWidget(MyPetApp(state: s));
+    await t.pumpWidget(MyPetApp(state: s, engine: FakeEngine(bark)));
     await shot(t, '02-today');
     await t.scrollUntilVisible(find.text('Log again'), 300, scrollable: find.byType(Scrollable).first);
     await t.tap(find.text('Log again'));
@@ -67,8 +69,31 @@ void main() {
     s.goToTab(1);
     await shot(t, '11-pets');
     s.goToTab(2);
-    await shot(t, '07-check');
+    await shot(t, '07-record');
+    await t.tap(find.bySemanticsLabel('Record 10 seconds'));
+    await t.pump();
+    await t.pump(const Duration(seconds: 3));
+    await expectLater(find.byType(MyPetApp), matchesGoldenFile('out/08-recording.png'));
+    await t.tap(find.bySemanticsLabel('Stop recording'));
+    await shot(t, '09-result');
   });
+
+  for (final (name, emb, species) in [
+    ('09a-not-heard', talk, Species.dog),
+    ('09b-cat-purring', purr, Species.cat),
+    ('09c-not-sure', barkUnclear, Species.dog),
+  ]) {
+    testWidgets(name, (t) async {
+      await setUp(t);
+      final s = await state(demo: false);
+      await s.addPet(name: species == Species.cat ? 'Mochi' : 'Milo', species: species);
+      s.goToTab(2);
+      await t.pumpWidget(MyPetApp(state: s, engine: FakeEngine(emb)));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Choose a video or audio file'));
+      await shot(t, name);
+    });
+  }
 
   testWidgets('empty states', (t) async {
     await setUp(t);

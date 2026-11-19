@@ -21,7 +21,7 @@ Rules these follow (Dr Yam, 18 Sep 2026; proposal report): machine learning, not
 | 10 | ML Lab "Try a clip": record near a pet or pick a video on the phone | Done 19 Nov 2026 (iPhone) |
 | 11 | `build_photo_check.py`, `check_short_clips.py`: the picture half of the clip check, and 5 s vs 10 s clips | Done 19 Nov 2026 (Mac); picture on the iPhone not yet run |
 | 12 | `12_how_many_clips.ipynb`: learning curves, how many labelled clips the check needs, and whether more animals or more clips help | Running |
-| 13 | `build_video_library.py`: real Commons videos of dogs and cats in the Test library, checked by picture and sound | Running |
+| 13 | `build_video_library.py`: real Commons videos of dogs and cats in the Test library, checked by picture and sound | Done 19 Nov 2026 (iPhone) |
 | later | Android timing on a borrowed phone; YAMNet only if needed | Later |
 
 ## For Li Shen: how to retrain and test
@@ -231,3 +231,23 @@ Picture model: CLIP ViT-B/32 image encoder (free, MIT licence, quantized ONNX, 8
 - The ML Lab's **Try a clip** now checks the picture too when you pick a video.
 
 Full numbers: `results/11_photo_check.json`. Data: CIFAR-10 (Krizhevsky 2009); Dog Emotion Dataset v2 (huggingface.co/datasets/Dewa/Dog_Emotion_Dataset_v2).
+
+## Step 13 result (real videos in the Test library, 19 Nov 2026)
+
+80 videos from Wikimedia Commons (40 dogs, 40 cats, free licences, source link on each), checked the way the app checks a clip: the loudest 10 s of the soundtrack through CLAP, three frames through the CLIP image model. 46 more were skipped (27 had no soundtrack, 15 would not decode, 3 downloads were cut short, 1 frame error). The Test library on the iPhone now holds 518 clips (235 MB).
+
+| What | Right |
+|---|---|
+| Cat or dog from the **picture** | 54 of 80 (dogs 23 of 40, cats 31 of 40) |
+| Cat or dog from the **sound** | 47 of 80 (dogs 21 of 40, cats 26 of 40) |
+| Both agree and are right | 35 of 80 |
+| At least one is right | 66 of 80 |
+
+**How to read this**
+
+- Real videos are much harder than the datasets. Many Commons videos are about something else (people talking, music, other animals, a pet far from the camera), so the picture often says "other" (23 of 80) and the sound often says speech or quiet.
+- The picture and the sound fail on different videos, so using both helps: at least one is right on 66 of 80 (83%), against 54 (68%) for the picture alone.
+- For these videos the feeling has no true label, so it is not scored. 22 of 40 dog videos came out "upset", the same lean seen in step 8, so the app must keep saying "likely" and show the other possibilities.
+- The phone's answers match Python's on the counts. The largest difference in a likelihood is 0.115, up from 0.0 for sound only. It comes from the picture gate, which multiplies small differences in the image numbers by about 100, and it did not change any of the counts.
+
+Full numbers: `results/13_video_clips.json`.

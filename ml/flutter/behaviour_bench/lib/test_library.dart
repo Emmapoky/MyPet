@@ -35,10 +35,11 @@ const taskTitles = {
 class SoundEvidence {
   SoundEvidence(Map<String, dynamic> j)
       : names = List<String>.from(j['names']),
+        keys = List<String>.from(j['keys']),
         species = List<String>.from(j['species']),
         scale = (j['scale'] as num).toDouble(),
         t = (j['T'] as List).map((r) => (r as List).map((v) => (v as num).toDouble()).toList()).toList();
-  final List<String> names, species;
+  final List<String> names, keys, species;
   final double scale;
   final List<List<double>> t;
 
@@ -94,8 +95,14 @@ class Clip {
         animal = j['animal'],
         seconds = (j['seconds'] as num).toDouble(),
         truth = Map<String, String>.from(j['truth']),
+        group = j['group'] ?? 'dataset',
+        soundTruth = j['sound_truth'],
+        source = j['source'] ?? '',
+        tasks = {...Map<String, String>.from(j['truth']).keys, ...List<String>.from(j['tasks'] ?? const [])}.toList(),
         python = (j['python'] as Map).map((k, v) => MapEntry(k as String, (v as List).map((x) => (x as num).toDouble()).toList()));
-  final String file, species, animal;
+  final String file, species, animal, group, source;
+  final String? soundTruth;
+  final List<String> tasks;
   final double seconds;
   final Map<String, String> truth;
   final Map<String, List<double>> python;
@@ -153,6 +160,7 @@ class TestLibraryPage extends StatefulWidget {
 class _TestLibraryPageState extends State<TestLibraryPage> {
   Map<String, Classifier> _clf = {};
   SoundEvidence? _sound;
+  List<String> get _soundKeys => _sound?.keys ?? const [];
   List<Clip> _clips = [];
   String _filter = 'all';
   String? _error;
@@ -216,7 +224,7 @@ class _TestLibraryPageState extends State<TestLibraryPage> {
         final norm = math.sqrt(e.fold(0.0, (s, v) => s + v * v));
         final emb = e.map((v) => v / norm).toList();
         clip.phone = {
-          for (final t in clip.truth.keys) t: _clf[t]!.probs(emb),
+          for (final t in clip.tasks) t: _clf[t]!.probs(emb),
           if (_sound != null) 'sound': _sound!.probs(emb),
         };
         clip.ms = sw.elapsedMilliseconds;
@@ -271,6 +279,13 @@ class _TestLibraryPageState extends State<TestLibraryPage> {
         }
       }
       if (run.isNotEmpty) out['species_from_sound'] = {'clips': run.length, 'right': right};
+      final typed = run.where((c) => c.soundTruth != null).toList();
+      if (typed.isNotEmpty) {
+        out['online_sound_type'] = {
+          'clips': typed.length,
+          'right': typed.where((c) => argmax(c.phone!['sound']!) == _soundKeys.indexOf(c.soundTruth!)).length,
+        };
+      }
     }
     for (final c in _clips) {
       if (c.ms != null) ms.add(c.ms!);
@@ -311,13 +326,16 @@ class _TestLibraryPageState extends State<TestLibraryPage> {
     }
     if (rows.isEmpty) {
       rows.add(Text('${_clips.length} clips ready: '
-          '${_clips.where((c) => c.species == 'cat').length} cat meows, '
-          '${_clips.where((c) => c.species == 'dog').length} dog barks, all from animals the model never saw.'));
+          '${_clips.where((c) => c.species == 'cat' && c.group != 'online').length} cat meows, '
+          '${_clips.where((c) => c.species == 'dog' && c.group != 'online').length} dog barks from animals the model never saw, '
+          '${_clips.where((c) => c.group == 'online').length} online clips and videos.'));
     } else {
       final sp = s['species_from_sound'];
       if (sp != null) {
         rows.add(Text('Sound evidence names the right animal on ${sp['right']} of ${sp['clips']} clips'));
       }
+      final ot = s['online_sound_type'];
+      if (ot != null) rows.add(Text('Online clips: right sound type on ${ot['right']} of ${ot['clips']}'));
       rows.add(Text('Chance is about 33% for three labels and 25% for four. '
           'Median ${s['median_ms_per_clip']} ms per clip. '
           'Largest difference from Python: ${s['max_gap_vs_python']}'));
@@ -333,8 +351,16 @@ class _TestLibraryPageState extends State<TestLibraryPage> {
   Widget _tile(Clip c) {
     final lines = <Widget>[];
     var allRight = true;
-    for (final t in c.truth.keys) {
+    for (final t in c.tasks) {
       final clf = _clf[t]!;
+      if (!c.truth.containsKey(t)) {
+        if (c.phone != null) {
+          final p = c.phone![t]!;
+          final k = argmax(p);
+          lines.add(Text('${taskTitles[t]}: said ${clf.names[k]} ${(100 * p[k]).round()}% (no true label online)'));
+        }
+        continue;
+      }
       final truthName = clf.names[clf.classes.indexOf(c.truth[t]!)];
       if (c.phone == null) {
         lines.add(Text('${taskTitles[t]}: true $truthName'));
@@ -356,6 +382,11 @@ class _TestLibraryPageState extends State<TestLibraryPage> {
     final sp = c.phone?['sound'];
     if (sp != null && _sound != null) {
       final order = List.generate(sp.length, (i) => i)..sort((a, b) => sp[b].compareTo(sp[a]));
+      if (c.soundTruth != null) {
+        final k = _sound!.names[_soundKeys.indexOf(c.soundTruth!)];
+        lines.add(Text('Sound ${order.first == _soundKeys.indexOf(c.soundTruth!) ? '✓' : '✗'}, recorded as $k',
+            style: Theme.of(context).textTheme.bodySmall));
+      }
       lines.add(Text('Sounds like: ${order.take(2).map((i) => '${_sound!.names[i]} ${(100 * sp[i]).round()}%').join(', ')}',
           style: Theme.of(context).textTheme.bodySmall));
     }
@@ -368,12 +399,12 @@ class _TestLibraryPageState extends State<TestLibraryPage> {
         ),
         title: Text('${c.animal} · ${c.seconds.toStringAsFixed(1)} s'),
         subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: lines),
-        trailing: c.phone == null
+        trailing: c.phone == null || c.truth.isEmpty
             ? null
             : Icon(allRight ? Icons.check_circle : Icons.cancel, color: allRight ? Colors.green : Colors.red),
         children: [
           if (c.phone != null)
-            for (final t in c.truth.keys)
+            for (final t in c.tasks)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -388,7 +419,7 @@ class _TestLibraryPageState extends State<TestLibraryPage> {
               ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: Text(c.file, style: Theme.of(context).textTheme.bodySmall),
+            child: Text('${c.file}\n${c.source}', style: Theme.of(context).textTheme.bodySmall),
           ),
         ],
       ),
@@ -397,7 +428,9 @@ class _TestLibraryPageState extends State<TestLibraryPage> {
 
   @override
   Widget build(BuildContext context) {
-    final shown = _clips.where((c) => _filter == 'all' || c.species == _filter).toList();
+    final shown = _clips
+        .where((c) => _filter == 'all' || (_filter == 'online' ? c.group == 'online' : c.group != 'online' && c.species == _filter))
+        .toList();
     return Scaffold(
       appBar: AppBar(title: const Text('Test library')),
       body: _error != null
@@ -416,9 +449,9 @@ class _TestLibraryPageState extends State<TestLibraryPage> {
                 const SizedBox(height: 8),
                 _summaryCard(),
                 Wrap(spacing: 8, children: [
-                  for (final f in ['all', 'cat', 'dog'])
+                  for (final f in ['all', 'cat', 'dog', 'online'])
                     ChoiceChip(
-                      label: Text({'all': 'All', 'cat': 'Cats', 'dog': 'Dogs'}[f]!),
+                      label: Text({'all': 'All', 'cat': 'Cats', 'dog': 'Dogs', 'online': 'Online clips'}[f]!),
                       selected: _filter == f,
                       onSelected: (_) => setState(() => _filter = f),
                     ),

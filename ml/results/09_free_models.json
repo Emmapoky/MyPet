@@ -1,0 +1,41 @@
+{
+ "clap-htsat-unfused (current, 34 MB on the phone)": {
+  "cat": 0.527,
+  "dog_energy": 0.536,
+  "dog_mood": 0.482,
+  "dog_report4": 0.384,
+  "dims": 512
+ },
+ "larger_clap_general": {
+  "cat": 0.533,
+  "dog_energy": 0.547,
+  "dog_mood": 0.45,
+  "dog_report4": 0.387,
+  "dims": 512
+ },
+ "ast-audioset (MIT/ast-finetuned-audioset-10-10-0.4593)": {
+  "cat": 0.518,
+  "dog_energy": 0.492,
+  "dog_mood": 0.491,
+  "dog_report4": 0.425,
+  "dims": 768,
+  "s_per_clip_colab_cuda": 0.094
+ },
+ "yamnet": {
+  "cat": 0.422,
+  "dog_energy": 0.49,
+  "dog_mood": 0.457,
+  "dog_report4": 0.376,
+  "dims": 2048,
+  "s_per_clip_colab_cuda": 0.009
+ },
+ "panns-cnn14": {
+  "cat": 0.543,
+  "dog_energy": 0.486,
+  "dog_mood": 0.412,
+  "dog_report4": 0.359,
+  "dims": 2048,
+  "s_per_clip_colab_cuda": 0.02
+ },
+ "note": "Macro F1. Cats: 7-fold split by cat (CatMeows, 440 meows). Dogs: EmotionalCanines official split (other dogs in test). Same logistic regression grid for every model. Run 19 Nov 2026 on a Colab T4. PANNs clips repeat-padded to 10 s (CNN14 fails under 1 s)."
+}

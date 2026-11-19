@@ -17,7 +17,7 @@ Rules these follow (Dr Yam, 18 Sep 2026; proposal report): machine learning, not
 | 6 | `flutter/behaviour_bench` Test library screen: run every held-out clip on the iPhone, true label vs result, play, score | Done 19 Nov 2026 (iPhone) |
 | 7 | `build_test_library.py --sound-evidence`: the report's own labels (Table 4.2) and the sound evidence that checks it is the right animal | Done 19 Nov 2026 (iPhone) |
 | 8 | `build_online_test.py`: 144 clips recorded by ordinary people (Wikimedia Commons audio and video, ESC-50) | Done 19 Nov 2026 (iPhone) |
-| 9 | `09_compare_free_models.ipynb`: is another free audio model better than CLAP? (AST, YAMNet, PANNs) | Running |
+| 9 | `09_compare_free_models.ipynb`: is another free audio model better than CLAP? (AST, YAMNet, PANNs) | Done 19 Nov 2026 |
 | 10 | ML Lab "Try a clip": record near a pet or pick a video on the phone | Done 19 Nov 2026 (iPhone) |
 | 11 | `build_photo_check.py`, `check_short_clips.py`: the picture half of the clip check, and 5 s vs 10 s clips | Running |
 | later | Android timing on a borrowed phone; YAMNet only if needed | Later |
@@ -163,3 +163,44 @@ On the iPhone: median 112 ms per clip, fully offline, and the largest gap betwee
 Full numbers and confusion matrices: `results/05_test_library.json`.
 
 Data: CatMeows, Ludovico et al. 2020, Zenodo record 4008297. Check the licence on the record before redistributing; this repo only downloads it.
+
+## Step 7 result (the report's own labels, 19 Nov 2026)
+
+Same held-out clips as step 5, now with the labels in report Table 4.2, plus CLAP zero-shot "sound evidence" that checks the sound came from the chosen animal.
+
+| Classifier | Held-out clips | Macro F1 | Chance |
+|---|---|---|---|
+| Cat: likely hungry / reacting to handling / stressed in a strange place | 94 (4 cats) | 0.38 | 0.33 |
+| Dog: likely happy or playful / calm / sad or uneasy / upset | 200 | 0.36 | 0.25 |
+| Dog energy | 200 | 0.50 | 0.33 |
+| Dog mood | 200 | 0.42 | 0.33 |
+
+The iPhone gives exactly Python's answers (largest gap 0.0), about 110 to 130 ms per clip. Full numbers: `results/07_report_labels.json`.
+
+## Step 8 result (clips recorded by ordinary people, 19 Nov 2026)
+
+144 clips nobody in the datasets recorded: 64 from Wikimedia Commons (including 9 videos, only the sound used) and 80 from ESC-50.
+
+- **Cat or dog, from the sound alone:** 136 of 144 right. Across all 438 clips in the Test library on the iPhone: 395 right (90%).
+- **Type of sound (Commons):** 48 of 64. Purrs 15/15, barks 17/18, growls 4/6, meows 10/18 (5 heard as dog howls), hisses 1/4 (3 heard as dog growls), whimpers 0/2.
+- **Feeling:** the dog classifier says "upset" for most ordinary barks (13 of 18 Commons, 33 of 40 ESC-50). Barks recorded at home are not like the dataset's barks, so the feeling must stay "likely", with "Not sure" below 50%.
+
+Full numbers: `results/08_online_clips.json`.
+
+## Step 9 result (is another free model better? 19 Nov 2026)
+
+Same data, same splits, same classifier. Only the model that turns sound into numbers changes. Macro F1, higher is better:
+
+| Model | Cat | Dog energy | Dog mood | Dog 4 report labels |
+|---|---|---|---|---|
+| **CLAP htsat-unfused (current)** | 0.53 | 0.54 | 0.48 | 0.38 |
+| CLAP larger_clap_general | 0.53 | 0.55 | 0.45 | 0.39 |
+| AST (AudioSet) | 0.52 | 0.49 | 0.49 | **0.43** |
+| YAMNet | 0.42 | 0.49 | 0.46 | 0.38 |
+| PANNs CNN14 | **0.54** | 0.49 | 0.41 | 0.36 |
+
+**Decision: keep CLAP.** No free model wins across the board. AST is 0.04 better on the four dog labels but worse on energy, about 2.5 times bigger, and has no tested phone version. YAMNet, the report's fallback, is clearly worse on cats. The weak spot is the data (few animals, lab recordings), not the model. Full numbers: `results/09_free_models.json`.
+
+## Step 11b result (5 s clips vs 10 s, 19 Nov 2026)
+
+The app records one clip of 5 to 10 s. On the 46 test clips longer than 5 s (mostly Commons recordings), keeping only the first 5 s gave: cat or dog right 40 vs 42 (10 s), sound type right 29 vs 30 of 41, same feeling on 35 of 46. **5 s works but 10 s is a little better**, so the app records up to 10 s and lets the user stop from 5 s. Most dataset clips are under 2 s (median 1.8 s) and are repeat-padded already. Full numbers: `results/11_short_clips.json`.

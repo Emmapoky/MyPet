@@ -66,7 +66,7 @@ One deliberate difference: transformers takes a *random* 10 s from a longer clip
 
 `dart/clap_features` is a line-by-line Dart port with no packages (own FFT). `dart test` checks it against the 2b fixtures: the filter bank matches within 1e-9 and the features within 0.00001 dB on all three test signals (pass mark 0.01 dB). One clip takes about 0.15 s on a laptop CPU; a phone will be slower and is timed in step 3.
 
-This closes the risk in the report: the app can compute the model input exactly, so CLAP stays the plan and YAMNet stays the fallback only.
+This closes the feature-matching risk in the report: the app can compute the model input exactly. The CLAP or YAMNet decision now rests on phone speed and size (step 3).
 
 **Honest wording for the app and report:** show likelihoods with "not a diagnosis", and say the behaviour check is an early estimate. This matches Dr Yam's line that logging is the minimum and AI is the best case.
 

@@ -15,18 +15,25 @@ class FlagCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context);
+    final c = MyPetColors.of(context);
     final early = flag.confidence == Confidence.early;
+    final on = c.onChangeContainer;
     return Card(
-      color: early ? t.colorScheme.surfaceContainerHigh : t.colorScheme.tertiaryContainer,
+      elevation: 0,
+      color: c.changeContainer,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(Tokens.radiusCard),
+        side: early ? BorderSide(color: on.withValues(alpha: 0.4)) : BorderSide.none,
+      ),
       child: Padding(
         padding: const EdgeInsets.all(Tokens.space4),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Icon(Icons.insights, color: t.colorScheme.onTertiaryContainer),
+            Icon(Icons.trending_down, color: on, semanticLabel: early ? 'Early sign' : 'Change noticed'),
             const SizedBox(width: Tokens.space3),
             Expanded(
               child: Text(Wording.flagHeadline(flag, pet),
-                  style: t.textTheme.titleSmall),
+                  style: t.textTheme.titleSmall!.copyWith(color: on)),
             ),
           ]),
           if (expanded) ...[
@@ -34,11 +41,11 @@ class FlagCard extends StatelessWidget {
             for (final line in Wording.flagEvidence(flag))
               Padding(
                 padding: const EdgeInsets.only(bottom: Tokens.space1),
-                child: Text('• $line', style: t.textTheme.bodySmall),
+                child: Text('• $line', style: t.textTheme.bodySmall!.copyWith(color: on)),
               ),
           ],
           const SizedBox(height: Tokens.space2),
-          Text(Wording.notDiagnosis, style: t.textTheme.bodySmall),
+          Text(Wording.notDiagnosis, style: t.textTheme.bodySmall!.copyWith(color: on)),
         ]),
       ),
     );

@@ -104,12 +104,21 @@ class _TodayBody extends StatelessWidget {
       ),
       const SizedBox(height: Tokens.space4),
       if (logged)
-        Padding(
-          padding: const EdgeInsets.only(bottom: Tokens.space2),
+        Container(
+          margin: const EdgeInsets.only(bottom: Tokens.space3),
+          padding: const EdgeInsets.symmetric(horizontal: Tokens.space4, vertical: Tokens.space3),
+          decoration: BoxDecoration(
+            color: MyPetColors.of(context).loggedContainer,
+            borderRadius: BorderRadius.circular(Tokens.radiusCard),
+          ),
           child: Row(children: [
-            Icon(Icons.check_circle, color: t.colorScheme.primary, size: 20),
+            Icon(Icons.check_circle, color: MyPetColors.of(context).onLoggedContainer, size: 20),
             const SizedBox(width: Tokens.space2),
-            Text('${pet.name} is logged for today', style: t.textTheme.bodyMedium),
+            Expanded(
+              child: Text('${pet.name} is logged for today',
+                  style: t.textTheme.titleSmall!
+                      .copyWith(color: MyPetColors.of(context).onLoggedContainer)),
+            ),
           ]),
         ),
       FilledButton.icon(
@@ -147,7 +156,7 @@ class _TaskTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = context.read<AppState>();
-    final t = Theme.of(context);
+    final c = MyPetColors.of(context);
     final time = DateFormat.jm().format(o.at);
     final missed = o.state == OccurrenceState.missed;
     final isToday = DateUtils.isSameDay(o.at, s.now());
@@ -156,8 +165,13 @@ class _TaskTile extends StatelessWidget {
       value: o.state == OccurrenceState.done,
       controlAffinity: ListTileControlAffinity.leading,
       title: Text(o.reminder.title),
-      subtitle: Text(missed ? 'Missed · $when' : when,
-          style: missed ? TextStyle(color: t.colorScheme.error) : null),
+      subtitle: missed
+          ? Row(children: [
+              Icon(Icons.schedule, size: 16, color: c.onChangeContainer),
+              const SizedBox(width: Tokens.space1),
+              Flexible(child: Text('Missed · $when', style: TextStyle(color: c.onChangeContainer))),
+            ])
+          : Text(when),
       onChanged: o.state == OccurrenceState.done
           ? null
           : (_) => s.addEntry(petId, EntryKind.taskDone, {

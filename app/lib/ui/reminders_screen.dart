@@ -28,7 +28,6 @@ class RemindersScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = context.watch<AppState>();
     final pet = s.selectedPet;
-    final t = Theme.of(context);
     return Scaffold(
       appBar: AppBar(title: const PetSwitcher(), actions: const [SyncBadge()]),
       floatingActionButton: pet == null
@@ -78,7 +77,7 @@ class RemindersScreen extends StatelessWidget {
                     child: Column(children: [
                       for (final o in missed)
                         ListTile(
-                          leading: Icon(Icons.error_outline, color: t.colorScheme.error),
+                          leading: Icon(Icons.schedule, color: MyPetColors.of(context).onChangeContainer),
                           title: Text(o.reminder.title),
                           subtitle: Text(DateFormat('EEE d MMM, h:mm a').format(o.at)),
                         ),

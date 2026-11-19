@@ -6,6 +6,7 @@ import '../config/thresholds.dart';
 import '../models/care_entry.dart';
 import '../models/pet.dart';
 import '../models/schedule.dart';
+import '../notify/reminder_notifications.dart';
 import '../state/app_state.dart';
 import '../util/day.dart';
 import 'home_shell.dart';
@@ -19,7 +20,7 @@ import 'widgets/flag_card.dart';
 import 'widgets/pet_bar.dart';
 
 /// The time the missed-day reminder fires if a pet is not logged (FR21; Figma "Due by 9:00 pm").
-const dailyLogDueMinutes = 21 * 60;
+const dailyLogDueMinutes = ReminderNotifications.dailyLogMinutes;
 
 /// Today (report Table 4.4 screen 2; Figma screens 02 and 04): pet, today's care with
 /// missed items, Log now, timeline.

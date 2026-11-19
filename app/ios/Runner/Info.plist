@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>MyPet uses the microphone only when you tap Record (10 seconds of your pet's sounds) or the mic on a note. Sound is checked on this phone and then deleted.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>MyPet turns what you say into the note on a daily log.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

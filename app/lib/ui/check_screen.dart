@@ -376,7 +376,7 @@ class _CameraViewState extends State<_CameraView> {
                           size: 16, color: recording ? c.brand : Colors.white),
                       const SizedBox(width: Tokens.space1),
                       Flexible(
-                        child: Text(recording ? 'Recording · ${w.left} s' : 'Fit ${w.pet.name} in the frame',
+                        child: Text(recording ? '0:${elapsed.toString().padLeft(2, '0')}' : 'Fit ${w.pet.name} in the frame',
                             style: white, overflow: TextOverflow.ellipsis),
                       ),
                     ])),
@@ -400,7 +400,7 @@ class _CameraViewState extends State<_CameraView> {
           if (!checking) ...[
             Text(
               recording
-                  ? (canStop ? 'Tap to stop' : '${CheckScreen.minSeconds - elapsed} s more')
+                  ? (canStop ? 'Tap to stop' : 'Hold steady')
                   : '${w.pet.name} · ${_speciesWord(w.pet.species)}',
               style: white,
             ),

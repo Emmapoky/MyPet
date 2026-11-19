@@ -311,7 +311,7 @@ void main() {
       await t.pump(const Duration(milliseconds: 300)); // start chime
       await t.pump();
       await t.pump(const Duration(seconds: 1));
-      expect(find.text('Recording · 9 s'), findsOneWidget);
+      expect(find.text('0:01'), findsOneWidget);
       // Stop is off until the clip is 5 s long.
       await t.tap(find.bySemanticsLabel('Stop recording'));
       await t.pump();

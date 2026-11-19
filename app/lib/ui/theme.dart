@@ -98,7 +98,7 @@ class MyPetColors extends ThemeExtension<MyPetColors> {
     lavender: Color(0xFF9C86F5),
     lavenderContainer: Color(0xFFF1EDFF),
     onLavenderContainer: Color(0xFF4A36B0),
-    pink: Color(0xFFF27BAA),
+    pink: Color(0xFFCC3F7A),
     pinkContainer: Color(0xFFFDE6F0),
     onPinkContainer: Color(0xFF8A2A5C),
     sky: Color(0xFF5AA9E6),
@@ -112,8 +112,9 @@ class MyPetColors extends ThemeExtension<MyPetColors> {
     onLoggedContainer: Color(0xFF1F6B4A),
     loggedEdge: Color(0xFF5CC08E),
     petAccents: [
-      Color(0xFF7B5CE0), Color(0xFFF27BAA), Color(0xFF5AA9E6),
-      Color(0xFFFFB938), Color(0xFF4FC1A6), Color(0xFFFF9A6B),
+      // Deep enough that white text and paws pass 4.5:1 (tokens v3.1).
+      Color(0xFF6A4FD6), Color(0xFFCC3F7A), Color(0xFF2B74BE),
+      Color(0xFF1A8070), Color(0xFFB85020), Color(0xFF8E44AD),
     ],
     surfaceTint: Color(0xFFE3F0FB),
   );
@@ -146,15 +147,15 @@ class MyPetColors extends ThemeExtension<MyPetColors> {
     loggedEdge: Color(0xFF6BC799),
     petAccents: [
       Color(0xFFB9A8FF), Color(0xFFF7A8CB), Color(0xFF8CC8F2),
-      Color(0xFFFFD173), Color(0xFF86DCC4), Color(0xFFFFBE9A),
+      Color(0xFF86DCC4), Color(0xFFFFBE9A), Color(0xFFD9A8F0),
     ],
     surfaceTint: Color(0xFF1C3550),
   );
 
-  /// Text or icon colour on a pet colour: white on violet, dark ink on the light
-  /// accents (pink, sky, sun, mint, peach), so it always passes contrast.
+  /// Text or icon colour on a pet colour: white in light mode; dark ink only on
+  /// the pastel dark-mode accents.
   static Color onAccent(Color fill) =>
-      fill.computeLuminance() > 0.3 ? const Color(0xFF2B2340) : Colors.white;
+      fill.computeLuminance() > 0.4 ? const Color(0xFF1B1530) : Colors.white;
 
   static MyPetColors of(BuildContext context) => Theme.of(context).extension<MyPetColors>()!;
 

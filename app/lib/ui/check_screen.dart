@@ -13,6 +13,7 @@ import 'home_shell.dart';
 import 'theme.dart';
 import 'widgets/clip_replay.dart';
 import 'widgets/common.dart';
+import 'widgets/pet_bar.dart';
 import 'feedback.dart';
 import 'wording.dart';
 
@@ -203,13 +204,21 @@ class _CheckScreenState extends State<CheckScreen> {
           onRecord: () => _record(pet),
           onStop: () => _stop(pet),
           onPick: () => _pick(pet),
+          active: s.tab == CheckScreen.tabIndex,
         ),
       );
     }
     return Scaffold(
       appBar: AppBar(
         leading: onResult ? BackButton(onPressed: _reset) : null,
-        title: Text(onResult ? 'Result' : 'Check'),
+        // The result names who was checked, so it is clear with several pets.
+        title: onResult
+            ? Row(children: [
+                PetAvatar(pet: _checkedPet, size: 36),
+                const SizedBox(width: Tokens.space3),
+                Flexible(child: Text(_checkedPet!.name, overflow: TextOverflow.ellipsis)),
+              ])
+            : const Text('Check'),
         actions: const [MoreMenu()],
       ),
       body: PageWash(child: SafeArea(child: _body(context, s, pet))),
@@ -268,7 +277,11 @@ class _CameraView extends StatefulWidget {
     required this.onRecord,
     required this.onStop,
     required this.onPick,
+    required this.active,
   });
+
+  /// The Check tab is the one showing (spinners only animate then).
+  final bool active;
   final Widget? camera;
   final bool cameraAsked;
   final Pet pet;
@@ -379,18 +392,41 @@ class _CameraViewState extends State<_CameraView> {
               Expanded(
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: Semantics(
-                    liveRegion: recording,
-                    child: pill(Row(mainAxisSize: MainAxisSize.min, children: [
-                      Icon(recording ? Icons.fiber_manual_record_rounded : Icons.center_focus_strong_rounded,
-                          size: 16, color: recording ? c.brand : Colors.white),
-                      const SizedBox(width: Tokens.space1),
-                      Flexible(
-                        child: Text(recording ? '0:${elapsed.toString().padLeft(2, '0')}' : 'Fit ${w.pet.name} in the frame',
-                            style: white, overflow: TextOverflow.ellipsis),
-                      ),
-                    ])),
-                  ),
+                  child: recording || checking
+                      ? Semantics(
+                          label: recording ? 'Recording' : null,
+                          child: pill(Row(mainAxisSize: MainAxisSize.min, children: [
+                            Icon(Icons.fiber_manual_record_rounded, size: 16, color: c.brand),
+                            const SizedBox(width: Tokens.space1),
+                            Text('0:${elapsed.toString().padLeft(2, '0')}', style: white),
+                          ])),
+                        )
+                      // Who is being checked: tap to pick another pet (also swipe at the bottom).
+                      : Semantics(
+                          button: true,
+                          label: 'Checking ${w.pet.name}. Change pet',
+                          excludeSemantics: true,
+                          child: Material(
+                            color: Colors.black.withValues(alpha: 0.45),
+                            shape: const StadiumBorder(),
+                            child: InkWell(
+                              customBorder: const StadiumBorder(),
+                              onTap: () {
+                                Feel.tap();
+                                showPetSwitcher(context);
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(4, 4, Tokens.space2, 4),
+                                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                  PetAvatar(pet: w.pet, size: 36),
+                                  const SizedBox(width: Tokens.space2),
+                                  Flexible(child: Text(w.pet.name, style: white, overflow: TextOverflow.ellipsis)),
+                                  const Icon(Icons.expand_more_rounded, color: Colors.white),
+                                ]),
+                              ),
+                            ),
+                          ),
+                        ),
                 ),
               ),
               if (!recording && !checking)
@@ -433,7 +469,7 @@ class _CameraViewState extends State<_CameraView> {
                         child: Semantics(
                           button: true,
                           selected: on,
-                          label: on ? 'Record a clip of ${p.name}' : 'Check ${p.name}',
+                          label: on ? (w.ready ? 'Record a clip of ${p.name}' : 'Getting ready') : 'Check ${p.name}',
                           excludeSemantics: true,
                           child: GestureDetector(
                             onTap: () {
@@ -444,17 +480,34 @@ class _CameraViewState extends State<_CameraView> {
                                     duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
                               }
                             },
-                            child: AnimatedContainer(
+                            child: AnimatedScale(
                               duration: const Duration(milliseconds: 200),
-                              width: on ? 72 : 52,
-                              height: on ? 72 : 52,
-                              decoration: BoxDecoration(
-                                color: c.petAccent(p.id),
-                                shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white, width: on ? 0 : 2),
-                              ),
-                              child: Icon(on ? Icons.videocam_rounded : Icons.pets_rounded,
-                                  color: MyPetColors.onAccent(c.petAccent(p.id)), size: on ? 32 : 24),
+                              scale: on ? 1 : 0.72,
+                              child: Stack(clipBehavior: Clip.none, children: [
+                                PetAvatar(pet: p, size: 72, onHero: !on),
+                                if (on && !w.ready && w.active)
+                                  const Positioned.fill(
+                                    child: Padding(
+                                      padding: EdgeInsets.all(18),
+                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
+                                    ),
+                                  ),
+                                if (on && w.ready)
+                                  Positioned(
+                                    right: -2,
+                                    bottom: -2,
+                                    child: Container(
+                                      width: 28,
+                                      height: 28,
+                                      decoration: BoxDecoration(
+                                        color: c.brand,
+                                        shape: BoxShape.circle,
+                                        border: Border.all(color: Colors.white, width: 2),
+                                      ),
+                                      child: const Icon(Icons.videocam_rounded, size: 16, color: Colors.white),
+                                    ),
+                                  ),
+                              ]),
                             ),
                           ),
                         ),
@@ -593,6 +646,8 @@ class ResultView extends StatelessWidget {
                   Text('Heard', style: t.textTheme.labelLarge!.copyWith(color: t.colorScheme.onSurfaceVariant)),
                   const SizedBox(height: Tokens.space1),
                   Text(o.topSound, style: t.textTheme.titleLarge),
+                  const SizedBox(height: Tokens.space1),
+                  Text(soundGuess(o.sounds), style: t.textTheme.bodySmall),
                 ]),
               ),
             ],
@@ -610,7 +665,7 @@ class ResultView extends StatelessWidget {
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text('Did not clearly hear a ${_speciesWord(o.species)}', style: t.textTheme.titleLarge),
                       const SizedBox(height: Tokens.space1),
-                      Text('Closest sound: ${o.topSound}',
+                      Text('Closest sound: ${soundGuess(o.sounds)}',
                           style: t.textTheme.bodyLarge!.copyWith(color: t.colorScheme.onSurfaceVariant)),
                     ]),
                   ),
@@ -630,7 +685,7 @@ class ResultView extends StatelessWidget {
           MyCard(
             title: 'Sounds heard',
             child: Wrap(spacing: Tokens.space2, runSpacing: Tokens.space2, children: [
-              for (final (n, _) in o.sounds.take(3)) _SoundChip(n),
+              for (final (n, p) in o.sounds.take(3)) _SoundChip('$n ${_pct(p)}'),
             ]),
           ),
           if (o.kind == OutcomeKind.heardOnly) ...[

@@ -57,6 +57,9 @@ dependencies:
   camera: ^0.12.2
   audioplayers: ^6.8.1
   video_player: ^2.14.0
+  image_picker: ^1.2.4
+  pdfrx: ^3.1.0
+  flutter_svg: ^2.4.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -93,6 +96,7 @@ flutter:
     - assets/models/
     - assets/behaviour/
     - assets/sounds/
+    - assets/illustrations/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

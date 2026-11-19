@@ -1,5 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../models/pet.dart';
+
 /// Design tokens v3: violet, pink, sky blue and sun yellow from Erwyna's pitch
 /// slides and her September SwiftUI MyPet. Source of truth: mypet/design/mypet-tokens-v3.json.
 /// Violet is the trusted main colour; pink, sky and sun are accents only.
@@ -83,7 +85,7 @@ class MyPetColors extends ThemeExtension<MyPetColors> {
       LinearGradient(colors: page, begin: Alignment.topCenter, end: Alignment.bottomCenter);
 
   /// A stable colour for a pet, so each pet keeps its colour on every screen.
-  Color petAccent(String petId) => petAccents[petId.codeUnits.fold(0, (a, b) => a + b) % petAccents.length];
+  Color petAccent(Pet p) => petAccents[petColourIndex(p) % petAccents.length];
 
   static const light = MyPetColors(
     brand: Color(0xFF6A4FD6),
@@ -91,32 +93,30 @@ class MyPetColors extends ThemeExtension<MyPetColors> {
     brandContainer: Color(0xFFEEEAFF),
     onBrandContainer: Color(0xFF4A36B0),
     hero: [Color(0xFF6A4FD6), Color(0xFFB5488A)],
-    page: [Color(0xFFFAF7FF), Color(0xFFF3F8FF)],
+    page: [Color(0xFFF1ECFF), Color(0xFFFCEFF6)],
     sun: Color(0xFFFFC94D),
     sunContainer: Color(0xFFFFF3CF),
     onSunContainer: Color(0xFF6B4A00),
     lavender: Color(0xFF9C86F5),
     lavenderContainer: Color(0xFFF1EDFF),
     onLavenderContainer: Color(0xFF4A36B0),
-    pink: Color(0xFFCC3F7A),
+    pink: Color(0xFFC23F7E),
     pinkContainer: Color(0xFFFDE6F0),
     onPinkContainer: Color(0xFF8A2A5C),
-    sky: Color(0xFF5AA9E6),
-    skyContainer: Color(0xFFE3F0FB),
-    onSkyContainer: Color(0xFF1E5C8F),
-    cardBorder: Color(0xFFECE8F5),
+    sky: Color(0xFF4A62C9),
+    skyContainer: Color(0xFFE6EAFB),
+    onSkyContainer: Color(0xFF2E3F8F),
+    cardBorder: Color(0xFFE6DEFA),
     changeContainer: Color(0xFFFFF1D6),
     onChangeContainer: Color(0xFF7A4A00),
     changeEdge: Color(0xFFF2B544),
-    loggedContainer: Color(0xFFDFF3E7),
-    onLoggedContainer: Color(0xFF1F6B4A),
-    loggedEdge: Color(0xFF5CC08E),
+    loggedContainer: Color(0xFFEDE7FF),
+    onLoggedContainer: Color(0xFF4A36B0),
+    loggedEdge: Color(0xFF8E7CF0),
     petAccents: [
-      // Deep enough that white text and paws pass 4.5:1 (tokens v3.1).
-      Color(0xFF6A4FD6), Color(0xFFCC3F7A), Color(0xFF2B74BE),
-      Color(0xFF1A8070), Color(0xFFB85020), Color(0xFF8E44AD),
+      Color(0xFF6A4FD6), Color(0xFFC23F7E), Color(0xFF4A62C9), Color(0xFF8E44AD), Color(0xFF2F6FA8), Color(0xFFB8476A), Color(0xFFA86500), Color(0xFFA0527A),
     ],
-    surfaceTint: Color(0xFFE3F0FB),
+    surfaceTint: Color(0xFFF7F4FF),
   );
 
   static const dark = MyPetColors(
@@ -135,21 +135,20 @@ class MyPetColors extends ThemeExtension<MyPetColors> {
     pink: Color(0xFFF7A8CB),
     pinkContainer: Color(0xFF4A2338),
     onPinkContainer: Color(0xFFFFD6E7),
-    sky: Color(0xFF8CC8F2),
-    skyContainer: Color(0xFF1C3550),
-    onSkyContainer: Color(0xFFCDE6FA),
+    sky: Color(0xFFA8B8F5),
+    skyContainer: Color(0xFF26304F),
+    onSkyContainer: Color(0xFFD6DEFB),
     cardBorder: Color(0xFF363044),
     changeContainer: Color(0xFF3A2E1A),
     onChangeContainer: Color(0xFFFFD9A0),
     changeEdge: Color(0xFFF2C261),
-    loggedContainer: Color(0xFF1E3A2C),
-    onLoggedContainer: Color(0xFF9FE0BE),
-    loggedEdge: Color(0xFF6BC799),
+    loggedContainer: Color(0xFF2E2A48),
+    onLoggedContainer: Color(0xFFD9D1FF),
+    loggedEdge: Color(0xFFB9A8FF),
     petAccents: [
-      Color(0xFFB9A8FF), Color(0xFFF7A8CB), Color(0xFF8CC8F2),
-      Color(0xFF86DCC4), Color(0xFFFFBE9A), Color(0xFFD9A8F0),
+      Color(0xFFB9A8FF), Color(0xFFF2A6C8), Color(0xFFA8B8F5), Color(0xFFD9A8F0), Color(0xFF9CC4EA), Color(0xFFF0A8BC), Color(0xFFFFD173), Color(0xFFE3B0CC),
     ],
-    surfaceTint: Color(0xFF1C3550),
+    surfaceTint: Color(0xFF2A2538),
   );
 
   /// Text or icon colour on a pet colour: white in light mode; dark ink only on
@@ -187,11 +186,11 @@ const _lightScheme = ColorScheme(
   onSurfaceVariant: Color(0xFF6B6480),
   surfaceContainerLowest: Color(0xFFFFFFFF),
   surfaceContainerLow: Color(0xFFFFFFFF),
-  surfaceContainer: Color(0xFFF4F1FB),
+  surfaceContainer: Color(0xFFF7F4FF),
   surfaceContainerHigh: Color(0xFFF4F1FB),
   surfaceContainerHighest: Color(0xFFEAE6F4),
   outline: Color(0xFF8A84A0),
-  outlineVariant: Color(0xFFECE8F5),
+  outlineVariant: Color(0xFFE6DEFA),
   scrim: Color(0xFF2B2340),
   shadow: Color(0xFF4A36B0),
   surfaceTint: Color(0x00000000),

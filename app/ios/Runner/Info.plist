@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Pick a video of your pet for the behaviour check. Only its sound is used, and it is not kept.</string>
+	<string>Choose a photo of your pet for its profile, or a video for the behaviour check. Photos stay on this phone; videos are checked and then deleted.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>MyPet films a 5 to 10 second clip only when you tap Record. It is checked on this phone and then deleted.</string>
+	<string>Take a photo of your pet for its profile, or film a 5 to 10 second clip for the behaviour check when you tap Record. Clips are checked on this phone and then deleted.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>MyPet uses the microphone only when you tap Record (a 5 to 10 second clip) or the mic on a note. The clip is checked on this phone and then deleted.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>

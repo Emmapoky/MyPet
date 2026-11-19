@@ -1,5 +1,14 @@
 import '../util/day.dart';
 
+/// How many pet colours there are (MyPetColors.petAccents).
+const petColourCount = 8;
+
+/// Names of the pet colours, in the same order (tokens v3.2 petAccentNames).
+const petColourNames = ['Violet', 'Berry', 'Periwinkle', 'Plum', 'Ocean', 'Rose', 'Honey', 'Mauve'];
+
+/// The pet's colour: the one picked, or a steady one from its id.
+int petColourIndex(Pet p) => (p.colour ?? p.id.codeUnits.fold<int>(0, (a, b) => a + b)) % petColourCount;
+
 /// Cats and dogs only (report Table 3.1, FR01).
 enum Species { cat, dog }
 
@@ -20,6 +29,12 @@ class Pet {
   final List<String> carerIds;
   final DateTime createdAt;
 
+  /// Index into the pet colours the person picked (null: the app picks one).
+  final int? colour;
+
+  /// Profile photo file name in the app's photo folder on this phone (null: illustration).
+  final String? photo;
+
   const Pet({
     required this.id,
     required this.name,
@@ -30,6 +45,8 @@ class Pet {
     this.status = PetStatus.active,
     required this.carerIds,
     required this.createdAt,
+    this.colour,
+    this.photo,
   });
 
   bool get isActive => status == PetStatus.active;
@@ -44,6 +61,9 @@ class Pet {
     bool clearWeight = false,
     PetStatus? status,
     List<String>? carerIds,
+    int? colour,
+    String? photo,
+    bool clearPhoto = false,
   }) =>
       Pet(
         id: id,
@@ -55,6 +75,8 @@ class Pet {
         status: status ?? this.status,
         carerIds: carerIds ?? this.carerIds,
         createdAt: createdAt,
+        colour: colour ?? this.colour,
+        photo: clearPhoto ? null : (photo ?? this.photo),
       );
 
   Map<String, dynamic> toMap() => {
@@ -66,6 +88,8 @@ class Pet {
         'status': status.name,
         'carerIds': carerIds,
         'createdAt': createdAt.toUtc().toIso8601String(),
+        'colour': ?colour,
+        'photo': ?photo,
       };
 
   factory Pet.fromMap(String id, Map<String, dynamic> m) => Pet(
@@ -79,5 +103,7 @@ class Pet {
         status: PetStatus.values.byName((m['status'] as String?) ?? 'active'),
         carerIds: List<String>.from(m['carerIds'] as List),
         createdAt: DateTime.parse(m['createdAt'] as String),
+        colour: (m['colour'] as num?)?.toInt(),
+        photo: m['photo'] as String?,
       );
 }

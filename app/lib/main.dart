@@ -20,6 +20,8 @@ Future<void> main() async {
       state.look = ThemeMode.values.firstWhere((m) => m.name == saved, orElse: () => ThemeMode.light);
     }
     state.onLookChanged = (m) => f.writeAsString(m.name);
+    // Pet photos stay on this phone only.
+    state.photoDir = '${(await getApplicationDocumentsDirectory()).path}/pet_photos';
   } catch (_) {}
   runApp(MyPetApp(state: state));
   // Pet data arrives a moment after start; the first log opens once it is there.

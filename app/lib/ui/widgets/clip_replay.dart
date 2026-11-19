@@ -238,7 +238,7 @@ class _MomentPill extends StatelessWidget {
     final sound = moment.source == MomentSource.sound;
     return Semantics(
       button: true,
-      label: 'Play ${moment.label} at ${clock(moment.start)}, ${sound ? 'sound' : 'picture'}',
+      label: 'Play ${moment.label}, ${(100 * moment.p).round()} percent, at ${clock(moment.start)}, ${sound ? 'sound' : 'picture'}',
       excludeSemantics: true,
       child: Material(
         color: sound ? soundColour : pictureColour,
@@ -257,6 +257,11 @@ class _MomentPill extends StatelessWidget {
                 const SizedBox(width: Tokens.space2),
                 Text('${clock(moment.start)} ${moment.label}',
                     style: t.textTheme.labelLarge!.copyWith(color: Colors.white)),
+                if (moment.p > 0) ...[
+                  const SizedBox(width: Tokens.space1),
+                  Text('${(100 * moment.p).round()}%',
+                      style: t.textTheme.labelMedium!.copyWith(color: Colors.white.withValues(alpha: 0.85))),
+                ],
               ]),
             ),
           ),

@@ -13,6 +13,7 @@ import 'package:mypet/behaviour/model.dart';
 import 'package:mypet/models/care_entry.dart';
 import 'package:mypet/models/pet.dart';
 import 'package:mypet/ui/app.dart';
+import 'package:mypet/ui/check_screen.dart';
 import 'package:mypet/ui/feedback.dart';
 import 'package:mypet/ui/wording.dart';
 
@@ -100,9 +101,9 @@ class FakeEngine implements BehaviourEngine {
     // A few moments like the phone finds: the top pet sound twice, and the pet in view.
     final pet = o.kind != OutcomeKind.notHeard;
     return o.withClip(clip: wavPath, seconds: 8, moments: [
-      if (pet) Moment(MomentSource.sound, o.topSound, 1, 3),
-      if (pet) Moment(MomentSource.sound, o.topSound, 5, 6),
-      Moment(MomentSource.picture, species == Species.cat ? 'Cat in view' : 'Dog in view', 0, 7),
+      if (pet) Moment(MomentSource.sound, o.topSound, 1, 3, p: o.sounds.first.$2),
+      if (pet) Moment(MomentSource.sound, o.topSound, 5, 6, p: o.sounds.first.$2),
+      Moment(MomentSource.picture, species == Species.cat ? 'Cat in view' : 'Dog in view', 0, 7, p: 0.93),
     ]);
   }
 
@@ -143,15 +144,17 @@ void main() {
 
     test('only pet sounds that stand out become moments', () {
       final ev = fakeAnalysis.sound;
-      expect(soundInWindow(ev, [0.7, 0.1, 0.1, 0.1]), 'Barking');
+      expect(soundInWindow(ev, [0.7, 0.1, 0.1, 0.1]), ('Barking', 0.7));
       expect(soundInWindow(ev, [0.1, 0.1, 0.1, 0.7]), isNull); // people talking
       expect(soundInWindow(ev, [0.35, 0.3, 0.3, 0.05]), isNull); // nothing clear
     });
 
     test('a frame shows a feeling only when the picture is sure', () {
-      expect(pictureInFrame('dog', feelings: [('Likely calm', 0.8)]), 'Calm');
-      expect(pictureInFrame('dog', feelings: [('Likely calm', 0.4)]), 'Dog in view');
-      expect(pictureInFrame('cat'), 'Cat in view');
+      expect(pictureInFrame('dog', feelings: [('Likely calm', 0.8)]), ('Calm', 0.8));
+      expect(pictureInFrame('dog', seenP: 0.9, feelings: [('Likely calm', 0.4)]), ('Dog in view', 0.9));
+      expect(pictureInFrame('cat', seenP: 0.8), ('Cat in view', 0.8));
+      expect(soundGuess([('Purring', 0.72), ('Meowing', 0.18)]), 'Purring 72%, or maybe meowing 18%');
+      expect(soundGuess([('Purring', 0.9), ('Meowing', 0.05)]), 'Purring 90%');
       expect(pictureInFrame('other'), isNull);
     });
   });
@@ -348,8 +351,8 @@ void main() {
       await settle(t);
       await t.tap(find.text('Check'));
       await settle(t);
-      expect(find.text('Fit Milo in the frame'), findsOneWidget);
-      expect(find.text('Fit Milo in the frame'), findsOneWidget);
+      expect(find.bySemanticsLabel('Checking Milo. Change pet'), findsOneWidget);
+      expect(find.bySemanticsLabel('Checking Milo. Change pet'), findsOneWidget);
 
       await t.tap(find.bySemanticsLabel('Record a clip of Milo'));
       await t.pump(const Duration(milliseconds: 300)); // start chime
@@ -367,7 +370,7 @@ void main() {
       await settle(t);
 
       expect(engine.checked, ['clip.mov']);
-      expect(find.text('Result'), findsOneWidget);
+      expect(find.byType(ResultView), findsOneWidget);
       expect(find.text('Happy or playful'), findsOneWidget);
       expect(find.text('0:01 Barking'), findsOneWidget);
     expect(find.text('0:00 Dog in view'), findsOneWidget);
@@ -397,11 +400,11 @@ void main() {
     await t.tap(find.byTooltip('Choose a video'));
     await settle(t);
     expect(find.text('Did not clearly hear a dog'), findsOneWidget);
-    expect(find.text('Closest sound: People talking'), findsOneWidget);
+    expect(find.textContaining('Closest sound: People talking'), findsOneWidget);
     await t.scrollUntilVisible(find.text('Try again'), 200);
     expect(find.text('Save'), findsNothing);
     await t.tap(find.text('Try again'));
     await settle(t);
-    expect(find.text('Fit Milo in the frame'), findsOneWidget);
+    expect(find.bySemanticsLabel('Checking Milo. Change pet'), findsOneWidget);
   });
 }

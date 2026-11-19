@@ -168,8 +168,12 @@ class PhoneBehaviourEngine implements BehaviourEngine {
         final idx = List.generate(p.length, (i) => i)..sort((a, b) => p[b].compareTo(p[a]));
         feel = [for (final i in idx) (clf.names[i], p[i])];
       }
-      final label = pictureInFrame(seen, feelings: feel);
-      if (label != null) moments.add(Moment(MomentSource.picture, label, k.toDouble(), math.min(k + 1.0, dur)));
+      final gp = m.gate.probs(e);
+      final seenP = [for (var i = 0; i < gp.length; i++) if (m.gate.species[i] == seen) gp[i]].fold(0.0, (a, b) => a + b);
+      final hit = pictureInFrame(seen, seenP: seenP, feelings: feel);
+      if (hit != null) {
+        moments.add(Moment(MomentSource.picture, hit.$1, k.toDouble(), math.min(k + 1.0, dur), p: hit.$2));
+      }
     }
     // Whole clip: the frames nearest 20%, 50% and 80% through (or evenly spread for other counts).
     final n = m.frames;
@@ -202,8 +206,10 @@ class PhoneBehaviourEngine implements BehaviourEngine {
     final dur = x.length / sampleRate;
     for (var i = 0; i < keys.length; i++) {
       final e = await _embed(feats[i]);
-      final label = soundInWindow(_analysis!.sound, _analysis!.sound.probs(e));
-      if (label != null) out.add(Moment(MomentSource.sound, label, keys[i].toDouble(), math.min(keys[i] + 1.0, dur)));
+      final hit = soundInWindow(_analysis!.sound, _analysis!.sound.probs(e));
+      if (hit != null) {
+        out.add(Moment(MomentSource.sound, hit.$1, keys[i].toDouble(), math.min(keys[i] + 1.0, dur), p: hit.$2));
+      }
     }
     return out;
   }

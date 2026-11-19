@@ -160,7 +160,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
       if (result.flags.isEmpty) const SizedBox(height: Tokens.space4),
       MyCard(
         title: "${pet.name}'s usual and today",
-        accent: c.petAccent(pet.id),
+        accent: c.petAccent(pet),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           _EnergyBars(
             days: days,

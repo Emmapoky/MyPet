@@ -140,6 +140,8 @@ class AppState extends ChangeNotifier {
     String breed = '',
     Day? birthDate,
     double? weightKg,
+    int? colour,
+    String? photo,
   }) async {
     final pet = Pet(
       id: backend.newId(),
@@ -150,6 +152,8 @@ class AppState extends ChangeNotifier {
       weightKg: weightKg,
       carerIds: [_me],
       createdAt: now(),
+      colour: colour ?? nextColour(),
+      photo: photo,
     );
     await backend.savePet(pet);
     _selectedPetId = pet.id;
@@ -157,6 +161,18 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> updatePet(Pet pet) => backend.savePet(pet);
+
+  /// The first pet colour no active pet uses yet, so a household's pets look different.
+  int nextColour() {
+    final used = {for (final p in activePets) petColourIndex(p)};
+    for (var i = 0; i < petColourCount; i++) {
+      if (!used.contains(i)) return i;
+    }
+    return activePets.length % petColourCount;
+  }
+
+  /// Folder on this phone holding pet photos (set by main.dart; null in tests).
+  String? photoDir;
 
   Future<CareEntry> addEntry(String petId, EntryKind kind, Map<String, dynamic> data,
       {Day? day, String? supersedes, bool voided = false}) async {

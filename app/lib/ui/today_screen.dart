@@ -187,7 +187,7 @@ class _TodayBody extends StatelessWidget {
     final loggedCount = pets.where((p) => s.loggedToday(p.id)).length;
     final tasks = rows.where((r) => r.state != _RowState.missed || r.detail.isNotEmpty).toList();
     final tasksDone = rows.where((r) => r.state == _RowState.done).length;
-    final accent = c.petAccent(pet.id);
+    final accent = c.petAccent(pet);
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(Tokens.space4, Tokens.space2, Tokens.space4, Tokens.space5),

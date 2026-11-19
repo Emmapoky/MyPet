@@ -59,7 +59,7 @@ class PetsScreen extends StatelessWidget {
         else
           for (final p in active) ...[
             MyCard(
-              accent: MyPetColors.of(context).petAccent(p.id),
+              accent: MyPetColors.of(context).petAccent(p),
               padding: const EdgeInsets.symmetric(vertical: Tokens.space1),
               child: tile(p),
             ),

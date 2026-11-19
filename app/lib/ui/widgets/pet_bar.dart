@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:material_ui/material_ui.dart';
 
 import '../feedback.dart';
@@ -8,36 +10,54 @@ import '../../models/pet.dart';
 import '../../state/app_state.dart';
 import '../pet_edit_screen.dart';
 import '../theme.dart';
+import 'pet_portrait.dart';
 
-/// Pet avatar: a paw in the pet's own colour, as in the SwiftUI app.
+/// Pet picture: the carer's photo if they added one, otherwise a drawn cat or dog
+/// face on the pet's own colour.
 class PetAvatar extends StatelessWidget {
   const PetAvatar({super.key, this.pet, this.size = 56, this.onHero = false});
   final Pet? pet;
   final double size;
 
-  /// White circle for use on the coral hero card.
+  /// White ring for use on the hero card.
   final bool onHero;
 
   @override
   Widget build(BuildContext context) {
     final c = MyPetColors.of(context);
-    final accent = pet == null ? c.brandStrong : c.petAccent(pet!.id);
-    return ExcludeSemantics(
-      child: Container(
+    final p = pet;
+    final Widget face;
+    if (p == null) {
+      face = Container(
         width: size,
         height: size,
-        decoration: BoxDecoration(
-          color: onHero ? Colors.white : accent,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(
-          Icons.pets_rounded,
-          color: onHero ? accent : MyPetColors.onAccent(accent),
-          size: size * 0.48,
-        ),
-      ),
+        decoration: BoxDecoration(color: c.brandStrong, shape: BoxShape.circle),
+        child: Icon(Icons.pets_rounded, color: Colors.white, size: size * 0.48),
+      );
+    } else {
+      final file = petPhotoFile(context.read<AppState>(), p);
+      face = file != null
+          ? ClipOval(child: Image.file(file, width: size, height: size, fit: BoxFit.cover, gaplessPlayback: true))
+          : PetPortrait.of(p, background: c.petAccent(p), size: size);
+    }
+    return ExcludeSemantics(
+      child: onHero
+          ? Container(
+              padding: const EdgeInsets.all(3),
+              decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+              child: face,
+            )
+          : face,
     );
   }
+}
+
+/// The pet's photo on this phone, if there is one.
+File? petPhotoFile(AppState s, Pet p) {
+  final dir = s.photoDir, name = p.photo;
+  if (dir == null || name == null) return null;
+  final f = File('$dir/$name');
+  return f.existsSync() ? f : null;
 }
 
 /// Opens a sheet to switch to another pet or add one.
@@ -134,10 +154,10 @@ class PetStrip extends StatelessWidget {
               excludeSemantics: true,
               child: Material(
                 color: p.id == selected
-                    ? c.petAccent(p.id)
+                    ? c.petAccent(p)
                     : t.colorScheme.surface,
                 shape: StadiumBorder(
-                  side: BorderSide(color: c.petAccent(p.id), width: 1.5),
+                  side: BorderSide(color: c.petAccent(p), width: 1.5),
                 ),
                 child: InkWell(
                   customBorder: const StadiumBorder(),
@@ -151,26 +171,22 @@ class PetStrip extends StatelessWidget {
                       minHeight: Tokens.minTarget,
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: Tokens.space4,
-                        vertical: Tokens.space2,
+                      padding: const EdgeInsets.fromLTRB(
+                        Tokens.space1 + 2,
+                        Tokens.space1,
+                        Tokens.space4,
+                        Tokens.space1,
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
-                            Icons.pets_rounded,
-                            size: 18,
-                            color: p.id == selected
-                                ? MyPetColors.onAccent(c.petAccent(p.id))
-                                : c.petAccent(p.id),
-                          ),
+                          PetAvatar(pet: p, size: 30, onHero: p.id == selected),
                           const SizedBox(width: Tokens.space2),
                           Text(
                             p.name,
                             style: t.textTheme.titleSmall!.copyWith(
                               color: p.id == selected
-                                  ? MyPetColors.onAccent(c.petAccent(p.id))
+                                  ? MyPetColors.onAccent(c.petAccent(p))
                                   : t.colorScheme.onSurface,
                             ),
                           ),

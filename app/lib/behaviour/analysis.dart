@@ -47,12 +47,15 @@ enum MomentSource { sound, picture }
 /// One stretch of the clip and what was found in it, such as "Hissing" from 0:02 to 0:04
 /// (sound) or "Dog in view" (picture). Times are seconds from the start of the clip.
 class Moment {
-  const Moment(this.source, this.label, this.start, this.end);
+  const Moment(this.source, this.label, this.start, this.end, {this.p = 0});
   final MomentSource source;
   final String label;
   final double start, end;
 
-  Map<String, dynamic> toJson() => {'src': source.name, 'label': label, 's': start, 'e': end};
+  /// How likely the label is, at its surest second (0 to 1).
+  final double p;
+
+  Map<String, dynamic> toJson() => {'src': source.name, 'label': label, 's': start, 'e': end, 'p': p};
 
   @override
   String toString() => '${source.name}:$label@$start-$end';
@@ -67,7 +70,7 @@ List<Moment> mergeMoments(List<Moment> raw) {
     Moment? cur;
     for (final m in these) {
       if (cur != null && cur.label == m.label && m.start <= cur.end + 0.01) {
-        cur = Moment(src, m.label, cur.start, math.max(cur.end, m.end));
+        cur = Moment(src, m.label, cur.start, math.max(cur.end, m.end), p: math.max(cur.p, m.p));
       } else {
         if (cur != null) out.add(cur);
         cur = m;
@@ -80,22 +83,32 @@ List<Moment> mergeMoments(List<Moment> raw) {
 
 /// The pet sound heard in one short window, or null when the top sound is people,
 /// background, or not clear enough ([minP]).
-String? soundInWindow(SoundEvidence ev, List<double> probs, {double minP = 0.4}) {
+(String, double)? soundInWindow(SoundEvidence ev, List<double> probs, {double minP = 0.4}) {
   final i = argmax(probs);
   if (ev.species[i] == 'other' || probs[i] < minP) return null;
-  return ev.names[i];
+  return (ev.names[i], probs[i]);
 }
 
 /// What one frame shows: the pet's feeling when the picture model is sure enough (dogs),
 /// otherwise just "Dog in view" or "Cat in view". Null when no dog or cat is seen.
-String? pictureInFrame(String seen, {List<(String, double)>? feelings, double minP = 0.5}) {
+(String, double)? pictureInFrame(String seen, {double seenP = 0, List<(String, double)>? feelings, double minP = 0.5}) {
   if (seen != 'dog' && seen != 'cat') return null;
   if (feelings != null && feelings.isNotEmpty && feelings.first.$2 >= minP) {
     final f = feelings.first.$1;
     final short = f.startsWith('Likely ') ? f.substring(7) : f;
-    return short.isEmpty ? f : short[0].toUpperCase() + short.substring(1);
+    return (short.isEmpty ? f : short[0].toUpperCase() + short.substring(1), feelings.first.$2);
   }
-  return seen == 'dog' ? 'Dog in view' : 'Cat in view';
+  return (seen == 'dog' ? 'Dog in view' : 'Cat in view', seenP);
+}
+
+/// "Purring 72%, or maybe meowing 18%": the top sound, and the next one when it is
+/// at least [orMaybe] likely (ML thread's rule).
+String soundGuess(List<(String, double)> sounds, {double orMaybe = 0.15}) {
+  if (sounds.isEmpty) return '';
+  String pct(double p) => '${(100 * p).round()}%';
+  final top = '${sounds.first.$1} ${pct(sounds.first.$2)}';
+  if (sounds.length < 2 || sounds[1].$2 < orMaybe) return top;
+  return '$top, or maybe ${sounds[1].$1.toLowerCase()} ${pct(sounds[1].$2)}';
 }
 
 class CheckOutcome {

@@ -34,7 +34,9 @@ import build_test_library as base  # noqa: E402  (same pipeline, same classifier
 
 CACHE = os.path.join(base.CACHE, "online")
 RESULTS = os.path.join(base.APP, "..", "..", "results", "08_online_clips.json")
-UA = {"User-Agent": "MyPet-student-project/0.1 (FIT3162 university project; behaviour model test)"}
+# Wikimedia's User-Agent policy asks for a way to reach the project.
+UA = {"User-Agent": "MyPet-student-project/0.1 (https://github.com/Emmapoky/MyPet; FIT3162 university project) python-urllib"}
+COMMONS_BLOCKED = {"n": 0}  # consecutive 429s; after 3 we stop asking Commons in this run
 
 # (Commons file title, species, sound type). Sound types match the keys in base.SOUNDS.
 COMMONS = [
@@ -112,18 +114,24 @@ def get(url, path, polite=0.0):
     if os.path.exists(path) and os.path.getsize(path) > 0:
         return path
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    for attempt in range(6):
+    if polite and COMMONS_BLOCKED["n"] >= 3:
+        raise RuntimeError("skipped: Commons is rate-limiting this run, try again later")
+    for attempt in range(2):
         time.sleep(polite)
         try:
             req = urllib.request.Request(url, headers=UA)
             with urllib.request.urlopen(req, timeout=120) as r, open(path + ".part", "wb") as f:
                 f.write(r.read())
             os.replace(path + ".part", path)
+            COMMONS_BLOCKED["n"] = 0
             return path
         except urllib.error.HTTPError as e:
-            if e.code != 429 or attempt == 5:
+            if e.code != 429:
                 raise
-            wait = int(e.headers.get("Retry-After") or 0) or 30 * (attempt + 1)
+            if attempt == 1:
+                COMMONS_BLOCKED["n"] += 1
+                raise
+            wait = min(int(e.headers.get("Retry-After") or 0) or 30, 130)
             print(f"  Commons asked us to slow down; waiting {wait} s", flush=True)
             time.sleep(wait)
     return path

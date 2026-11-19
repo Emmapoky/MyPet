@@ -22,7 +22,7 @@ Run after tool/build_test_library.py --sound-evidence (it reuses that step's cla
 Adds the online clips to assets/test_library/ (manifest entries with "group": "online") and writes
 ml/results/08_online_clips.json.
 """
-import csv, io, json, os, sys, time, urllib.parse, urllib.request
+import csv, io, json, os, sys, time, urllib.error, urllib.parse, urllib.request
 from collections import Counter, defaultdict
 
 import numpy as np
@@ -106,13 +106,26 @@ COMMONS = [
 ESC50 = "https://raw.githubusercontent.com/karolpiczak/ESC-50/master/"
 
 
-def get(url, path):
-    if not (os.path.exists(path) and os.path.getsize(path) > 0):
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        req = urllib.request.Request(url, headers=UA)
-        with urllib.request.urlopen(req, timeout=120) as r, open(path + ".part", "wb") as f:
-            f.write(r.read())
-        os.replace(path + ".part", path)
+def get(url, path, polite=0.0):
+    """Download once into the cache. Wikimedia asks bots to go slowly: with polite > 0 we wait that many
+    seconds before each new download and back off on HTTP 429 (Too many requests)."""
+    if os.path.exists(path) and os.path.getsize(path) > 0:
+        return path
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    for attempt in range(6):
+        time.sleep(polite)
+        try:
+            req = urllib.request.Request(url, headers=UA)
+            with urllib.request.urlopen(req, timeout=120) as r, open(path + ".part", "wb") as f:
+                f.write(r.read())
+            os.replace(path + ".part", path)
+            return path
+        except urllib.error.HTTPError as e:
+            if e.code != 429 or attempt == 5:
+                raise
+            wait = int(e.headers.get("Retry-After") or 0) or 30 * (attempt + 1)
+            print(f"  Commons asked us to slow down; waiting {wait} s", flush=True)
+            time.sleep(wait)
     return path
 
 
@@ -181,9 +194,9 @@ def main():
             continue
         ext = os.path.splitext(info[title]["url"])[1]
         try:
-            x = decode_any(get(info[title]["url"], os.path.join(CACHE, "commons", f"{i:03d}{ext}")))
+            x = decode_any(get(info[title]["url"], os.path.join(CACHE, "commons", f"{i:03d}{ext}"), polite=3.0))
         except Exception as e:  # noqa: BLE001
-            skipped.append(f"{title}: {e}")
+            skipped.append(f"{title}: {str(e)[:60]}")
             continue
         if len(x) < base.SR // 4:
             skipped.append(f"{title}: no audio")

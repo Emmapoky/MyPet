@@ -7,6 +7,8 @@
 //    answers when the top sound is a meow. Purring or hissing is shown as evidence.
 // 3. If the most likely feeling is below [Analysis.unsureBelow], say "Not sure"
 //    and show every likelihood.
+import 'dart:math' as math;
+
 import '../models/pet.dart';
 import 'model.dart';
 
@@ -39,6 +41,63 @@ enum PictureUse {
   notSeen,
 }
 
+/// Where a moment in the clip was found.
+enum MomentSource { sound, picture }
+
+/// One stretch of the clip and what was found in it, such as "Hissing" from 0:02 to 0:04
+/// (sound) or "Dog in view" (picture). Times are seconds from the start of the clip.
+class Moment {
+  const Moment(this.source, this.label, this.start, this.end);
+  final MomentSource source;
+  final String label;
+  final double start, end;
+
+  Map<String, dynamic> toJson() => {'src': source.name, 'label': label, 's': start, 'e': end};
+
+  @override
+  String toString() => '${source.name}:$label@$start-$end';
+}
+
+/// Joins back-to-back readings with the same label and source into one moment,
+/// keeping them in time order (sound moments first, then picture moments).
+List<Moment> mergeMoments(List<Moment> raw) {
+  final out = <Moment>[];
+  for (final src in MomentSource.values) {
+    final these = raw.where((m) => m.source == src).toList()..sort((a, b) => a.start.compareTo(b.start));
+    Moment? cur;
+    for (final m in these) {
+      if (cur != null && cur.label == m.label && m.start <= cur.end + 0.01) {
+        cur = Moment(src, m.label, cur.start, math.max(cur.end, m.end));
+      } else {
+        if (cur != null) out.add(cur);
+        cur = m;
+      }
+    }
+    if (cur != null) out.add(cur);
+  }
+  return out;
+}
+
+/// The pet sound heard in one short window, or null when the top sound is people,
+/// background, or not clear enough ([minP]).
+String? soundInWindow(SoundEvidence ev, List<double> probs, {double minP = 0.4}) {
+  final i = argmax(probs);
+  if (ev.species[i] == 'other' || probs[i] < minP) return null;
+  return ev.names[i];
+}
+
+/// What one frame shows: the pet's feeling when the picture model is sure enough (dogs),
+/// otherwise just "Dog in view" or "Cat in view". Null when no dog or cat is seen.
+String? pictureInFrame(String seen, {List<(String, double)>? feelings, double minP = 0.5}) {
+  if (seen != 'dog' && seen != 'cat') return null;
+  if (feelings != null && feelings.isNotEmpty && feelings.first.$2 >= minP) {
+    final f = feelings.first.$1;
+    final short = f.startsWith('Likely ') ? f.substring(7) : f;
+    return short.isEmpty ? f : short[0].toUpperCase() + short.substring(1);
+  }
+  return seen == 'dog' ? 'Dog in view' : 'Cat in view';
+}
+
 class CheckOutcome {
   CheckOutcome({
     required this.kind,
@@ -46,7 +105,30 @@ class CheckOutcome {
     required this.feelings,
     required this.sounds,
     this.picture = PictureUse.none,
+    this.moments = const [],
+    this.clip,
+    this.seconds = 0,
   });
+
+  /// Moments found in the clip, for the replay on the result screen.
+  final List<Moment> moments;
+
+  /// The clip, kept on the phone only while the result is open (deleted on Save or Retake).
+  final String? clip;
+
+  /// Length of the clip in seconds.
+  final double seconds;
+
+  CheckOutcome withClip({String? clip, required double seconds, required List<Moment> moments}) => CheckOutcome(
+        kind: kind,
+        species: species,
+        feelings: feelings,
+        sounds: sounds,
+        picture: picture,
+        moments: moments,
+        clip: clip,
+        seconds: seconds,
+      );
   final OutcomeKind kind;
   final Species species;
   final PictureUse picture;
@@ -70,6 +152,7 @@ class CheckOutcome {
         'ms': ms,
         'source': source,
         'picture': picture.name,
+        if (moments.isNotEmpty) 'moments': [for (final m in moments) m.toJson()],
       };
 }
 

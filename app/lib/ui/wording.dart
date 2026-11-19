@@ -78,6 +78,9 @@ class Wording {
     return rest.isEmpty ? label : rest[0].toUpperCase() + rest.substring(1);
   }
 
+  /// "Likely sad or uneasy" -> "Sad or uneasy", for the one-line list of other feelings.
+  static String feelingShort(String label) => feelingHeadline(label);
+
   static String entryTitle(EntryKind k) => switch (k) {
         EntryKind.dailyLog => 'Daily log',
         EntryKind.healthRecord => 'Health record',

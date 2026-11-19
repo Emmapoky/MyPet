@@ -5,9 +5,11 @@
 // The picture and the sound are read separately and combined into one result:
 //   sound:   soundtrack -> 48 kHz mono WAV (ffmpeg) -> clap_features (isolate)
 //            -> quantized CLAP ONNX -> Analysis rules (ML steps 3 to 10).
-//   picture: frames from the clip -> image model (ML step 11, not trained yet;
-//            until its files exist the result says it used sound only).
-// The clip and everything taken from it are deleted straight after (FR-N02).
+//   picture: frames from the clip -> CLIP image model (ML step 11); sound only
+//            if its files are not on the phone.
+// Each second is also read on its own, so the result can show when each sound or
+// picture moment happened. The soundtrack is deleted straight away; the clip only
+// stays for the replay on the result screen and is deleted on Save or Retake (FR-N02).
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -63,13 +65,22 @@ abstract class BehaviourEngine {
   /// Lets the person pick a video or audio file and returns its path, or null if they cancelled.
   Future<String?> pickFile();
 
-  /// Checks the clip (picture and sound) and deletes it, whatever happens.
+  /// Checks the clip (picture and sound). On success the clip is kept for the replay on
+  /// the result screen and [CheckOutcome.clip] points to it; call [discard] when the result
+  /// closes. If the check fails, the clip is deleted straight away.
   Future<CheckOutcome> check(String clipPath, Species species, {required bool picked});
+
+  /// Deletes a clip kept for the result screen (FR-N02).
+  Future<void> discard(String? clipPath);
 
   Future<void> dispose();
 }
 
 Float32List _features(List<double> x) => clapInputFeatures(x);
+List<Float32List> _featuresMany(List<List<double>> xs) => [for (final x in xs) clapInputFeatures(x)];
+
+/// Moments are read for at most this many seconds of a clip.
+const maxMoments = 30;
 
 class PhoneBehaviourEngine implements BehaviourEngine {
   CameraController? _camera;
@@ -105,49 +116,109 @@ class PhoneBehaviourEngine implements BehaviourEngine {
     }
   }
 
-  /// Reads [n] evenly spaced frames of the clip, resized and centre-cropped, as RGB bytes.
-  Future<List<Uint8List>> _frames(String src, int n, int size) async {
+  /// Length of the clip in seconds and whether it has pictures.
+  Future<(double, bool)> _probe(String src) async {
     final info = (await FFprobeKit.getMediaInformation(src)).getMediaInformation();
     final hasVideo = info?.getStreams().any((s) => s.getType() == 'video') ?? false;
-    final dur = double.tryParse(info?.getDuration() ?? '') ?? 0;
-    if (!hasVideo || dur <= 0) return const [];
-    final out = <Uint8List>[];
-    for (var i = 0; i < n; i++) {
-      // Same spots as the ML Lab: 20%, 50% and 80% through the clip for 3 frames.
-      final at = dur * (n == 1 ? 0.5 : 0.2 + 0.6 * i / (n - 1));
-      final raw = await _tmp('frame$i.rgb');
-      await FFmpegKit.execute('-y -ss ${at.toStringAsFixed(2)} -i "$src" -frames:v 1 '
-          '-vf "scale=$size:$size:force_original_aspect_ratio=increase:flags=bicubic,crop=$size:$size" '
-          '-f rawvideo -pix_fmt rgb24 "$raw"');
-      final f = File(raw);
-      if (await f.exists()) {
-        final b = await f.readAsBytes();
-        if (b.length == size * size * 3) out.add(b);
-        await f.delete();
+    return (double.tryParse(info?.getDuration() ?? '') ?? 0, hasVideo);
+  }
+
+  /// One frame per second (up to [maxMoments]), resized and centre-cropped, as RGB bytes.
+  /// Frame k shows second k of the clip.
+  Future<List<Uint8List>> _framesPerSecond(String src, int size) async {
+    final raw = await _tmp('frames.rgb');
+    await FFmpegKit.execute('-y -i "$src" -frames:v $maxMoments '
+        '-vf "fps=1,scale=$size:$size:force_original_aspect_ratio=increase:flags=bicubic,crop=$size:$size" '
+        '-f rawvideo -pix_fmt rgb24 "$raw"');
+    final f = File(raw);
+    if (!await f.exists()) return const [];
+    final b = await f.readAsBytes();
+    await f.delete();
+    final one = size * size * 3;
+    return [for (var k = 0; (k + 1) * one <= b.length; k++) Uint8List.sublistView(b, k * one, (k + 1) * one)];
+  }
+
+  Future<List<double>> _embedFrame(PictureModel m, OrtSession v, Uint8List f) async {
+    final input = await OrtValue.fromList(m.pixels(f), [1, 3, m.size, m.size]);
+    final out = await v.run({m.inputName: input});
+    final e = (await out[m.output]!.asFlattenedList()).map((x) => (x as num).toDouble()).toList();
+    await input.dispose();
+    for (final o in out.values) {
+      await o.dispose();
+    }
+    return e;
+  }
+
+  /// The picture side: the whole-clip reading (frames at 20%, 50% and 80%, as in the
+  /// ML Lab) and one moment per second of what the picture showed.
+  Future<(PictureReading?, List<Moment>)> _readPicture(String src, Species species, double dur) async {
+    final m = _picture, v = _vision;
+    if (m == null || v == null || dur <= 0) return (null, const <Moment>[]);
+    final frames = await _framesPerSecond(src, m.size);
+    if (frames.isEmpty) return (null, const <Moment>[]);
+    final embs = [for (final f in frames) await _embedFrame(m, v, f)];
+    final clf = species == Species.cat ? m.cat : m.dog;
+    final moments = <Moment>[];
+    for (var k = 0; k < embs.length; k++) {
+      final e = meanUnit([embs[k]]);
+      final seen = m.gate.speciesOf(m.gate.probs(e));
+      List<(String, double)>? feel;
+      if (clf != null && seen == species.name) {
+        final p = clf.probs(e);
+        final idx = List.generate(p.length, (i) => i)..sort((a, b) => p[b].compareTo(p[a]));
+        feel = [for (final i in idx) (clf.names[i], p[i])];
       }
+      final label = pictureInFrame(seen, feelings: feel);
+      if (label != null) moments.add(Moment(MomentSource.picture, label, k.toDouble(), math.min(k + 1.0, dur)));
+    }
+    // Whole clip: the frames nearest 20%, 50% and 80% through (or evenly spread for other counts).
+    final n = m.frames;
+    final pick = <int>{
+      for (var i = 0; i < n; i++)
+        (dur * (n == 1 ? 0.5 : 0.2 + 0.6 * i / (n - 1))).floor().clamp(0, embs.length - 1),
+    };
+    final e = meanUnit([for (final i in pick) embs[i]]);
+    final seen = m.gate.speciesOf(m.gate.probs(e));
+    return (PictureReading(species: seen, feelings: clf?.probs(e)), moments);
+  }
+
+  /// One moment per second of the pet sound heard there, each read from 2 s of sound
+  /// centred on that second. Quiet seconds are skipped.
+  Future<List<Moment>> _soundMoments(List<double> x, Species species) async {
+    final secs = math.min((x.length / sampleRate).ceil(), maxMoments);
+    final windows = <int, List<double>>{};
+    for (var k = 0; k < secs; k++) {
+      final a = math.max(0, ((k - 0.5) * sampleRate).round());
+      final b = math.min(x.length, ((k + 1.5) * sampleRate).round());
+      if (b - a < sampleRate ~/ 2) continue;
+      final w = x.sublist(a, b);
+      final rms = math.sqrt(w.fold(0.0, (s, v) => s + v * v) / w.length);
+      if (rms >= 0.005) windows[k] = w;
+    }
+    if (windows.isEmpty) return const [];
+    final feats = await compute(_featuresMany, windows.values.toList());
+    final out = <Moment>[];
+    final keys = windows.keys.toList();
+    final dur = x.length / sampleRate;
+    for (var i = 0; i < keys.length; i++) {
+      final e = await _embed(feats[i]);
+      final label = soundInWindow(_analysis!.sound, _analysis!.sound.probs(e));
+      if (label != null) out.add(Moment(MomentSource.sound, label, keys[i].toDouble(), math.min(keys[i] + 1.0, dur)));
     }
     return out;
   }
 
-  Future<PictureReading?> _readPicture(String src, Species species) async {
-    final m = _picture, v = _vision;
-    if (m == null || v == null) return null;
-    final frames = await _frames(src, m.frames, m.size);
-    if (frames.isEmpty) return null;
-    final embs = <List<double>>[];
-    for (final f in frames) {
-      final input = await OrtValue.fromList(m.pixels(f), [1, 3, m.size, m.size]);
-      final out = await v.run({m.inputName: input});
-      embs.add((await out[m.output]!.asFlattenedList()).map((x) => (x as num).toDouble()).toList());
-      await input.dispose();
-      for (final o in out.values) {
-        await o.dispose();
-      }
+  /// CLAP audio embedding, scaled to length 1.
+  Future<List<double>> _embed(Float32List feats) async {
+    final input = await OrtValue.fromList(feats, [1, 1, nFrames, nMels]);
+    final out = await _session!.run({'input_features': input});
+    final e = (await out['audio_embeds']!.asFlattenedList()).map((v) => (v as num).toDouble()).toList();
+    await input.dispose();
+    for (final v in out.values) {
+      await v.dispose();
     }
-    final e = meanUnit(embs);
-    final seen = m.gate.speciesOf(m.gate.probs(e));
-    final clf = species == Species.cat ? m.cat : m.dog;
-    return PictureReading(species: seen, feelings: clf?.probs(e));
+    final n = math.sqrt(e.fold(0.0, (s, v) => s + v * v));
+    return [for (final v in e) v / n];
   }
 
   Future<String> _tmp(String name) async => '${(await getTemporaryDirectory()).path}/$name';
@@ -196,35 +267,41 @@ class PhoneBehaviourEngine implements BehaviourEngine {
   @override
   Future<CheckOutcome> check(String clipPath, Species species, {required bool picked}) async {
     String? wav;
+    var keep = false;
     try {
       await load();
       wav = await _soundtrack(clipPath);
-      var x = readWav16(ByteData.sublistView(await File(wav).readAsBytes()));
-      if (x.length < sampleRate) {
+      final all = readWav16(ByteData.sublistView(await File(wav).readAsBytes()));
+      if (all.length < sampleRate) {
         throw const CheckProblem('The clip was under 1 second. Record a little longer.');
       }
-      if (picked) x = loudest10s(x);
-      final feats = await compute(_features, x);
-      final input = await OrtValue.fromList(feats, [1, 1, nFrames, nMels]);
-      final out = await _session!.run({'input_features': input});
-      final e = (await out['audio_embeds']!.asFlattenedList()).map((v) => (v as num).toDouble()).toList();
-      await input.dispose();
-      for (final v in out.values) {
-        await v.dispose();
-      }
-      final n = math.sqrt(e.fold(0.0, (s, v) => s + v * v));
-      final sound = _analysis!.check([for (final v in e) v / n], species);
-      final pic = await _readPicture(clipPath, species);
+      final x = picked ? loudest10s(all) : all;
+      final sound = _analysis!.check(await _embed(await compute(_features, x)), species);
+      final (dur0, hasVideo) = await _probe(clipPath);
+      final dur = dur0 > 0 ? dur0 : all.length / sampleRate;
+      final (pic, picMoments) = hasVideo ? await _readPicture(clipPath, species, dur) : (null, const <Moment>[]);
       final names = _analysis!.classifiers[species == Species.cat ? 'cat_context' : 'dog_report']!.names;
-      return combine(sound, pic, soundWeight: _picture?.soundWeight ?? 1, names: names);
+      final result = combine(sound, pic, soundWeight: _picture?.soundWeight ?? 1, names: names);
+      final moments = mergeMoments([...await _soundMoments(all, species), ...picMoments]);
+      keep = true;
+      return result.withClip(clip: clipPath, seconds: dur, moments: moments);
     } finally {
-      // Nothing is kept (FR-N02): not the clip, not the soundtrack.
-      for (final f in [clipPath, ?wav]) {
+      // The soundtrack is never kept. The clip stays only for the replay on the result
+      // screen, and is deleted when that closes (discard) or straight away on a problem.
+      for (final f in [if (!keep) clipPath, ?wav]) {
         try {
           await File(f).delete();
         } catch (_) {}
       }
     }
+  }
+
+  @override
+  Future<void> discard(String? clipPath) async {
+    if (clipPath == null) return;
+    try {
+      await File(clipPath).delete();
+    } catch (_) {}
   }
 
   @override

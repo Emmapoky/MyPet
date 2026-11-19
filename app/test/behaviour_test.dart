@@ -96,8 +96,19 @@ class FakeEngine implements BehaviourEngine {
     required bool picked,
   }) async {
     checked.add(wavPath);
-    return fakeAnalysis.check(emb, species);
+    final o = fakeAnalysis.check(emb, species);
+    // A few moments like the phone finds: the top pet sound twice, and the pet in view.
+    final pet = o.kind != OutcomeKind.notHeard;
+    return o.withClip(clip: wavPath, seconds: 8, moments: [
+      if (pet) Moment(MomentSource.sound, o.topSound, 1, 3),
+      if (pet) Moment(MomentSource.sound, o.topSound, 5, 6),
+      Moment(MomentSource.picture, species == Species.cat ? 'Cat in view' : 'Dog in view', 0, 7),
+    ]);
   }
+
+  final discarded = <String?>[];
+  @override
+  Future<void> discard(String? clipPath) async => discarded.add(clipPath);
 
   @override
   Future<void> dispose() async {}
@@ -112,6 +123,39 @@ void phoneSize(WidgetTester t) {
 
 void main() {
   Feel.sounds = false;
+  group('moments in the clip', () {
+    test('back-to-back seconds with the same label join into one moment', () {
+      final m = mergeMoments([
+        const Moment(MomentSource.sound, 'Hissing', 2, 3),
+        const Moment(MomentSource.picture, 'Cat in view', 0, 1),
+        const Moment(MomentSource.sound, 'Hissing', 3, 4),
+        const Moment(MomentSource.sound, 'Purring', 4, 5),
+        const Moment(MomentSource.picture, 'Cat in view', 1, 2),
+        const Moment(MomentSource.sound, 'Hissing', 7, 8),
+      ]);
+      expect(m.map((x) => x.toString()), [
+        'sound:Hissing@2.0-4.0',
+        'sound:Purring@4.0-5.0',
+        'sound:Hissing@7.0-8.0',
+        'picture:Cat in view@0.0-2.0',
+      ]);
+    });
+
+    test('only pet sounds that stand out become moments', () {
+      final ev = fakeAnalysis.sound;
+      expect(soundInWindow(ev, [0.7, 0.1, 0.1, 0.1]), 'Barking');
+      expect(soundInWindow(ev, [0.1, 0.1, 0.1, 0.7]), isNull); // people talking
+      expect(soundInWindow(ev, [0.35, 0.3, 0.3, 0.05]), isNull); // nothing clear
+    });
+
+    test('a frame shows a feeling only when the picture is sure', () {
+      expect(pictureInFrame('dog', feelings: [('Likely calm', 0.8)]), 'Calm');
+      expect(pictureInFrame('dog', feelings: [('Likely calm', 0.4)]), 'Dog in view');
+      expect(pictureInFrame('cat'), 'Cat in view');
+      expect(pictureInFrame('other'), isNull);
+    });
+  });
+
   group('decision rules', () {
     test('a clear bark gives a feeling for a dog', () {
       final o = fakeAnalysis.check(bark, Species.dog);
@@ -325,7 +369,8 @@ void main() {
       expect(engine.checked, ['clip.mov']);
       expect(find.text('Result'), findsOneWidget);
       expect(find.text('Happy or playful'), findsOneWidget);
-      expect(find.text('Other possibilities'), findsOneWidget);
+      expect(find.text('0:01 Barking'), findsOneWidget);
+    expect(find.text('0:00 Dog in view'), findsOneWidget);
       expect(find.text(Wording.notDiagnosisBehaviour), findsOneWidget);
       await t.scrollUntilVisible(find.textContaining('Clip deleted'), 200);
       expect(find.textContaining('Clip deleted'), findsOneWidget);
@@ -335,6 +380,8 @@ void main() {
       final saved = s.timelineOf(pet.id).ofKind(EntryKind.behaviourResult);
       expect(saved, hasLength(1));
       expect(saved.first.topLabel, 'Likely happy or playful');
+    expect(engine.discarded, ['clip.mov']);
+    expect(saved.first.data['moments'], hasLength(3));
       expect(s.tab, 0);
     },
   );

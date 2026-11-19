@@ -11,6 +11,7 @@ import '../models/pet.dart';
 import '../state/app_state.dart';
 import 'home_shell.dart';
 import 'theme.dart';
+import 'widgets/clip_replay.dart';
 import 'widgets/common.dart';
 import 'feedback.dart';
 import 'wording.dart';
@@ -50,11 +51,18 @@ class _CheckScreenState extends State<CheckScreen> {
   bool _picked = false;
   bool _saved = false;
 
-  BehaviourEngine get _engine => context.read<BehaviourEngine>();
+  late BehaviourEngine _engine;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _engine = context.read<BehaviourEngine>();
+  }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _engine.discard(_outcome?.clip);
     super.dispose();
   }
 
@@ -147,6 +155,8 @@ class _CheckScreenState extends State<CheckScreen> {
 
   void _reset() {
     if (!mounted) return;
+    // The clip was only kept for the replay: delete it now (FR-N02).
+    _engine.discard(_outcome?.clip);
     setState(() {
       _step = _Step.record;
       _outcome = null;
@@ -533,6 +543,8 @@ class ResultView extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(Tokens.space4, Tokens.space2, Tokens.space4, Tokens.space4),
       children: [
+        ClipReplay(clip: o.clip, seconds: o.seconds, moments: o.moments),
+        gap,
         ...switch (o.kind) {
           OutcomeKind.feeling => [
               MyCard(
@@ -550,12 +562,14 @@ class ResultView extends StatelessWidget {
                   ),
                   const SizedBox(height: Tokens.space3),
                   _Bar(value: o.feelings.first.$2, height: 10, color: t.colorScheme.primary),
+                  if (o.feelings.length > 1) ...[
+                    const SizedBox(height: Tokens.space3),
+                    Text(
+                      [for (final (n, p) in o.feelings.skip(1)) '${Wording.feelingShort(n)} ${_pct(p)}'].join(' · '),
+                      style: t.textTheme.bodySmall,
+                    ),
+                  ],
                 ]),
-              ),
-              gap,
-              MyCard(
-                title: 'Other possibilities',
-                child: Column(children: [for (final f in o.feelings.skip(1)) _FeelingRow(f)]),
               ),
             ],
           OutcomeKind.notSure => [
@@ -610,7 +624,8 @@ class ResultView extends StatelessWidget {
               ),
             ],
         },
-        if (!notHeard) ...[
+        // The pills above already show each sound; this card is only for clips with none.
+        if (!notHeard && !o.moments.any((m) => m.source == MomentSource.sound)) ...[
           gap,
           MyCard(
             title: 'Sounds heard',
@@ -664,7 +679,7 @@ class ResultView extends StatelessWidget {
           Icon(Icons.delete_outline_rounded, size: 16, color: t.colorScheme.onSurfaceVariant),
           const SizedBox(width: Tokens.space1),
           Flexible(
-            child: Text('Clip deleted · result took ${(ms / 1000).toStringAsFixed(1)} s',
+            child: Text('Clip deleted on Save or Retake · took ${(ms / 1000).toStringAsFixed(1)} s',
                 style: t.textTheme.bodySmall),
           ),
         ]),

@@ -1,0 +1,18 @@
+{"run": "2026-11-19 ~16:40 MYT, Colab free CPU, notebook 04_clap_dogs_emotionalcanines.ipynb at commit 3741506, PyTorch laion/clap-htsat-unfused",
+ "data": "EmotionalCanines (Dang et al., ACM MM 2025), 1,400 barks, Siberian Husky and Shiba Inu, CC BY-NC-SA 4.0, downloaded only",
+ "split": "dataset's own train/test split (600 train + 100 test barks per breed; the dataset says test dogs differ from train dogs, there is no per-dog id to check)",
+ "clip_seconds": {"median": 0.96, "min": 0.06, "max": 30.02},
+ "embedding_seconds_total": 591,
+ "classifier": "StandardScaler + LogisticRegression, C chosen by 5-fold GridSearchCV on train only from {0.001, 0.01, 0.1, 1}",
+ "results": {
+  "arousal_husky":  {"test_barks": 100, "majority_f1": 0.169, "zero_shot_f1": 0.317, "logreg_f1": 0.425, "logreg_acc": 0.440, "C": 0.001},
+  "arousal_shiba":  {"test_barks": 100, "majority_f1": 0.169, "zero_shot_f1": 0.379, "logreg_f1": 0.586, "logreg_acc": 0.590, "C": 0.01},
+  "arousal_both":   {"test_barks": 200, "majority_f1": 0.167, "zero_shot_f1": 0.352, "logreg_f1": 0.541, "logreg_acc": 0.540, "C": 0.001},
+  "valence_husky":  {"test_barks": 100, "majority_f1": 0.169, "zero_shot_f1": 0.175, "logreg_f1": 0.447, "logreg_acc": 0.450, "C": 0.1},
+  "valence_shiba":  {"test_barks": 100, "majority_f1": 0.165, "zero_shot_f1": 0.281, "logreg_f1": 0.495, "logreg_acc": 0.490, "C": 0.01},
+  "valence_both":   {"test_barks": 200, "majority_f1": 0.167, "zero_shot_f1": 0.230, "logreg_f1": 0.482, "logreg_acc": 0.495, "C": 0.01}
+ },
+ "confusion_matrices_rows_true_cols_pred": {
+  "arousal_both (Low, Medium, High)": [[35, 19, 13], [14, 39, 14], [9, 23, 34]],
+  "valence_both (Negative, Neutral, Positive)": [[21, 21, 24], [9, 31, 27], [9, 11, 47]]
+ }}

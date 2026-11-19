@@ -12,7 +12,7 @@ Rules these follow (Dr Yam, 18 Sep 2026; proposal report): machine learning, not
 | 2b | `reference/`: plain NumPy version of the model input, checked against transformers, plus test files for any app port | Done 19 Nov 2026 |
 | 2c | `dart/clap_features`: Dart (Flutter) version of the model input, tested against the 2b test files | Done 19 Nov 2026 |
 | 3 | `flutter/behaviour_bench`: run the whole check in Flutter on a real iPhone and time it | Done 19 Nov 2026 (iPhone); Android not yet, no Android SDK on the Mac |
-| 4 | Dogs: same test as step 1 on EmotionalCanines | Next |
+| 4 | `04_clap_dogs_emotionalcanines.ipynb`: same test as step 1 on EmotionalCanines dog barks | Done 19 Nov 2026 |
 | 5 | YAMNet comparison (only if needed) | Later |
 
 ## Step 1 result (CatMeows, 440 meows, 21 cats, 3 contexts)
@@ -83,5 +83,29 @@ Loading the model once takes 456 ms (do it when the Check screen opens, not afte
 **What this means:** the report's target of a result within 5 s (FR20, NFR03) is met with a wide margin, about 0.1 s, fully offline on the phone, and the phone's numbers match Python exactly. The classifier on top (logistic regression on 512 numbers) adds well under a millisecond. CLAP stays the plan; YAMNet is not needed for speed. Still to time: an Android phone, and an older iPhone.
 
 **Honest wording for the app and report:** show likelihoods with "not a diagnosis", and say the behaviour check is an early estimate. This matches Dr Yam's line that logging is the minimum and AI is the best case.
+
+## Step 4 result (dogs: EmotionalCanines, 1,400 barks, Husky and Shiba Inu)
+
+Two labels per bark, three levels each: arousal (Low, Medium, High) and valence (Negative, Neutral, Positive). Tested on the dataset's own test set (100 barks per breed, from dogs not in the training set according to the dataset; it has no per-dog id we could check). Chance is about 0.33 macro F1.
+
+| Task | Breed | Always guess biggest class | CLAP zero-shot | **CLAP + logistic regression** |
+|---|---|---|---|---|
+| Arousal | Husky | 0.17 | 0.32 | **0.43** |
+| Arousal | Shiba | 0.17 | 0.38 | **0.59** |
+| Arousal | Both (200 barks) | 0.17 | 0.35 | **0.54** |
+| Valence | Husky | 0.17 | 0.18 | **0.45** |
+| Valence | Shiba | 0.17 | 0.28 | **0.50** |
+| Valence | Both (200 barks) | 0.17 | 0.23 | **0.48** |
+
+All numbers are macro F1. Full numbers and confusion matrices: `results/04_dogs.json`.
+
+**What this means**
+
+- Same pattern as cats: zero-shot prompts are at or below chance (valence 0.23), while a small classifier on CLAP embeddings is clearly better (0.54 arousal, 0.48 valence). The plan of embeddings + logistic regression holds for dogs too.
+- It is still weak, about one in two right on three levels. High-arousal and positive barks are spotted best; negative barks are often called neutral or positive (21 of 66 right). That is the case owners care about most, so the app must not sound sure about it.
+- One model for both breeds does about as well as one per breed, so the app can start with one dog model. Two breeds is a narrow base; other breeds are untested.
+- Barks are short (median 1 s) and were repeat-padded to 10 s, as with cats. A few clips are longer than 10 s (longest 30 s); for those, transformers took a random 10 s window while the phone takes the first 10 s. With a median of 1 s this affects only a small share of clips, but the count was not printed.
+
+**Licence:** CC BY-NC-SA 4.0 (non-commercial, share-alike). Fine for a university project; a model trained on it should not ship in a commercial app. This repo only downloads it and does not store the audio.
 
 Data: CatMeows, Ludovico et al. 2020, Zenodo record 4008297. Check the licence on the record before redistributing; this repo only downloads it.

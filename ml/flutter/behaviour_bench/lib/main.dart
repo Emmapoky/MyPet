@@ -1,4 +1,4 @@
-// MyPet behaviour check timing bench (FIT3162, ML step 3).
+// MyPet ML Lab (FIT3162). A test app for the ML team, separate from the MyPet app.\n// Started as the timing bench (ML step 3).
 //
 // Measures, on a real phone, how long the behaviour check takes from
 // "10 s clip finished" to "512-number embedding ready":
@@ -62,7 +62,21 @@ double cosine(List<double> a, List<double> b) {
 
 int median(List<int> xs) => (List.of(xs)..sort())[xs.length ~/ 2];
 
+// Colours from the MyPet app (design/mypet-tokens-v2.json), so the Lab looks like part of the project.
+const coralDeep = Color(0xFFC9452F);
+const coral = Color(0xFFE8684B);
+const teal = Color(0xFF17706F);
+const pageTop = Color(0xFFFFF2EB);
+const pageBottom = Color(0xFFEDF7F7);
+const ink = Color(0xFF2B1D1A);
+
 void main() => runApp(MaterialApp(
+      title: 'MyPet ML Lab',
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: teal, primary: teal),
+        scaffoldBackgroundColor: pageTop,
+        appBarTheme: const AppBarTheme(backgroundColor: pageTop, foregroundColor: ink),
+      ),
       // --dart-define=AUTORUN=true opens and starts the timing test,
       // --dart-define=AUTORUN_LIBRARY=true opens and starts the test library.
       home: const bool.fromEnvironment('AUTORUN_LIBRARY')
@@ -74,35 +88,55 @@ void main() => runApp(MaterialApp(
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
+
+  Widget _section(BuildContext context, IconData icon, String title, String subtitle, Widget page) => Card(
+        color: Colors.white,
+        child: ListTile(
+          leading: CircleAvatar(backgroundColor: teal.withValues(alpha: 0.12), child: Icon(icon, color: teal)),
+          title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+          subtitle: Text(subtitle),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => page)),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('MyPet behaviour check')),
-        body: ListView(padding: const EdgeInsets.all(16), children: [
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.library_music),
-              title: const Text('Test library'),
-              subtitle: const Text('Run the cat and dog model on real clips and compare with the true labels'),
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TestLibraryPage())),
-            ),
+        body: Container(
+          decoration: const BoxDecoration(
+              gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                  colors: [pageTop, pageBottom])),
+          child: SafeArea(
+            child: ListView(padding: const EdgeInsets.all(16), children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  gradient: const LinearGradient(colors: [coralDeep, coral]),
+                ),
+                child: const Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: 6, children: [
+                  Text('MyPet ML Lab',
+                      style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800)),
+                  Text('For Li Shen and the ML team. Not part of the MyPet app.',
+                      style: TextStyle(color: Colors.white, fontSize: 15)),
+                ]),
+              ),
+              const SizedBox(height: 16),
+              _section(context, Icons.library_music, 'Test library',
+                  'Held-out cats and dogs plus online clips, scored against the true labels',
+                  const TestLibraryPage()),
+              _section(context, Icons.videocam, 'Try a clip',
+                  'Record near a pet, or pick a video. Same check as the app', const TryLivePage()),
+              _section(context, Icons.timer, 'Timing', 'How fast the check runs on this phone', const BenchPage()),
+              const SizedBox(height: 8),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8),
+                child: Text('How to retrain and test: ml/README.md, "For Li Shen".',
+                    style: TextStyle(color: Color(0xFF6E5F5A))),
+              ),
+            ]),
           ),
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.mic),
-              title: const Text('Try it on a pet'),
-              subtitle: const Text('Record 10 s, or pick a video or sound on this phone'),
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TryLivePage())),
-            ),
-          ),
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.timer),
-              title: const Text('Timing test'),
-              subtitle: const Text('How fast the check runs on this phone (step 3)'),
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BenchPage())),
-            ),
-          ),
-        ]),
+        ),
       );
 }
 
@@ -210,7 +244,7 @@ class _BenchPageState extends State<BenchPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('MyPet behaviour check timing')),
+        appBar: AppBar(title: const Text('Timing')),
         body: ListView(
           padding: const EdgeInsets.all(16),
           children: [

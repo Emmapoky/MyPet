@@ -162,7 +162,7 @@ class _TryLivePageState extends State<TryLivePage> {
     final ready = _analysis != null && _session != null;
     final r = _result;
     return Scaffold(
-      appBar: AppBar(title: const Text('Try it on a pet')),
+      appBar: AppBar(title: const Text('Try a clip')),
       body: ListView(padding: const EdgeInsets.all(16), children: [
         const Text('Record 10 seconds near the pet, or pick a video or sound already on this phone. '
             'Only the sound is used, and it is deleted after the check.'),

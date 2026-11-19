@@ -15,7 +15,39 @@ Rules these follow (Dr Yam, 18 Sep 2026; proposal report): machine learning, not
 | 4 | `04_clap_dogs_emotionalcanines.ipynb`: same test as step 1 on EmotionalCanines dog barks | Done 19 Nov 2026 |
 | 5 | `flutter/behaviour_bench/tool/build_test_library.py`: train the classifiers the phone uses (cats, dog energy, dog mood) with the exact phone pipeline, and pack the held-out clips | Done 19 Nov 2026 |
 | 6 | `flutter/behaviour_bench` Test library screen: run every held-out clip on the iPhone, true label vs result, play, score | Done 19 Nov 2026 (iPhone) |
+| 7 | `build_test_library.py --sound-evidence`: the report's own labels (Table 4.2) and the sound evidence that checks it is the right animal | Done 19 Nov 2026 (iPhone) |
+| 8 | `build_online_test.py`: 144 clips recorded by ordinary people (Wikimedia Commons audio and video, ESC-50) | Done 19 Nov 2026 (iPhone) |
+| 9 | `09_compare_free_models.ipynb`: is another free audio model better than CLAP? (AST, YAMNet, PANNs) | Running |
+| 10 | ML Lab "Try a clip": record near a pet or pick a video on the phone | Done 19 Nov 2026 (iPhone) |
+| 11 | `build_photo_check.py`, `check_short_clips.py`: the picture half of the clip check, and 5 s vs 10 s clips | Running |
 | later | Android timing on a borrowed phone; YAMNet only if needed | Later |
+
+## For Li Shen: how to retrain and test
+
+The **MyPet ML Lab** (`flutter/behaviour_bench`) is the team's test app. It is not part of the MyPet app. It runs exactly what the app runs, on the phone, and scores it. On a Mac with Flutter, Xcode and Python 3:
+
+```sh
+cd ml/flutter/behaviour_bench
+./tool/fetch_model.sh                                   # CLAP audio model, 34.3 MB (not in git)
+python3 -m venv .venv
+.venv/bin/pip install numpy scipy scikit-learn onnxruntime torch transformers av datasets pillow torchvision
+
+.venv/bin/python tool/build_test_library.py --sound-evidence   # step 7: trains the classifiers, packs held-out clips
+.venv/bin/python tool/build_online_test.py                     # step 8: adds 144 online clips
+.venv/bin/python tool/build_photo_check.py                     # step 11: picture model, gate, combine weight
+.venv/bin/python tool/check_short_clips.py                     # step 11b: 5 s vs 10 s clips
+
+flutter pub get
+flutter run -d <iphone-id> --profile                           # ML Lab home: Test library, Try a clip, Timing
+flutter run -d <iphone-id> --profile --dart-define=AUTORUN_LIBRARY=true   # runs the whole library, prints LIBRARY_JSON
+```
+
+- **Retrain with new data:** add a loader next to `load_cats()` / `load_dogs()` in `tool/build_test_library.py`, keep test animals out of training (split by animal, not by clip), and rerun the commands above. Scores go to `ml/results/`.
+- **Try another audio model:** `09_compare_free_models.ipynb` in Colab uses the same splits and the same classifier, so only the model changes.
+- **Ship to the app:** `app/tool/get_behaviour_model.sh` copies `classifiers.json`, `sound_evidence.json` and `photo_classifiers.json` from `assets/test_library/` and downloads the models.
+- **Check the phone matches Python:** the Test library prints `max_gap_vs_python`; it should be 0.0.
+
+Downloads are cached in `tool/.cache/`. Clips and classifier files are not in git (dataset licences).
 
 ## Step 1 result (CatMeows, 440 meows, 21 cats, 3 contexts)
 

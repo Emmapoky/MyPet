@@ -1,0 +1,58 @@
+rules_version = '2';
+
+// MyPet: only a pet's carers can read or write its data (NFR06).
+// Timeline entries can be added but never changed or deleted (FR-N04).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function carerOf(petData) {
+      return signedIn() && request.auth.uid in petData.carerIds;
+    }
+
+    function petData(petId) {
+      return get(/databases/$(database)/documents/pets/$(petId)).data;
+    }
+
+    function validPet(p) {
+      return p.keys().hasAll(['name', 'species', 'carerIds', 'status', 'createdAt'])
+        && p.name is string && p.name.size() > 0 && p.name.size() <= 60
+        && p.species in ['cat', 'dog']
+        && p.status in ['active', 'archived', 'rehomed', 'deceased']
+        && p.carerIds is list && p.carerIds.size() >= 1 && p.carerIds.size() <= 10;
+    }
+
+    match /pets/{petId} {
+      allow read: if carerOf(resource.data);
+      allow create: if signedIn()
+        && request.auth.uid in request.resource.data.carerIds
+        && validPet(request.resource.data);
+      allow update: if carerOf(resource.data)
+        && request.auth.uid in request.resource.data.carerIds
+        && validPet(request.resource.data);
+      // Pets are archived, never deleted (FR01).
+      allow delete: if false;
+
+      match /entries/{entryId} {
+        allow read: if carerOf(petData(petId));
+        allow create: if carerOf(petData(petId))
+          && request.resource.data.petId == petId
+          && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.kind in ['dailyLog', 'healthRecord', 'behaviourResult', 'taskDone']
+          && request.resource.data.day is string
+          // A behaviour result keeps the result only, never the clip (FR-N02).
+          && !request.resource.data.data.keys().hasAny(['audio', 'clip', 'recording']);
+        allow update, delete: if false;
+      }
+
+      match /reminders/{reminderId} {
+        allow read, delete: if carerOf(petData(petId));
+        allow create, update: if carerOf(petData(petId))
+          && request.resource.data.petId == petId;
+      }
+    }
+  }
+}

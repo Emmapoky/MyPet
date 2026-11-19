@@ -1,0 +1,21 @@
+{
+  "pets_with_change": 300,
+  "flagged_within_7_days": 277,
+  "hit_rate": 0.9233333333333333,
+  "hit_rate_by_measure": {
+    "ate": 0.98,
+    "energy": 0.79,
+    "toileting": 1.0
+  },
+  "median_days_to_flag": 1,
+  "control_pet_days": 18000,
+  "control_days_with_a_flag": 158,
+  "control_pets_ever_flagged": 91,
+  "control_flag_days_by_measure": {
+    "ate": 41,
+    "toileting": 56,
+    "energy": 61
+  },
+  "false_flag_days_before_onset": 107,
+  "flags_before_7_logged_days": 0
+}

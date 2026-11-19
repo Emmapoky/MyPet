@@ -19,3 +19,22 @@ flutter run -d <iphone-id> --profile --dart-define=AUTORUN=true   # real phone: 
 Look for the `BENCH_JSON` line in the output. Simulators only run debug builds, which are much slower, so use
 them to check it works, not for timing. iOS needs a minimum of 16.0 (set). With CocoaPods, the Podfile needs
 `platform :ios, '16.0'` and `use_frameworks! :linkage => :static`.
+
+## Test library (ML steps 5 and 6)
+
+The app's home screen now has a **Test library**: it runs the full behaviour check on every held-out clip
+(4 CatMeows cats and 200 EmotionalCanines barks from dogs the classifiers never trained on), shows each
+result next to the true label, lets you play the clip, and scores the whole set. It also reports the largest
+difference between the phone's likelihoods and Python's, to prove the phone gives the same answers.
+
+```sh
+cd ml/flutter/behaviour_bench
+.venv/bin/pip install numpy scipy scikit-learn onnxruntime
+.venv/bin/python tool/build_test_library.py   # downloads clips (cached in tool/.cache), trains, exports
+flutter run -d <iphone-id> --profile --dart-define=AUTORUN_LIBRARY=true
+```
+
+`build_test_library.py` trains the classifiers the app uses on the training animals only, with the exact
+phone pipeline (first 10 s, `ml/reference` features, quantized ONNX), and writes
+`assets/test_library/` (classifiers, manifest, clips; not in git because the dog data is CC BY-NC-SA and the
+cat data is someone else's) plus `ml/results/05_test_library.json`. Look for `LIBRARY_JSON` in the app output.

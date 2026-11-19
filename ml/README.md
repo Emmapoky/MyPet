@@ -13,7 +13,9 @@ Rules these follow (Dr Yam, 18 Sep 2026; proposal report): machine learning, not
 | 2c | `dart/clap_features`: Dart (Flutter) version of the model input, tested against the 2b test files | Done 19 Nov 2026 |
 | 3 | `flutter/behaviour_bench`: run the whole check in Flutter on a real iPhone and time it | Done 19 Nov 2026 (iPhone); Android not yet, no Android SDK on the Mac |
 | 4 | `04_clap_dogs_emotionalcanines.ipynb`: same test as step 1 on EmotionalCanines dog barks | Done 19 Nov 2026 |
-| 5 | YAMNet comparison (only if needed) | Later |
+| 5 | `flutter/behaviour_bench/tool/build_test_library.py`: train the classifiers the phone uses (cats, dog energy, dog mood) with the exact phone pipeline, and pack the held-out clips | In progress |
+| 6 | `flutter/behaviour_bench` Test library screen: run every held-out clip on the iPhone, true label vs result, play, score | In progress |
+| later | Android timing on a borrowed phone; YAMNet only if needed | Later |
 
 ## Step 1 result (CatMeows, 440 meows, 21 cats, 3 contexts)
 

@@ -50,3 +50,8 @@ app.*.map.json
 # model is downloaded by tool/fetch_model.sh
 assets/models/*.onnx
 .venv/
+
+# test library (built by tool/build_test_library.py; audio not redistributed)
+assets/test_library/*
+!assets/test_library/.gitkeep
+tool/.cache/

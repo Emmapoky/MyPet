@@ -18,6 +18,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_onnxruntime/flutter_onnxruntime.dart';
 
+import 'test_library.dart';
+
 const modelAsset = 'assets/models/clap_audio_quantized.onnx';
 const signals = ['short_tone', 'chirp_10s', 'long_12s'];
 const repeats = 5;
@@ -59,7 +61,41 @@ double cosine(List<double> a, List<double> b) {
 
 int median(List<int> xs) => (List.of(xs)..sort())[xs.length ~/ 2];
 
-void main() => runApp(const MaterialApp(home: BenchPage()));
+void main() => runApp(MaterialApp(
+      // --dart-define=AUTORUN=true opens and starts the timing test,
+      // --dart-define=AUTORUN_LIBRARY=true opens and starts the test library.
+      home: const bool.fromEnvironment('AUTORUN_LIBRARY')
+          ? const TestLibraryPage(autorun: true)
+          : const bool.fromEnvironment('AUTORUN')
+              ? const BenchPage()
+              : const HomePage(),
+    ));
+
+class HomePage extends StatelessWidget {
+  const HomePage({super.key});
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: const Text('MyPet behaviour check')),
+        body: ListView(padding: const EdgeInsets.all(16), children: [
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.library_music),
+              title: const Text('Test library'),
+              subtitle: const Text('Run the cat and dog model on real clips and compare with the true labels'),
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TestLibraryPage())),
+            ),
+          ),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.timer),
+              title: const Text('Timing test'),
+              subtitle: const Text('How fast the check runs on this phone (step 3)'),
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BenchPage())),
+            ),
+          ),
+        ]),
+      );
+}
 
 class BenchPage extends StatefulWidget {
   const BenchPage({super.key});

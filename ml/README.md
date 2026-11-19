@@ -11,9 +11,9 @@ Rules these follow (Dr Yam, 18 Sep 2026; proposal report): machine learning, not
 | 2 | `02_onnx_matches_pytorch.ipynb`: the planned on-device ONNX files give the same embeddings and the same result as step 1 | Done 19 Nov 2026 |
 | 2b | `reference/`: plain NumPy version of the model input, checked against transformers, plus test files for any app port | Done 19 Nov 2026 |
 | 2c | `dart/clap_features`: Dart (Flutter) version of the model input, tested against the 2b test files | Done 19 Nov 2026 |
-| 3 | Run the ONNX model from Dart on a phone (Android and iPhone) and time it | Next |
-| 3 | Dogs: same test on EmotionalCanines | Later |
-| 4 | YAMNet embeddings on the same splits (the fallback) | Later |
+| 3 | `flutter/behaviour_bench`: run the whole check in Flutter on a real iPhone and time it | Done 19 Nov 2026 (iPhone); Android not yet, no Android SDK on the Mac |
+| 4 | Dogs: same test as step 1 on EmotionalCanines | Next |
+| 5 | YAMNet comparison (only if needed) | Later |
 
 ## Step 1 result (CatMeows, 440 meows, 21 cats, 3 contexts)
 
@@ -67,6 +67,20 @@ One deliberate difference: transformers takes a *random* 10 s from a longer clip
 `dart/clap_features` is a line-by-line Dart port with no packages (own FFT). `dart test` checks it against the 2b fixtures: the filter bank matches within 1e-9 and the features within 0.00001 dB on all three test signals (pass mark 0.01 dB). One clip takes about 0.15 s on a laptop CPU; a phone will be slower and is timed in step 3.
 
 This closes the feature-matching risk in the report: the app can compute the model input exactly. The CLAP or YAMNet decision now rests on phone speed and size (step 3).
+
+## Step 3 result (real iPhone, 19 Nov 2026)
+
+Erwyna's iPhone (iOS 27.2.1), Flutter app `flutter/behaviour_bench`, quantized CLAP ONNX via `flutter_onnxruntime`, Dart features in an isolate.
+
+| Test sound | Clip to embedding (median) | Features | Model | First run | Matches Python (cosine) |
+|---|---|---|---|---|---|
+| short_tone (1.5 s, repeat-padded) | 103 ms | 51 ms | 51 ms | 103 ms | 1.0 |
+| chirp_10s | 111 ms | 62 ms | 49 ms | 113 ms | 1.0 |
+| long_12s (cut to 10 s) | 119 ms | 65 ms | 56 ms | 115 ms | 1.0 |
+
+Loading the model once takes 456 ms (do it when the Check screen opens, not after recording).
+
+**What this means:** the report's target of a result within 5 s (FR20, NFR03) is met with a wide margin, about 0.1 s, fully offline on the phone, and the phone's numbers match Python exactly. The classifier on top (logistic regression on 512 numbers) adds well under a millisecond. CLAP stays the plan; YAMNet is not needed for speed. Still to time: an Android phone, and an older iPhone.
 
 **Honest wording for the app and report:** show likelihoods with "not a diagnosis", and say the behaviour check is an early estimate. This matches Dr Yam's line that logging is the minimum and AI is the best case.
 

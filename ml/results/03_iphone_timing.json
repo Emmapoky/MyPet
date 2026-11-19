@@ -1,0 +1,6 @@
+{"run": "2026-11-19 16:19 MYT, Erwyna's iPhone (iOS 27.2.1), behaviour_bench at commit 3d741e4, quantized CLAP ONNX (34.3 MB) via flutter_onnxruntime 1.9.0; launched with --profile as instructed (build mode read from the phone screenshot, not the BENCH_JSON line)",
+ "model_load_ms": 456,
+ "short_tone": {"total_ms_median": 103, "features_ms_median": 51, "inference_ms_median": 51, "total_ms_first": 103, "cosine_vs_python": 1.0},
+ "chirp_10s":  {"total_ms_median": 111, "features_ms_median": 62, "inference_ms_median": 49, "total_ms_first": 113, "cosine_vs_python": 1.0},
+ "long_12s":   {"total_ms_median": 119, "features_ms_median": 65, "inference_ms_median": 56, "total_ms_first": 115, "cosine_vs_python": 1.0},
+ "meets_5s_target": true}

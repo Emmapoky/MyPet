@@ -30,7 +30,7 @@ Embedding one clip took 0.63 s on Colab's free CPU (a phone will differ; timed i
 
 - CLAP zero-shot is at chance on this task. It mostly answers "food" for everything (see the confusion matrix in `results/01_catmeows.json`). Keep it only as the baseline the report promised, not as a label source.
 - A small classifier on CLAP embeddings is clearly better than zero-shot (0.49 vs 0.34 macro F1 on cats it never saw), so the plan of embeddings + logistic regression holds up.
-- It is still weak. Isolation meows are recognised best; food and brushing get mixed up. Results on unseen cats are much lower than what you get if the same cat is in train and test, which is why we split by cat.
+- It is still weak. Isolation meows are recognised best; food and brushing get mixed up. Every number here is on cats the model never saw, which is the fair test for new users.
 - The test split has only 4 cats, so the single-split numbers jump around. The 7-fold number is the one to quote.
 - CatMeows clips are 1 to 4 s (median 1.8 s) and were repeat-padded to 10 s. The app plans 10 s recordings, so real clips may hold several meows. Worth testing once we record our own.
 

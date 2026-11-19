@@ -1,0 +1,95 @@
+{
+ "cat_context": {
+  "clips": 94,
+  "accuracy": 0.362,
+  "macro_f1": 0.349,
+  "confusion_rows_true_cols_pred": [
+   [
+    2,
+    7,
+    5
+   ],
+   [
+    22,
+    17,
+    3
+   ],
+   [
+    19,
+    4,
+    15
+   ]
+  ],
+  "class_order": [
+   "F",
+   "B",
+   "I"
+  ],
+  "C": 1,
+  "train_cats": 17,
+  "test_cats": [
+   "ANI01",
+   "BAC01",
+   "CAN01",
+   "NIG01"
+  ]
+ },
+ "dog_arousal": {
+  "clips": 200,
+  "accuracy": 0.5,
+  "macro_f1": 0.502,
+  "confusion_rows_true_cols_pred": [
+   [
+    34,
+    21,
+    12
+   ],
+   [
+    17,
+    33,
+    17
+   ],
+   [
+    10,
+    23,
+    33
+   ]
+  ],
+  "class_order": [
+   "Low",
+   "Medium",
+   "High"
+  ],
+  "C": 0.001
+ },
+ "dog_valence": {
+  "clips": 200,
+  "accuracy": 0.445,
+  "macro_f1": 0.421,
+  "confusion_rows_true_cols_pred": [
+   [
+    14,
+    15,
+    37
+   ],
+   [
+    5,
+    27,
+    35
+   ],
+   [
+    5,
+    14,
+    48
+   ]
+  ],
+  "class_order": [
+   "Negative",
+   "Neutral",
+   "Positive"
+  ],
+  "C": 0.001
+ },
+ "note": "Held-out clips only (other cats, other dogs). Phone pipeline: first 10 s, ml/reference features, quantized CLAP ONNX, L2-normalised, logistic regression.",
+ "fake_model": false
+}

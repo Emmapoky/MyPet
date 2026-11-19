@@ -190,7 +190,7 @@ def main():
             if sp == "dog":
                 pf = w * pf + (1 - w) * base.probs(pc["dog_photo"], v)
             j = int(pf.argmax())
-            cands.append({"title": title, "species": sp, "path": path, "x": x, "s0": s0, "dur": dur,
+            cands.append({"task": task, "pf": pf, "title": title, "species": sp, "path": path, "x": x, "s0": s0, "dur": dur,
                           "top_sound": keys[int(order[0])], "sound_p": float(ps[order[0]]),
                           "feeling": clf[task]["classes"][j], "feeling_p": float(pf[j]),
                           "feeling_name": clf[task]["names"][j], "ps": ps, "order": order, "pg": pg, "gby": gby,
@@ -233,6 +233,7 @@ def main():
             "seconds": round(c["dur"], 1), "bytes": os.path.getsize(dst),
             "result": {
                 "feeling": c["feeling"], "feeling_name": c["feeling_name"], "p": round(c["feeling_p"], 3),
+                "feelings": {n: round(float(q), 3) for n, q in zip(clf[c["task"]]["names"], c["pf"])},
                 "method": "sound and picture combined" if c["species"] == "dog" else "sound only (cat feelings come from meows)",
                 "top_sounds": [{"key": keys[int(j)], "name": names[int(j)], "p": round(float(c["ps"][j]), 3)} for j in c["order"][:3]],
                 "picture_shows_pet": True,

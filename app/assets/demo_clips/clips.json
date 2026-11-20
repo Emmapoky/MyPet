@@ -1,0 +1,1627 @@
+{
+ "note": "Cuts of Wikimedia Commons videos under licences that allow redistribution. Results come from the same pipeline as the app (CLAP sound, CLIP picture, sound weight from photo_classifiers.json). Likelihoods only, not a diagnosis.",
+ "clips": [
+  {
+   "file": "dog_dog_bark_01.mp4",
+   "species": "dog",
+   "slot": "dog_bark",
+   "title": "Dog - Spinning 1",
+   "author": "guuseeg32",
+   "licence": "CC BY 3.0",
+   "page": "https://commons.wikimedia.org/wiki/File%3ADog_-_Spinning_1.webm",
+   "seconds": 8.0,
+   "bytes": 1068665,
+   "result": {
+    "feeling": "upset",
+    "feeling_name": "Likely upset",
+    "p": 0.566,
+    "feelings": {
+     "Likely happy or playful": 0.09,
+     "Likely calm": 0.111,
+     "Likely sad or uneasy": 0.234,
+     "Likely upset": 0.566
+    },
+    "method": "sound and picture combined",
+    "top_sounds": [
+     {
+      "key": "dog_bark",
+      "name": "Barking",
+      "p": 0.829
+     },
+     {
+      "key": "dog_growl",
+      "name": "Growling",
+      "p": 0.142
+     },
+     {
+      "key": "dog_whimper",
+      "name": "Whimpering",
+      "p": 0.018
+     }
+    ],
+    "picture_shows_pet": true,
+    "picture": {
+     "what": "a dog",
+     "p": 0.49,
+     "species_likelihood": {
+      "cat": 0.08,
+      "dog": 0.49,
+      "other": 0.43
+     }
+    }
+   },
+   "moments": [
+    {
+     "src": "sound",
+     "label": "Barking",
+     "s": 0.0,
+     "e": 1.0,
+     "p": 0.673
+    },
+    {
+     "src": "picture",
+     "label": "a dog",
+     "s": 0.0,
+     "e": 1.0,
+     "p": 0.728
+    },
+    {
+     "src": "sound",
+     "label": "Barking",
+     "s": 1.0,
+     "e": 2.0,
+     "p": 0.84
+    },
+    {
+     "src": "picture",
+     "label": "a dog",
+     "s": 1.0,
+     "e": 2.0,
+     "p": 0.415
+    },
+    {
+     "src": "sound",
+     "label": "Barking",
+     "s": 2.0,
+     "e": 3.0,
+     "p": 0.615
+    },
+    {
+     "src": "picture",
+     "label": "a dog",
+     "s": 2.0,
+     "e": 3.0,
+     "p": 0.913
+    },
+    {
+     "src": "sound",
+     "label": "Barking",
+     "s": 3.0,
+     "e": 4.0,
+     "p": 0.729
+    },
+    {
+     "src": "picture",
+     "label": "a street or a garden",
+     "s": 3.0,
+     "e": 4.0,
+     "p": 0.31
+    },
+    {
+     "src": "sound",
+     "label": "Barking",
+     "s": 4.0,
+     "e": 5.0,
+     "p": 0.757
+    },
+    {
+     "src": "picture",
+     "label": "a dog",
+     "s": 4.0,
+     "e": 5.0,
+     "p": 0.545
+    },
+    {
+     "src": "sound",
+     "label": "Barking",
+     "s": 5.0,
+     "e": 6.0,
+     "p": 0.611
+    },
+    {
+     "src": "picture",
+     "label": "a dog",
+     "s": 5.0,
+     "e": 6.0,
+     "p": 0.63
+    },
+    {
+     "src": "sound",
+     "label": "Barking",
+     "s": 6.0,
+     "e": 7.0,
+     "p": 0.754
+    },
+    {
+     "src": "picture",
+     "label": "a dog",
+     "s": 6.0,
+     "e": 7.0,
+     "p": 0.57
+    },
+    {
+     "src": "sound",
+     "label": "Barking",
+     "s": 7.0,
+     "e": 8.0,
+     "p": 0.767
+    },
+    {
+     "src": "picture",
+     "label": "a dog",
+     "s": 7.0,
+     "e": 8.0,
+     "p": 0.599
+    }
+   ]
+  },
+  {
+   "file": "dog_dog_bark_02.mp4",
+   "species": "dog",
+   "slot": "dog_bark",
+   "title": "Bellender Zwergspitz",
+   "author": "Fiver, der Hellseher",
+   "licence": "CC BY-SA 4.0",
+   "page": "https://commons.wikimedia.org/wiki/File%3ABellender_Zwergspitz.webm",
+   "seconds": 7.1,
+   "bytes": 607513,
+   "result": {
+    "feeling": "upset",
+    "feeling_name": "Likely upset",
+    "p": 0.426,
+    "feelings": {
+     "Likely happy or playful": 0.099,
+     "Likely calm": 0.127,
+     "Likely sad or uneasy": 0.348,
+     "Likely upset": 0.426
+    },
+    "method": "sound and picture combined",
+    "top_sounds": [
+     {
+      "key": "dog_bark",
+      "name": "Barking",
+      "p": 0.752
+     },
+     {
+      "key": "dog_whimper",
+      "name": "Whimpering",
+      "p": 0.156
+     },
+     {
+      "key": "dog_howl",
+      "name": "Howling",
+      "p": 0.046
+     }
+    ],
+    "picture_shows_pet": true,
+    "picture": {
+     "what": "a dog",
+     "p": 0.653,
+     "species_likelihood": {
+      "cat": 0.286,
+      "dog": 0.653,
+      "other": 0.061
+     }
+    }
+   },
+   "moments": [
+    {
+     "src": "sound",
+     "label": "Barking",
+     "s": 0.0,
+     "e": 1.0,
+     "p": 0.723
+    },
+    {
+     "src": "picture",
+     "label": "a dog",
+     "s": 0.0,
+     "e": 1.0,
+     "p": 0.653
+    },
+    {
+     "src": "sound",
+     "label": "Barking",
+     "s": 1.0,
+     "e": 2.0,
+     "p": 0.768
+    },
+    {
+     "src": "picture",
+     "label": "a dog",
+     "s": 1.0,
+     "e": 2.0,
+     "p": 0.653
+    },
+    {
+     "src": "sound",
+     "label": "Barking",
+     "s": 2.0,
+     "e": 3.0,
+     "p": 0.778
+    },
+    {
+     "src": "picture",
+     "label": "a dog",
+     "s": 2.0,
+     "e": 3.0,
+     "p": 0.653
+    },
+    {
+     "src": "sound",
+     "label": "Barking",
+     "s": 3.0,
+     "e": 4.0,
+     "p": 0.466
+    },
+    {
+     "src": "picture",
+     "label": "a dog",
+     "s": 3.0,
+     "e": 4.0,
+     "p": 0.653
+    },
+    {
+     "src": "sound",
+     "label": "Purring",
+     "s": 4.0,
+     "e": 5.0,
+     "p": 0.418
+    },
+    {
+     "src": "picture",
+     "label": "a dog",
+     "s": 4.0,
+     "e": 5.0,
+     "p": 0.653
+    },
+    {
+     "src": "sound",
+     "label": "Barking",
+     "s": 5.0,
+     "e": 6.0,
+     "p": 0.437
+    },
+    {
+     "src": "picture",
+     "label": "a dog",
+     "s": 5.0,
+     "e": 6.0,
+     "p": 0.653
+    },
+    {
+     "src": "sound",
+     "label": "Barking",
+     "s": 6.0,
+     "e": 7.0,
+     "p": 0.543
+    },
+    {
+     "src": "picture",
+     "label": "a dog",
+     "s": 6.0,
+     "e": 7.0,
+     "p": 0.653
+    }
+   ]
+  },
+  {
+   "file": "dog_dog_bark_03.mp4",
+   "species": "dog",
+   "slot": "dog_bark",
+   "title": "2022-04-27 STARA DOLINA Di Valle Vecchia CARNIVORA Canis lupus familiaris DOMAČI PES",
+   "author": "NaIzletuSi ™",
+   "licence": "CC BY 3.0",
+   "page": "https://commons.wikimedia.org/wiki/File%3A2022-04-27_STARA_DOLINA_Di_Valle_Vecchia_CARNIVORA_Canis_lupus_familiaris_DOMA%C4%8CI_PES.webm",
+   "seconds": 8.0,
+   "bytes": 869453,
+   "result": {
+    "feeling": "upset",
+    "feeling_name": "Likely upset",
+    "p": 0.547,
+    "feelings": {
+     "Likely happy or playful": 0.13,
+     "Likely calm": 0.192,
+     "Likely sad or uneasy": 0.131,
+     "Likely upset": 0.547
+    },
+    "method": "sound and picture combined",
+    "top_sounds": [
+     {
+      "key": "dog_bark",
+      "name": "Barking",
+      "p": 0.691
+     },
+     {
+      "key": "dog_whimper",
+      "name": "Whimpering",
+      "p": 0.187
+     },
+     {
+      "key": "dog_growl",
+      "name": "Growling",
+      "p": 0.072
+     }
+    ],
+    "picture_shows_pet": true,
+    "picture": {
+     "what": "a dog",
+     "p": 0.692,
+     "species_likelihood": {
+      "cat": 0.006,
+      "dog": 0.692,
+      "other": 0.301
+     }
+    }
+   },
+   "moments": [
+    {
+     "src": "sound",
+     "label": "Purring",
+     "s": 0.0,
+     "e": 1.0,
+     "p": 0.403
+    },
+    {
+     "src": "picture",
+     "label": "an object",
+     "s": 0.0,
+     "e": 1.0,
+     "p": 0.919
+    },
+    {
+     "src": "sound",
+     "label": "Purring",
+     "s": 1.0,
+     "e": 2.0,
+     "p": 0.427
+    },
+    {
+     "src": "picture",
+     "label": "an object",
+     "s": 1.0,
+     "e": 2.0,
+     "p": 0.873
+    },
+    {
+     "src": "sound",
+     "label": "Barking",
+     "s": 2.0,
+     "e": 3.0,
+     "p": 0.745
+    },
+    {
+     "src": "picture",
+     "label": "an object",
+     "s": 2.0,
+     "e": 3.0,
+     "p": 0.933
+    },
+    {
+     "src": "sound",
+     "label": "Barking",
+     "s": 3.0,
+     "e": 4.0,
+     "p": 0.707
+    },
+    {
+     "src": "picture",
+     "label": "a dog",
+     "s": 3.0,
+     "e": 4.0,
+     "p": 0.24
+    },
+    {
+     "src": "sound",
+     "label": "Whimpering",
+     "s": 4.0,
+     "e": 5.0,
+     "p": 0.435
+    },
+    {
+     "src": "picture",
+     "label": "a dog",
+     "s": 4.0,
+     "e": 5.0,
+     "p": 0.91
+    },
+    {
+     "src": "sound",
+     "label": "Whimpering",
+     "s": 5.0,
+     "e": 6.0,
+     "p": 0.39
+    },
+    {
+     "src": "picture",
+     "label": "a dog",
+     "s": 5.0,
+     "e": 6.0,
+     "p": 0.948
+    },
+    {
+     "src": "sound",
+     "label": "Whimpering",
+     "s": 6.0,
+     "e": 7.0,
+     "p": 0.377
+    },
+    {
+     "src": "picture",
+     "label": "a dog",
+     "s": 6.0,
+     "e": 7.0,
+     "p": 0.947
+    },
+    {
+     "src": "sound",
+     "label": "Whimpering",
+     "s": 7.0,
+     "e": 8.0,
+     "p": 0.352
+    },
+    {
+     "src": "picture",
+     "label": "a dog",
+     "s": 7.0,
+     "e": 8.0,
+     "p": 0.942
+    }
+   ]
+  },
+  {
+   "file": "dog_dog_whimper_04.mp4",
+   "species": "dog",
+   "slot": "dog_whimper",
+   "title": "Background footage of Yulin dog meat investigation by Direct Action Everywhere",
+   "author": "Direct Action Everywhere",
+   "licence": "CC BY-SA 4.0",
+   "page": "https://commons.wikimedia.org/wiki/File%3ABackground_footage_of_Yulin_dog_meat_investigation_by_Direct_Action_Everywhere.webm",
+   "seconds": 8.0,
+   "bytes": 424370,
+   "result": {
+    "feeling": "upset",
+    "feeling_name": "Likely upset",
+    "p": 0.421,
+    "feelings": {
+     "Likely happy or playful": 0.164,
+     "Likely calm": 0.01,
+     "Likely sad or uneasy": 0.405,
+     "Likely upset": 0.421
+    },
+    "method": "sound and picture combined",
+    "top_sounds": [
+     {
+      "key": "dog_howl",
+      "name": "Howling",
+      "p": 0.862
+     },
+     {
+      "key": "dog_whimper",
+      "name": "Whimpering",
+      "p": 0.052
+     },
+     {
+      "key": "dog_bark",
+      "name": "Barking",
+      "p": 0.038
+     }
+    ],
+    "picture_shows_pet": true,
+    "picture": {
+     "what": "a dog",
+     "p": 0.918,
+     "species_likelihood": {
+      "cat": 0.006,
+      "dog": 0.918,
+      "other": 0.076
+     }
+    }
+   },
+   "moments": [
+    {
+     "src": "sound",
+     "label": "Howling",
+     "s": 0.0,
+     "e": 1.0,
+     "p": 0.814
+    },
+    {
+     "src": "picture",
+     "label": "a dog",
+     "s": 0.0,
+     "e": 1.0,
+     "p": 0.882
+    },
+    {
+     "src": "sound",
+     "label": "Howling",
+     "s": 1.0,
+     "e": 2.0,
+     "p": 0.847
+    },
+    {
+     "src": "picture",
+     "label": "a dog",
+     "s": 1.0,
+     "e": 2.0,
+     "p": 0.911
+    },
+    {
+     "src": "sound",
+     "label": "Howling",
+     "s": 2.0,
+     "e": 3.0,
+     "p": 0.87
+    },
+    {
+     "src": "picture",
+     "label": "a dog",
+     "s": 2.0,
+     "e": 3.0,
+     "p": 0.91
+    },
+    {
+     "src": "sound",
+     "label": "Howling",
+     "s": 3.0,
+     "e": 4.0,
+     "p": 0.896
+    },
+    {
+     "src": "picture",
+     "label": "a dog",
+     "s": 3.0,
+     "e": 4.0,
+     "p": 0.847
+    },
+    {
+     "src": "sound",
+     "label": "Howling",
+     "s": 4.0,
+     "e": 5.0,
+     "p": 0.864
+    },
+    {
+     "src": "picture",
+     "label": "a dog",
+     "s": 4.0,
+     "e": 5.0,
+     "p": 0.924
+    },
+    {
+     "src": "sound",
+     "label": "Howling",
+     "s": 5.0,
+     "e": 6.0,
+     "p": 0.872
+    },
+    {
+     "src": "picture",
+     "label": "a dog",
+     "s": 5.0,
+     "e": 6.0,
+     "p": 0.863
+    },
+    {
+     "src": "sound",
+     "label": "Howling",
+     "s": 6.0,
+     "e": 7.0,
+     "p": 0.878
+    },
+    {
+     "src": "picture",
+     "label": "a dog",
+     "s": 6.0,
+     "e": 7.0,
+     "p": 0.899
+    },
+    {
+     "src": "sound",
+     "label": "Howling",
+     "s": 7.0,
+     "e": 8.0,
+     "p": 0.719
+    },
+    {
+     "src": "picture",
+     "label": "a dog",
+     "s": 7.0,
+     "e": 8.0,
+     "p": 0.928
+    }
+   ]
+  },
+  {
+   "file": "dog_dog_calm_or_playful_05.mp4",
+   "species": "dog",
+   "slot": "dog_calm_or_playful",
+   "title": "Batumi2025dog-baton",
+   "author": "Vitaly Zdanevich",
+   "licence": "CC BY 4.0",
+   "page": "https://commons.wikimedia.org/wiki/File%3ABatumi2025dog-baton.webm",
+   "seconds": 8.0,
+   "bytes": 687262,
+   "result": {
+    "feeling": "calm",
+    "feeling_name": "Likely calm",
+    "p": 0.439,
+    "feelings": {
+     "Likely happy or playful": 0.09,
+     "Likely calm": 0.439,
+     "Likely sad or uneasy": 0.273,
+     "Likely upset": 0.197
+    },
+    "method": "sound and picture combined",
+    "top_sounds": [
+     {
+      "key": "dog_howl",
+      "name": "Howling",
+      "p": 0.212
+     },
+     {
+      "key": "cat_purr",
+      "name": "Purring",
+      "p": 0.204
+     },
+     {
+      "key": "dog_growl",
+      "name": "Growling",
+      "p": 0.164
+     }
+    ],
+    "picture_shows_pet": true,
+    "picture": {
+     "what": "a dog",
+     "p": 0.553,
+     "species_likelihood": {
+      "cat": 0.116,
+      "dog": 0.553,
+      "other": 0.331
+     }
+    }
+   },
+   "moments": [
+    {
+     "src": "sound",
+     "label": "Purring",
+     "s": 0.0,
+     "e": 1.0,
+     "p": 0.606
+    },
+    {
+     "src": "picture",
+     "label": "a dog",
+     "s": 0.0,
+     "e": 1.0,
+     "p": 0.745
+    },
+    {
+     "src": "sound",
+     "label": "Purring",
+     "s": 1.0,
+     "e": 2.0,
+     "p": 0.653
+    },
+    {
+     "src": "picture",
+     "label": "another animal",
+     "s": 1.0,
+     "e": 2.0,
+     "p": 0.435
+    },
+    {
+     "src": "sound",
+     "label": "Purring",
+     "s": 2.0,
+     "e": 3.0,
+     "p": 0.506
+    },
+    {
+     "src": "picture",
+     "label": "an object",
+     "s": 2.0,
+     "e": 3.0,
+     "p": 0.442
+    },
+    {
+     "src": "sound",
+     "label": "Purring",
+     "s": 3.0,
+     "e": 4.0,
+     "p": 0.385
+    },
+    {
+     "src": "picture",
+     "label": "another animal",
+     "s": 3.0,
+     "e": 4.0,
+     "p": 0.456
+    },
+    {
+     "src": "sound",
+     "label": "Growling",
+     "s": 4.0,
+     "e": 5.0,
+     "p": 0.472
+    },
+    {
+     "src": "picture",
+     "label": "a dog",
+     "s": 4.0,
+     "e": 5.0,
+     "p": 0.888
+    },
+    {
+     "src": "sound",
+     "label": "Howling",
+     "s": 5.0,
+     "e": 6.0,
+     "p": 0.412
+    },
+    {
+     "src": "picture",
+     "label": "a dog",
+     "s": 5.0,
+     "e": 6.0,
+     "p": 0.864
+    },
+    {
+     "src": "sound",
+     "label": "Howling",
+     "s": 6.0,
+     "e": 7.0,
+     "p": 0.375
+    },
+    {
+     "src": "picture",
+     "label": "a dog",
+     "s": 6.0,
+     "e": 7.0,
+     "p": 0.706
+    },
+    {
+     "src": "sound",
+     "label": "Howling",
+     "s": 7.0,
+     "e": 8.0,
+     "p": 0.389
+    },
+    {
+     "src": "picture",
+     "label": "a dog",
+     "s": 7.0,
+     "e": 8.0,
+     "p": 0.876
+    }
+   ]
+  },
+  {
+   "file": "dog_dog_calm_or_playful_06.mp4",
+   "species": "dog",
+   "slot": "dog_calm_or_playful",
+   "title": "Dogs pulling a sled",
+   "author": "Jan Mosimann",
+   "licence": "CC BY 2.0",
+   "page": "https://commons.wikimedia.org/wiki/File%3ADogs_pulling_a_sled.webm",
+   "seconds": 8.0,
+   "bytes": 780255,
+   "result": {
+    "feeling": "calm",
+    "feeling_name": "Likely calm",
+    "p": 0.402,
+    "feelings": {
+     "Likely happy or playful": 0.168,
+     "Likely calm": 0.402,
+     "Likely sad or uneasy": 0.084,
+     "Likely upset": 0.346
+    },
+    "method": "sound and picture combined",
+    "top_sounds": [
+     {
+      "key": "dog_howl",
+      "name": "Howling",
+      "p": 0.271
+     },
+     {
+      "key": "dog_whimper",
+      "name": "Whimpering",
+      "p": 0.217
+     },
+     {
+      "key": "cat_hiss",
+      "name": "Hissing",
+      "p": 0.212
+     }
+    ],
+    "picture_shows_pet": true,
+    "picture": {
+     "what": "a dog",
+     "p": 0.601,
+     "species_likelihood": {
+      "cat": 0.016,
+      "dog": 0.601,
+      "other": 0.384
+     }
+    }
+   },
+   "moments": [
+    {
+     "src": "sound",
+     "label": "Howling",
+     "s": 0.0,
+     "e": 1.0,
+     "p": 0.299
+    },
+    {
+     "src": "picture",
+     "label": "an object",
+     "s": 0.0,
+     "e": 1.0,
+     "p": 0.321
+    },
+    {
+     "src": "sound",
+     "label": "Howling",
+     "s": 1.0,
+     "e": 2.0,
+     "p": 0.423
+    },
+    {
+     "src": "picture",
+     "label": "another animal",
+     "s": 1.0,
+     "e": 2.0,
+     "p": 0.383
+    },
+    {
+     "src": "sound",
+     "label": "Howling",
+     "s": 2.0,
+     "e": 3.0,
+     "p": 0.431
+    },
+    {
+     "src": "picture",
+     "label": "a dog",
+     "s": 2.0,
+     "e": 3.0,
+     "p": 0.786
+    },
+    {
+     "src": "sound",
+     "label": "Howling",
+     "s": 3.0,
+     "e": 4.0,
+     "p": 0.434
+    },
+    {
+     "src": "picture",
+     "label": "a dog",
+     "s": 3.0,
+     "e": 4.0,
+     "p": 0.635
+    },
+    {
+     "src": "sound",
+     "label": "Howling",
+     "s": 4.0,
+     "e": 5.0,
+     "p": 0.336
+    },
+    {
+     "src": "picture",
+     "label": "a dog",
+     "s": 4.0,
+     "e": 5.0,
+     "p": 0.66
+    },
+    {
+     "src": "sound",
+     "label": "Howling",
+     "s": 5.0,
+     "e": 6.0,
+     "p": 0.289
+    },
+    {
+     "src": "picture",
+     "label": "a dog",
+     "s": 5.0,
+     "e": 6.0,
+     "p": 0.37
+    },
+    {
+     "src": "sound",
+     "label": "Howling",
+     "s": 6.0,
+     "e": 7.0,
+     "p": 0.244
+    },
+    {
+     "src": "picture",
+     "label": "a dog",
+     "s": 6.0,
+     "e": 7.0,
+     "p": 0.666
+    },
+    {
+     "src": "sound",
+     "label": "Hissing",
+     "s": 7.0,
+     "e": 8.0,
+     "p": 0.252
+    },
+    {
+     "src": "picture",
+     "label": "a dog",
+     "s": 7.0,
+     "e": 8.0,
+     "p": 0.766
+    }
+   ]
+  },
+  {
+   "file": "cat_cat_meow_07.mp4",
+   "species": "cat",
+   "slot": "cat_meow",
+   "title": "2022-10-18 LJUBLJANA Doma CARNIVORA Felis catus DOMAČA MAČKA 4",
+   "author": "NaIzletuSi ™",
+   "licence": "CC BY 3.0",
+   "page": "https://commons.wikimedia.org/wiki/File%3A2022-10-18_LJUBLJANA_Doma_CARNIVORA_Felis_catus_DOMA%C4%8CA_MA%C4%8CKA_4.webm",
+   "seconds": 8.0,
+   "bytes": 387607,
+   "result": {
+    "feeling": "F",
+    "feeling_name": "Likely hungry",
+    "p": 0.995,
+    "feelings": {
+     "Likely hungry": 0.995,
+     "Likely reacting to handling": 0.001,
+     "Likely stressed in a strange place": 0.003
+    },
+    "method": "sound only (cat feelings come from meows)",
+    "top_sounds": [
+     {
+      "key": "cat_meow",
+      "name": "Meowing",
+      "p": 0.554
+     },
+     {
+      "key": "cat_yowl",
+      "name": "Yowling",
+      "p": 0.344
+     },
+     {
+      "key": "dog_whimper",
+      "name": "Whimpering",
+      "p": 0.035
+     }
+    ],
+    "picture_shows_pet": true,
+    "picture": {
+     "what": "a cat",
+     "p": 0.906,
+     "species_likelihood": {
+      "cat": 0.906,
+      "dog": 0.007,
+      "other": 0.087
+     }
+    }
+   },
+   "moments": [
+    {
+     "src": "sound",
+     "label": "Purring",
+     "s": 0.0,
+     "e": 1.0,
+     "p": 0.379
+    },
+    {
+     "src": "picture",
+     "label": "a cat",
+     "s": 0.0,
+     "e": 1.0,
+     "p": 0.908
+    },
+    {
+     "src": "sound",
+     "label": "Whimpering",
+     "s": 1.0,
+     "e": 2.0,
+     "p": 0.255
+    },
+    {
+     "src": "picture",
+     "label": "a cat",
+     "s": 1.0,
+     "e": 2.0,
+     "p": 0.932
+    },
+    {
+     "src": "sound",
+     "label": "Purring",
+     "s": 2.0,
+     "e": 3.0,
+     "p": 0.43
+    },
+    {
+     "src": "picture",
+     "label": "a cat",
+     "s": 2.0,
+     "e": 3.0,
+     "p": 0.932
+    },
+    {
+     "src": "sound",
+     "label": "Whimpering",
+     "s": 3.0,
+     "e": 4.0,
+     "p": 0.571
+    },
+    {
+     "src": "picture",
+     "label": "a cat",
+     "s": 3.0,
+     "e": 4.0,
+     "p": 0.868
+    },
+    {
+     "src": "sound",
+     "label": "Whimpering",
+     "s": 4.0,
+     "e": 5.0,
+     "p": 0.437
+    },
+    {
+     "src": "picture",
+     "label": "a cat",
+     "s": 4.0,
+     "e": 5.0,
+     "p": 0.923
+    },
+    {
+     "src": "sound",
+     "label": "Purring",
+     "s": 5.0,
+     "e": 6.0,
+     "p": 0.755
+    },
+    {
+     "src": "picture",
+     "label": "a cat",
+     "s": 5.0,
+     "e": 6.0,
+     "p": 0.879
+    },
+    {
+     "src": "sound",
+     "label": "Howling",
+     "s": 6.0,
+     "e": 7.0,
+     "p": 0.325
+    },
+    {
+     "src": "picture",
+     "label": "a cat",
+     "s": 6.0,
+     "e": 7.0,
+     "p": 0.893
+    },
+    {
+     "src": "sound",
+     "label": "Howling",
+     "s": 7.0,
+     "e": 8.0,
+     "p": 0.295
+    },
+    {
+     "src": "picture",
+     "label": "a cat",
+     "s": 7.0,
+     "e": 8.0,
+     "p": 0.926
+    }
+   ]
+  },
+  {
+   "file": "cat_cat_meow_08.mp4",
+   "species": "cat",
+   "slot": "cat_meow",
+   "title": "Cat opening door",
+   "author": "Astropulse",
+   "licence": "CC BY-SA 4.0",
+   "page": "https://commons.wikimedia.org/wiki/File%3ACat_opening_door.webm",
+   "seconds": 8.0,
+   "bytes": 250701,
+   "result": {
+    "feeling": "I",
+    "feeling_name": "Likely stressed in a strange place",
+    "p": 0.852,
+    "feelings": {
+     "Likely hungry": 0.037,
+     "Likely reacting to handling": 0.111,
+     "Likely stressed in a strange place": 0.852
+    },
+    "method": "sound only (cat feelings come from meows)",
+    "top_sounds": [
+     {
+      "key": "cat_meow",
+      "name": "Meowing",
+      "p": 0.546
+     },
+     {
+      "key": "cat_yowl",
+      "name": "Yowling",
+      "p": 0.343
+     },
+     {
+      "key": "dog_whimper",
+      "name": "Whimpering",
+      "p": 0.045
+     }
+    ],
+    "picture_shows_pet": true,
+    "picture": {
+     "what": "a cat",
+     "p": 0.889,
+     "species_likelihood": {
+      "cat": 0.889,
+      "dog": 0.012,
+      "other": 0.099
+     }
+    }
+   },
+   "moments": [
+    {
+     "src": "sound",
+     "label": "Background noise",
+     "s": 0.0,
+     "e": 1.0,
+     "p": 0.319
+    },
+    {
+     "src": "picture",
+     "label": "a cat",
+     "s": 0.0,
+     "e": 1.0,
+     "p": 0.812
+    },
+    {
+     "src": "sound",
+     "label": "Whimpering",
+     "s": 1.0,
+     "e": 2.0,
+     "p": 0.323
+    },
+    {
+     "src": "picture",
+     "label": "a cat",
+     "s": 1.0,
+     "e": 2.0,
+     "p": 0.899
+    },
+    {
+     "src": "sound",
+     "label": "Growling",
+     "s": 2.0,
+     "e": 3.0,
+     "p": 0.451
+    },
+    {
+     "src": "picture",
+     "label": "a cat",
+     "s": 2.0,
+     "e": 3.0,
+     "p": 0.929
+    },
+    {
+     "src": "sound",
+     "label": "Howling",
+     "s": 3.0,
+     "e": 4.0,
+     "p": 0.224
+    },
+    {
+     "src": "picture",
+     "label": "a cat",
+     "s": 3.0,
+     "e": 4.0,
+     "p": 0.84
+    },
+    {
+     "src": "sound",
+     "label": "Hissing",
+     "s": 4.0,
+     "e": 5.0,
+     "p": 0.229
+    },
+    {
+     "src": "picture",
+     "label": "a cat",
+     "s": 4.0,
+     "e": 5.0,
+     "p": 0.814
+    },
+    {
+     "src": "sound",
+     "label": "Meowing",
+     "s": 5.0,
+     "e": 6.0,
+     "p": 0.265
+    },
+    {
+     "src": "picture",
+     "label": "a cat",
+     "s": 5.0,
+     "e": 6.0,
+     "p": 0.799
+    },
+    {
+     "src": "sound",
+     "label": "Meowing",
+     "s": 6.0,
+     "e": 7.0,
+     "p": 0.507
+    },
+    {
+     "src": "picture",
+     "label": "a cat",
+     "s": 6.0,
+     "e": 7.0,
+     "p": 0.792
+    },
+    {
+     "src": "sound",
+     "label": "Meowing",
+     "s": 7.0,
+     "e": 8.0,
+     "p": 0.607
+    },
+    {
+     "src": "picture",
+     "label": "a cat",
+     "s": 7.0,
+     "e": 8.0,
+     "p": 0.788
+    }
+   ]
+  },
+  {
+   "file": "cat_cat_purr_09.mp4",
+   "species": "cat",
+   "slot": "cat_purr",
+   "title": "Eleven months old kittens 2 2015-03-05",
+   "author": "FASTILY",
+   "licence": "CC BY-SA 4.0",
+   "page": "https://commons.wikimedia.org/wiki/File%3AEleven_months_old_kittens_2_2015-03-05.ogv",
+   "seconds": 8.0,
+   "bytes": 389839,
+   "result": {
+    "feeling": "F",
+    "feeling_name": "Likely hungry",
+    "p": 0.851,
+    "feelings": {
+     "Likely hungry": 0.851,
+     "Likely reacting to handling": 0.149,
+     "Likely stressed in a strange place": 0.0
+    },
+    "method": "sound only (cat feelings come from meows)",
+    "top_sounds": [
+     {
+      "key": "cat_purr",
+      "name": "Purring",
+      "p": 0.844
+     },
+     {
+      "key": "quiet",
+      "name": "Background noise",
+      "p": 0.066
+     },
+     {
+      "key": "cat_hiss",
+      "name": "Hissing",
+      "p": 0.064
+     }
+    ],
+    "picture_shows_pet": true,
+    "picture": {
+     "what": "a cat",
+     "p": 0.937,
+     "species_likelihood": {
+      "cat": 0.937,
+      "dog": 0.006,
+      "other": 0.056
+     }
+    }
+   },
+   "moments": [
+    {
+     "src": "sound",
+     "label": "Purring",
+     "s": 0.0,
+     "e": 1.0,
+     "p": 0.655
+    },
+    {
+     "src": "picture",
+     "label": "a cat",
+     "s": 0.0,
+     "e": 1.0,
+     "p": 0.934
+    },
+    {
+     "src": "sound",
+     "label": "Purring",
+     "s": 1.0,
+     "e": 2.0,
+     "p": 0.582
+    },
+    {
+     "src": "picture",
+     "label": "a cat",
+     "s": 1.0,
+     "e": 2.0,
+     "p": 0.934
+    },
+    {
+     "src": "sound",
+     "label": "Purring",
+     "s": 2.0,
+     "e": 3.0,
+     "p": 0.516
+    },
+    {
+     "src": "picture",
+     "label": "a cat",
+     "s": 2.0,
+     "e": 3.0,
+     "p": 0.931
+    },
+    {
+     "src": "sound",
+     "label": "Purring",
+     "s": 3.0,
+     "e": 4.0,
+     "p": 0.988
+    },
+    {
+     "src": "picture",
+     "label": "a cat",
+     "s": 3.0,
+     "e": 4.0,
+     "p": 0.932
+    },
+    {
+     "src": "sound",
+     "label": "Purring",
+     "s": 4.0,
+     "e": 5.0,
+     "p": 0.991
+    },
+    {
+     "src": "picture",
+     "label": "a cat",
+     "s": 4.0,
+     "e": 5.0,
+     "p": 0.932
+    },
+    {
+     "src": "sound",
+     "label": "Purring",
+     "s": 5.0,
+     "e": 6.0,
+     "p": 0.848
+    },
+    {
+     "src": "picture",
+     "label": "a cat",
+     "s": 5.0,
+     "e": 6.0,
+     "p": 0.938
+    },
+    {
+     "src": "sound",
+     "label": "Purring",
+     "s": 6.0,
+     "e": 7.0,
+     "p": 0.764
+    },
+    {
+     "src": "picture",
+     "label": "a cat",
+     "s": 6.0,
+     "e": 7.0,
+     "p": 0.925
+    },
+    {
+     "src": "sound",
+     "label": "Purring",
+     "s": 7.0,
+     "e": 8.0,
+     "p": 0.462
+    },
+    {
+     "src": "picture",
+     "label": "a cat",
+     "s": 7.0,
+     "e": 8.0,
+     "p": 0.93
+    }
+   ]
+  },
+  {
+   "file": "cat_cat_hiss_10.mp4",
+   "species": "cat",
+   "slot": "cat_hiss",
+   "title": "Hiirepyyk kass koer 2022",
+   "author": "Sillerkiil",
+   "licence": "CC BY-SA 4.0",
+   "page": "https://commons.wikimedia.org/wiki/File%3AHiirepyyk_kass_koer_2022.webm",
+   "seconds": 8.0,
+   "bytes": 1051758,
+   "result": {
+    "feeling": "F",
+    "feeling_name": "Likely hungry",
+    "p": 0.99,
+    "feelings": {
+     "Likely hungry": 0.99,
+     "Likely reacting to handling": 0.01,
+     "Likely stressed in a strange place": 0.0
+    },
+    "method": "sound only (cat feelings come from meows)",
+    "top_sounds": [
+     {
+      "key": "cat_hiss",
+      "name": "Hissing",
+      "p": 0.685
+     },
+     {
+      "key": "cat_purr",
+      "name": "Purring",
+      "p": 0.139
+     },
+     {
+      "key": "dog_whimper",
+      "name": "Whimpering",
+      "p": 0.044
+     }
+    ],
+    "picture_shows_pet": true,
+    "picture": {
+     "what": "a cat",
+     "p": 0.933,
+     "species_likelihood": {
+      "cat": 0.933,
+      "dog": 0.004,
+      "other": 0.062
+     }
+    }
+   },
+   "moments": [
+    {
+     "src": "sound",
+     "label": "Hissing",
+     "s": 0.0,
+     "e": 1.0,
+     "p": 0.828
+    },
+    {
+     "src": "picture",
+     "label": "a cat",
+     "s": 0.0,
+     "e": 1.0,
+     "p": 0.879
+    },
+    {
+     "src": "sound",
+     "label": "Hissing",
+     "s": 1.0,
+     "e": 2.0,
+     "p": 0.574
+    },
+    {
+     "src": "picture",
+     "label": "a cat",
+     "s": 1.0,
+     "e": 2.0,
+     "p": 0.923
+    },
+    {
+     "src": "sound",
+     "label": "Hissing",
+     "s": 2.0,
+     "e": 3.0,
+     "p": 0.523
+    },
+    {
+     "src": "picture",
+     "label": "a cat",
+     "s": 2.0,
+     "e": 3.0,
+     "p": 0.933
+    },
+    {
+     "src": "sound",
+     "label": "Hissing",
+     "s": 3.0,
+     "e": 4.0,
+     "p": 0.737
+    },
+    {
+     "src": "picture",
+     "label": "a cat",
+     "s": 3.0,
+     "e": 4.0,
+     "p": 0.948
+    },
+    {
+     "src": "sound",
+     "label": "Hissing",
+     "s": 4.0,
+     "e": 5.0,
+     "p": 0.704
+    },
+    {
+     "src": "picture",
+     "label": "a cat",
+     "s": 4.0,
+     "e": 5.0,
+     "p": 0.907
+    },
+    {
+     "src": "sound",
+     "label": "Hissing",
+     "s": 5.0,
+     "e": 6.0,
+     "p": 0.591
+    },
+    {
+     "src": "picture",
+     "label": "a cat",
+     "s": 5.0,
+     "e": 6.0,
+     "p": 0.93
+    },
+    {
+     "src": "sound",
+     "label": "Hissing",
+     "s": 6.0,
+     "e": 7.0,
+     "p": 0.525
+    },
+    {
+     "src": "picture",
+     "label": "a cat",
+     "s": 6.0,
+     "e": 7.0,
+     "p": 0.933
+    },
+    {
+     "src": "sound",
+     "label": "Hissing",
+     "s": 7.0,
+     "e": 8.0,
+     "p": 0.558
+    },
+    {
+     "src": "picture",
+     "label": "a cat",
+     "s": 7.0,
+     "e": 8.0,
+     "p": 0.944
+    }
+   ]
+  }
+ ]
+}

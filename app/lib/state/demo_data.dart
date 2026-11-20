@@ -88,11 +88,22 @@ class DemoClip {
         ? ([for (final e in all.entries) (e.key as String, (e.value as num).toDouble())]..sort((a, b) => b.$2.compareTo(a.$2)))
         : [(r['feeling_name'] as String, (r['p'] as num).toDouble())];
     final heardOnly = species == Species.cat && topKey != 'cat_meow';
+    // The same moments the phone would show: this pet's own sounds at 40% or more, and the
+    // seconds the picture showed the pet.
+    final own = species == Species.cat ? _catSounds : _dogSounds;
+    final petInView = species == Species.cat ? 'Cat in view' : 'Dog in view';
     final moments = mergeMoments([
       for (final m in (json['moments'] as List? ?? const []))
-        Moment(m['src'] == 'picture' ? MomentSource.picture : MomentSource.sound, m['label'] as String,
-            (m['s'] as num).toDouble(), (m['e'] as num).toDouble(),
-            p: (m['p'] as num?)?.toDouble() ?? 0),
+        if (((m['p'] as num?) ?? 0) >= 0.4)
+          if (m['src'] == 'picture')
+            if (m['label'] == 'a ${species.name}' || m['label'] == petInView)
+              Moment(MomentSource.picture, petInView, (m['s'] as num).toDouble(), (m['e'] as num).toDouble(),
+                  p: (m['p'] as num).toDouble())
+            else
+              ...[]
+          else if (own.contains(m['label']))
+            Moment(MomentSource.sound, m['label'] as String, (m['s'] as num).toDouble(), (m['e'] as num).toDouble(),
+                p: (m['p'] as num).toDouble()),
     ]);
     return CheckOutcome(
       kind: heardOnly
@@ -109,6 +120,9 @@ class DemoClip {
     );
   }
 }
+
+const _dogSounds = {'Barking', 'Whimpering', 'Whining', 'Howling', 'Growling', 'Panting'};
+const _catSounds = {'Meowing', 'Purring', 'Hissing', 'Yowling', 'Growling', 'Chirping'};
 
 /// The bundled demo clips, or none (no clips.json, or in tests).
 Future<List<DemoClip>> loadDemoClips() async {
@@ -179,6 +193,13 @@ final demoPets = <DemoPet>[
             [_p('Dog in view', 0, 8, 0.96), _s('Barking', 0, 2, 0.77), _s('Barking', 4, 6, 0.72), _p('Playful', 2, 5, 0.66)]),
         slot: 'dog_calm_or_playful',
       ),
+      DemoCheck(
+        20,
+        _dog([('Likely upset', 0.57), ('Likely happy or playful', 0.24), ('Likely calm', 0.12), ('Likely sad or uneasy', 0.07)],
+            [('Barking', 0.83), ('Growling', 0.14), ('Whimpering', 0.02)],
+            [_p('Dog in view', 0, 8, 0.9), _s('Barking', 0, 8, 0.84)]),
+        slot: 'dog_bark',
+      ),
     ],
   ),
   DemoPet(
@@ -231,6 +252,13 @@ final demoPets = <DemoPet>[
             [_p('Dog in view', 0, 8, 0.95), _p('Calm', 2, 8, 0.69), _s('Panting', 3, 6, 0.44)]),
         slot: 'dog_calm_or_playful',
       ),
+      DemoCheck(
+        10,
+        _dog([('Likely upset', 0.55), ('Likely happy or playful', 0.25), ('Likely calm', 0.13), ('Likely sad or uneasy', 0.07)],
+            [('Barking', 0.69), ('Whimpering', 0.19), ('Growling', 0.07)],
+            [_p('Dog in view', 3, 8, 0.95), _s('Barking', 2, 4, 0.74), _s('Whimpering', 4, 5, 0.43)]),
+        slot: 'dog_bark',
+      ),
     ],
   ),
   DemoPet(
@@ -249,6 +277,13 @@ final demoPets = <DemoPet>[
         _cat([('Likely hungry', 0.66), ('Likely reacting to handling', 0.2), ('Likely stressed in a strange place', 0.14)],
             [('Meowing', 0.79), ('Purring', 0.07), ('Hissing', 0.02)],
             [_p('Cat in view', 0, 6, 0.9), _s('Meowing', 1, 2, 0.79), _s('Meowing', 3, 4, 0.75), _s('Meowing', 5, 6, 0.61)], seconds: 6),
+        slot: 'cat_meow',
+      ),
+      DemoCheck(
+        3,
+        _cat([('Likely stressed in a strange place', 0.85), ('Likely hungry', 0.1), ('Likely reacting to handling', 0.05)],
+            [('Meowing', 0.55), ('Yowling', 0.34), ('Whimpering', 0.05)],
+            [_p('Cat in view', 0, 8, 0.85), _s('Meowing', 6, 8, 0.61)]),
         slot: 'cat_meow',
       ),
     ],

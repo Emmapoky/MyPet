@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mypet/detection/change_detector.dart';
 import 'package:mypet/behaviour/analysis.dart';
@@ -76,7 +79,7 @@ void main() {
     expect(s.detectionOf(pet('Mochi').id)!.flags.map((f) => f.measure), contains(Measure.ate));
     expect(s.detectionOf(pet('Pepper').id)!.flags, isEmpty);
     expect(s.detectionOf(pet('Bean').id)!.ready, isFalse);
-    expect(s.timelineOf(pet('Bean').id).ofKind(EntryKind.behaviourResult), hasLength(1));
+    expect(s.timelineOf(pet('Bean').id).ofKind(EntryKind.behaviourResult), hasLength(2));
   });
 
   test('a bundled demo clip becomes a saved check with its real answer and moments', () async {
@@ -111,5 +114,29 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 200));
     final checks = s.timelineOf('demo-biscuit').ofKind(EntryKind.behaviourResult);
     expect(checks.where((e) => e.data['clip'] == 'dog_dog_whimper_01.mp4'), hasLength(1));
+  });
+
+  test('every bundled demo clip lands on one demo check', () async {
+    final j = jsonDecode(File('assets/demo_clips/clips.json').readAsStringSync()) as Map<String, dynamic>;
+    final clips = [for (final c in j['clips'] as List) DemoClip(c as Map<String, dynamic>)];
+    expect(clips, hasLength(10));
+    for (final c in clips) {
+      expect(File('assets/demo_clips/${c.file}').existsSync(), isTrue, reason: c.file);
+      expect(c.json['licence'], startsWith('CC BY'));
+      // Only the pet's own sounds and the pet in view, as on the phone.
+      for (final m in c.result.moments) {
+        expect(m.p, greaterThanOrEqualTo(0.4));
+        if (m.source == MomentSource.picture) expect(m.label, endsWith('in view'));
+      }
+    }
+    final s = await signedInState();
+    await addDemoPets(s, fixedIds: true, clips: clips, clipDir: '/tmp/none');
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    final used = [
+      for (final p in demoPets)
+        for (final e in s.timelineOf(p.id).ofKind(EntryKind.behaviourResult))
+          if (e.data['clip'] != null) e.data['clip'],
+    ];
+    expect(used.toSet(), {for (final c in clips) c.file});
   });
 }

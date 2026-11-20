@@ -1,3 +1,4 @@
+import 'speed_test_screen.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
@@ -94,6 +95,8 @@ class MoreMenu extends StatelessWidget {
         s.startGuide(Guide(steps: tourSteps()));
       } else if (i == -4) {
         Navigator.of(context).push(MaterialPageRoute(builder: (_) => const HelpScreen()));
+      } else if (i == -5) {
+        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SpeedTestScreen()));
       } else if (i == -3) {
         Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DemoPickerScreen()));
       } else {
@@ -105,6 +108,7 @@ class MoreMenu extends StatelessWidget {
       const PopupMenuItem(value: -2, child: Text('Show me around')),
       const PopupMenuItem(value: -3, child: Text('Try a demo')),
       const PopupMenuItem(value: -4, child: Text('Guide and FAQ')),
+      const PopupMenuItem(value: -5, child: Text('Test this phone')),
       const PopupMenuItem(value: -1, child: Text('Settings')),
     ],
   );

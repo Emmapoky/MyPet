@@ -6,6 +6,7 @@ import 'check_screen.dart';
 import 'insights_screen.dart';
 import 'pets_screen.dart';
 import 'reminders_screen.dart';
+import 'help_screen.dart';
 import 'settings_screen.dart';
 import 'theme.dart';
 import 'today_screen.dart';
@@ -91,6 +92,8 @@ class MoreMenu extends StatelessWidget {
         final s = context.read<AppState>();
         s.goToTab(0);
         s.startGuide(Guide(steps: tourSteps()));
+      } else if (i == -4) {
+        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const HelpScreen()));
       } else if (i == -3) {
         Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DemoPickerScreen()));
       } else {
@@ -101,6 +104,7 @@ class MoreMenu extends StatelessWidget {
       for (var i = 0; i < extra.length; i++) PopupMenuItem(value: i, child: Text(extra[i].$1)),
       const PopupMenuItem(value: -2, child: Text('Show me around')),
       const PopupMenuItem(value: -3, child: Text('Try a demo')),
+      const PopupMenuItem(value: -4, child: Text('Guide and FAQ')),
       const PopupMenuItem(value: -1, child: Text('Settings')),
     ],
   );

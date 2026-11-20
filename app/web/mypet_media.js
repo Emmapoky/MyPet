@@ -36,7 +36,27 @@
     return d || 0;
   }
 
+  // "iPhone · Safari 18 · 6 cores" style line for the check timing readout. No IDs.
+  function deviceLine() {
+    var ua = navigator.userAgent || '';
+    var dev = /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad'
+      : /Android/.test(ua) ? (ua.match(/Android[^;]*;\s*([^;)]+?)(?:\sBuild|\))/) || [, 'Android'])[1]
+      : /Macintosh/.test(ua) ? (navigator.maxTouchPoints > 1 ? 'iPad' : 'Mac')
+      : /Windows/.test(ua) ? 'Windows PC' : /Linux/.test(ua) ? 'Linux' : 'Unknown device';
+    var m;
+    var br = (m = ua.match(/(?:Edg|EdgiOS)\/(\d+)/)) ? 'Edge ' + m[1]
+      : (m = ua.match(/(?:CriOS|Chrome)\/(\d+)/)) ? 'Chrome ' + m[1]
+      : (m = ua.match(/(?:FxiOS|Firefox)\/(\d+)/)) ? 'Firefox ' + m[1]
+      : (m = ua.match(/Version\/(\d+).*Safari/)) ? 'Safari ' + m[1] : 'Browser';
+    var bits = [dev, br];
+    if (navigator.hardwareConcurrency) bits.push(navigator.hardwareConcurrency + ' cores');
+    if (navigator.deviceMemory) bits.push(navigator.deviceMemory + ' GB');
+    return bits.join(' \u00b7 ');
+  }
+
   window.mypetMedia = {
+    deviceLine: deviceLine,
+
     bytes: async function (url) {
       var r = await fetch(url);
       return new Uint8Array(await r.arrayBuffer());

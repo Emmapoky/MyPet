@@ -9,6 +9,7 @@ import 'package:video_player/video_player.dart';
 
 import '../behaviour/analysis.dart';
 import '../behaviour/engine.dart';
+import '../util/check_timing.dart';
 import '../models/care_entry.dart';
 import '../models/pet.dart';
 import '../state/app_state.dart';
@@ -865,6 +866,7 @@ class ResultView extends StatelessWidget {
         ],
         gap,
         _Note(icon: Icons.info_outline_rounded, text: Wording.notDiagnosisBehaviour, color: c.surfaceTint),
+        if (onSave != null) checkTiming(context, clip: o.clip),
         gap,
         if (onSave != null) ...[
         Row(children: [

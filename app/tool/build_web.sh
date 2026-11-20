@@ -15,7 +15,7 @@ for f in assets/models/clap_audio_quantized.onnx assets/models/clip_vision_quant
 done
 
 rm -rf build/web
-flutter build web --release --no-wasm-dry-run --no-web-resources-cdn
+flutter build web --release --no-wasm-dry-run --no-web-resources-cdn --dart-define=APP_COMMIT="$(git rev-parse --short HEAD)"
 OUT="$APP/build/web"
 rm -f "$OUT"/assets/assets/models/*.onnx
 

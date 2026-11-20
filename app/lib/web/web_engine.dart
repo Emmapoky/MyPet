@@ -31,6 +31,15 @@ const webVisionModelUrl = 'models/clip_vision_quantized.onnx';
 
 BehaviourEngine makeBehaviourEngine() => WebBehaviourEngine();
 
+/// How long the last check took in this browser (shown by web_check_timing.dart).
+class CheckTiming {
+  const CheckTiming({required this.clip, required this.totalMs, required this.loadMs,
+      required this.soundMs, required this.pictureMs, required this.clipSeconds});
+  final String clip;
+  final int totalMs, loadMs, soundMs, pictureMs;
+  final double clipSeconds;
+}
+
 @JS('mypetMedia.decodeAudio')
 external JSPromise<JSFloat32Array> _decodeAudio(String url, int rate);
 
@@ -50,6 +59,9 @@ class WebBehaviourEngine implements BehaviourEngine {
   PictureModel? _picture;
   OrtSession? _vision;
   Future<void>? _loading;
+
+  /// Timing of the last check that gave a result.
+  CheckTiming? lastTiming;
 
   @override
   Future<void> load() => _loading ??= _load();
@@ -201,8 +213,10 @@ class WebBehaviourEngine implements BehaviourEngine {
   @override
   Future<CheckOutcome> check(String clipPath, Species species, {required bool picked}) async {
     var keep = false;
+    final sw = Stopwatch()..start();
     try {
       await load();
+      final loadMs = sw.elapsedMilliseconds;
       final url = _url(clipPath);
       final List<double> all;
       try {
@@ -219,11 +233,22 @@ class WebBehaviourEngine implements BehaviourEngine {
       final dur0 = info[0].toDartDouble;
       final hasVideo = info[1].toDartDouble > 0;
       final dur = dur0 > 0 && dur0.isFinite ? dur0 : all.length / sampleRate;
+      final picStart = sw.elapsedMilliseconds;
       final (pic, picMoments) = hasVideo ? await _readPicture(url, species, dur) : (null, const <Moment>[]);
+      final pictureMs = sw.elapsedMilliseconds - picStart;
       final names = _analysis!.classifiers[species == Species.cat ? 'cat_context' : 'dog_report']!.names;
       final result = combine(sound, pic, soundWeight: _picture?.soundWeight ?? 1, names: names);
       final moments = mergeMoments([...await _soundMoments(all, species), ...picMoments]);
       keep = true;
+      final total = sw.elapsedMilliseconds;
+      lastTiming = CheckTiming(
+        clip: clipPath,
+        totalMs: total,
+        loadMs: loadMs,
+        soundMs: total - loadMs - pictureMs,
+        pictureMs: pictureMs,
+        clipSeconds: dur,
+      );
       return result.withClip(clip: clipPath, seconds: dur, moments: moments);
     } finally {
       if (!keep) await discard(clipPath);

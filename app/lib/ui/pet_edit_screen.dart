@@ -1,6 +1,4 @@
-import 'dart:io';
 
-import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
@@ -11,7 +9,7 @@ import '../util/day.dart';
 import 'theme.dart';
 import 'feedback.dart';
 import 'widgets/common.dart';
-import 'widgets/pet_bar.dart';
+import 'widgets/pet_photo.dart';
 
 /// Create or edit a pet profile (FR01): species, breed, birth date, weight.
 class PetEditScreen extends StatefulWidget {
@@ -46,45 +44,15 @@ class _PetEditScreenState extends State<PetEditScreen> {
 
   /// Take or choose a photo; it is resized and kept only in the app's folder on this phone.
   Future<void> _photo() async {
-    final s = context.read<AppState>();
-    final dir = s.photoDir;
-    final src = await showModalBottomSheet<ImageSource?>(
-      context: context,
-      showDragHandle: true,
-      builder: (c) => SafeArea(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          ListTile(
-            leading: const Icon(Icons.photo_camera_rounded),
-            title: const Text('Take a photo'),
-            onTap: () => Navigator.pop(c, ImageSource.camera),
-          ),
-          ListTile(
-            leading: const Icon(Icons.photo_library_rounded),
-            title: const Text('Choose a photo'),
-            onTap: () => Navigator.pop(c, ImageSource.gallery),
-          ),
-          if (photo != null)
-            ListTile(
-              leading: const Icon(Icons.hide_image_rounded),
-              title: const Text('Use the drawing'),
-              onTap: () {
-                Navigator.pop(c);
-                setState(() => photo = null);
-              },
-            ),
-        ]),
-      ),
-    );
-    if (src == null || dir == null) return;
-    try {
-      final x = await ImagePicker().pickImage(source: src, maxWidth: 600, maxHeight: 600, imageQuality: 85);
-      if (x == null) return;
-      final file = 'pet_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      await Directory(dir).create(recursive: true);
-      await File(x.path).copy('$dir/$file');
-      if (mounted) setState(() => photo = file);
-    } catch (_) {
-      if (mounted) setState(() => error = 'Could not open photos. Allow access in Settings.');
+    final r = await pickPetPhoto(context, hasPhoto: photo != null);
+    if (!mounted) return;
+    switch (r) {
+      case NewPhoto(:final file):
+        setState(() => photo = file);
+      case UseDrawing():
+        setState(() => photo = null);
+      case null:
+        break;
     }
   }
 
@@ -150,31 +118,7 @@ class _PetEditScreenState extends State<PetEditScreen> {
         child: ListView(padding: const EdgeInsets.all(Tokens.space4), children: [
           // Photo (or drawing) and the pet's colour.
           Center(
-            child: Semantics(
-              button: true,
-              label: photo == null ? 'Add a photo' : 'Change photo',
-              excludeSemantics: true,
-              child: GestureDetector(
-                onTap: _photo,
-                child: Stack(clipBehavior: Clip.none, children: [
-                  PetAvatar(pet: _draft, size: 112),
-                  Positioned(
-                    right: -2,
-                    bottom: -2,
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: t.colorScheme.primary,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: t.colorScheme.surface, width: 3),
-                      ),
-                      child: Icon(Icons.photo_camera_rounded, size: 20, color: t.colorScheme.onPrimary),
-                    ),
-                  ),
-                ]),
-              ),
-            ),
+            child: PetPhotoButton(pet: _draft, onTap: _photo),
           ),
           const SizedBox(height: Tokens.space4),
           Wrap(alignment: WrapAlignment.center, spacing: Tokens.space1, children: [

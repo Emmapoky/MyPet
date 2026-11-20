@@ -99,6 +99,8 @@ flutter:
     - assets/illustrations/
     # Free-licence demo clips for More > Try a demo (credits in clips.json).
     - assets/demo_clips/
+    # Made-up vet PDFs for the demo pets (lib/records/demo_documents.dart, tool/make_demo_pdfs.dart).
+    - assets/demo_pdfs/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

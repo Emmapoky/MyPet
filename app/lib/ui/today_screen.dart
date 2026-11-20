@@ -333,8 +333,14 @@ class _CareRowTile extends StatelessWidget {
               Icon(icon, color: color),
               const SizedBox(width: Tokens.space4),
               Expanded(child: Text(row.title, style: t.textTheme.titleSmall)),
-              if (row.detail.isNotEmpty)
-                Text(row.detail, style: t.textTheme.bodySmall!.copyWith(color: detailColor)),
+              // Wraps instead of running off the card with large text.
+              if (row.detail.isNotEmpty) ...[
+                const SizedBox(width: Tokens.space2),
+                Flexible(
+                  child: Text(row.detail,
+                      textAlign: TextAlign.end, style: t.textTheme.bodySmall!.copyWith(color: detailColor)),
+                ),
+              ],
               const SizedBox(width: Tokens.space2),
             ]),
           ),

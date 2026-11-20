@@ -65,6 +65,22 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// File where answers given on the daily notification wait while the app is closed
+  /// (set by main.dart; null in tests).
+  String? notificationInbox;
+
+  /// The pet's usual energy: the middle value of its last 28 logged days, or 3.
+  int usualEnergy(String petId) {
+    final v = [
+      for (final e in timelineOf(petId).ofKind(EntryKind.dailyLog).take(28))
+        if (e.energy != null) e.energy!,
+    ]..sort();
+    return v.isEmpty ? 3 : v[v.length ~/ 2];
+  }
+
+  /// True for the "Try a demo" copy of the app, which offers the demo pets' vet PDFs.
+  bool demo = false;
+
   /// Folder on this phone holding the clips of saved checks (set by main.dart; null in
   /// tests, which then keep no clips).
   String? clipDir;

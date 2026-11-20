@@ -3,6 +3,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
+import '../logging/spoken_log.dart';
+
 import '../models/care_entry.dart';
 import '../models/pet.dart';
 import '../state/app_state.dart';
@@ -16,12 +18,15 @@ import 'widgets/pet_bar.dart';
 /// numbered questions, optional weight and voice note, Save. A routine day takes 3 taps
 /// from Today: Log now, energy, Save (NFR01: 3 taps or fewer).
 class QuickLogScreen extends StatefulWidget {
-  const QuickLogScreen({super.key, required this.pet, this.editing, this.day});
+  const QuickLogScreen({super.key, required this.pet, this.editing, this.day, this.heard});
   final Pet pet;
   final CareEntry? editing;
 
   /// A past day to fill in (tapped from a "Missed" row). Null means today.
   final Day? day;
+
+  /// Answers already heard for this pet, when one voice log named several pets.
+  final SpokenLog? heard;
 
   @override
   State<QuickLogScreen> createState() => _QuickLogScreenState();
@@ -42,6 +47,9 @@ class _QuickLogScreenState extends State<QuickLogScreen> {
   bool _listening = false;
   String _noteBeforeVoice = '';
 
+  /// What the voice log understood, per pet name (this pet and any others named).
+  Map<String, SpokenLog> _heard = {};
+
   @override
   void initState() {
     super.initState();
@@ -54,7 +62,22 @@ class _QuickLogScreenState extends State<QuickLogScreen> {
         sameAsLast = true;
         _fill(last!, withExtras: false);
       }
+      final h = widget.heard;
+      if (h != null) {
+        _heard = {widget.pet.name: h};
+        _apply(h);
+      }
     }
+  }
+
+  /// Fills in whatever the voice log understood; anything not said stays as it was.
+  void _apply(SpokenLog h) {
+    if (h.ate != null) ate = h.ate;
+    if (h.energy != null) energy = h.energy;
+    if (h.toiletingNormal != null) toilet = h.toiletingNormal;
+    if (h.weightKg != null) weight.text = h.weightKg!.toString();
+    if (h.text.isNotEmpty) note.text = [_noteBeforeVoice, h.text].where((x) => x.isNotEmpty).join(' ');
+    if (last != null && (ate != last!.ate || toilet != last!.toiletingNormal)) sameAsLast = false;
   }
 
   @override
@@ -103,6 +126,7 @@ class _QuickLogScreenState extends State<QuickLogScreen> {
       return;
     }
     final messenger = ScaffoldMessenger.of(context);
+    final names = context.read<AppState>().activePets.map((p) => p.name).toList();
     final ok = await _speech.initialize(onStatus: (st) {
       if (st == 'done' || st == 'notListening') {
         if (mounted) setState(() => _listening = false);
@@ -116,11 +140,18 @@ class _QuickLogScreenState extends State<QuickLogScreen> {
     _noteBeforeVoice = note.text.trim();
     setState(() => _listening = true);
     await _speech.listen(
-      onResult: (r) {
-        final spoken = r.recognizedWords;
-        note.text = [_noteBeforeVoice, spoken].where((x) => x.isNotEmpty).join(' ');
+      onResult: (r) => setState(() {
+        // "Mao ate well but was tired. Woof skipped dinner": fills Mao's answers now and
+        // keeps Woof's for the next log.
+        _heard = readSpokenLogs(r.recognizedWords, names, fallback: widget.pet.name);
+        final mine = _heard[widget.pet.name];
+        if (mine != null) {
+          _apply(mine);
+        } else {
+          note.text = [_noteBeforeVoice, r.recognizedWords].where((x) => x.isNotEmpty).join(' ');
+        }
         note.selection = TextSelection.collapsed(offset: note.text.length);
-      },
+      }),
       listenOptions: SpeechListenOptions(
         partialResults: true,
         onDevice: false,
@@ -167,7 +198,7 @@ class _QuickLogScreenState extends State<QuickLogScreen> {
         : null;
     if (next != null) {
       s.selectPet(next.id);
-      nav.pushReplacement(MaterialPageRoute(builder: (_) => QuickLogScreen(pet: next)));
+      nav.pushReplacement(MaterialPageRoute(builder: (_) => QuickLogScreen(pet: next, heard: _heard[next.name])));
       return;
     }
     s.goToTab(0);
@@ -201,6 +232,13 @@ class _QuickLogScreenState extends State<QuickLogScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(Tokens.space4, Tokens.space2, Tokens.space4, Tokens.space4),
           children: [
+            _VoiceCard(
+              petName: pet.name,
+              listening: _listening,
+              heard: _heard,
+              onTap: _voice,
+            ),
+            const SizedBox(height: Tokens.space4),
             if (last != null) ...[
               Material(
                 color: c.surfaceTint,
@@ -294,7 +332,7 @@ class _QuickLogScreenState extends State<QuickLogScreen> {
                 suffixIcon: Padding(
                   padding: const EdgeInsets.all(Tokens.space1),
                   child: IconButton.filledTonal(
-                    tooltip: _listening ? 'Stop voice note' : 'Speak a note',
+                    tooltip: _listening ? 'Stop listening' : 'Tell us about ${pet.name}\'s day',
                     isSelected: _listening,
                     style: IconButton.styleFrom(
                       backgroundColor: t.colorScheme.primaryContainer,
@@ -323,6 +361,72 @@ class _QuickLogScreenState extends State<QuickLogScreen> {
               child: Text(complete ? 'Save' : 'Answer 1, 2 and 3 to save'),
             ),
           ]),
+        ),
+      ),
+    );
+  }
+}
+
+/// "Tell us about Mao's day": speak instead of tapping. Shows what was understood, so the
+/// person can check it before saving.
+class _VoiceCard extends StatelessWidget {
+  const _VoiceCard({required this.petName, required this.listening, required this.heard, required this.onTap});
+  final String petName;
+  final bool listening;
+  final Map<String, SpokenLog> heard;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    final c = MyPetColors.of(context);
+    final understood = [
+      for (final e in heard.entries)
+        if (!e.value.isEmpty) heard.length == 1 ? e.value.summary : '${e.key}: ${e.value.summary}',
+    ];
+    return Semantics(
+      button: true,
+      liveRegion: true,
+      label: listening
+          ? 'Listening. Tap to stop.'
+          : understood.isEmpty
+              ? "Tell us about $petName's day by voice"
+              : 'Understood: ${understood.join('. ')}. Tap to speak again.',
+      excludeSemantics: true,
+      child: Material(
+        color: listening ? c.brand : c.brandContainer,
+        borderRadius: BorderRadius.circular(Tokens.radiusCard),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(Tokens.radiusCard),
+          onTap: () {
+            Feel.tap();
+            onTap();
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(Tokens.space4),
+            child: Row(children: [
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: listening ? Colors.white : c.brand,
+                child: Icon(listening ? Icons.stop_rounded : Icons.mic_rounded,
+                    color: listening ? c.brand : MyPetColors.onAccent(c.brand)),
+              ),
+              const SizedBox(width: Tokens.space4),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(listening ? 'Listening…' : "Tell us about $petName's day",
+                      style: t.textTheme.titleSmall!
+                          .copyWith(color: listening ? MyPetColors.onAccent(c.brand) : t.colorScheme.onSurface)),
+                  const SizedBox(height: 2),
+                  Text(
+                    understood.isEmpty ? 'For example: "ate well, a bit tired, normal poo"' : 'Understood: ${understood.join('\n')}',
+                    style: t.textTheme.bodySmall!.copyWith(
+                        color: listening ? MyPetColors.onAccent(c.brand) : t.colorScheme.onSurfaceVariant),
+                  ),
+                ]),
+              ),
+            ]),
+          ),
         ),
       ),
     );

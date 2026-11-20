@@ -7,6 +7,7 @@ import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../models/reminder.dart';
+import 'notification_log.dart';
 import '../state/app_state.dart';
 import '../util/day.dart';
 
@@ -54,7 +55,11 @@ class ReminderNotifications {
           requestSoundPermission: false,
           notificationCategories: [
             DarwinNotificationCategory(_dailyCategory, actions: [
-              DarwinNotificationAction.plain('log_now', 'Log now',
+              // Log without opening the app: everything usual, or say/type how the day went.
+              DarwinNotificationAction.plain(allNormalAction, 'All normal'),
+              DarwinNotificationAction.text(tellAction, 'Tell us about today',
+                  buttonTitle: 'Log', placeholder: 'e.g. ate well, a bit tired, normal poo'),
+              DarwinNotificationAction.plain('log_now', 'Open the log',
                   options: {DarwinNotificationActionOption.foreground}),
               DarwinNotificationAction.plain('later', 'Later'),
             ]),
@@ -73,6 +78,11 @@ class ReminderNotifications {
     final launch = await _plugin.getNotificationAppLaunchDetails();
     final r = launch?.notificationResponse;
     if (launch?.didNotificationLaunchApp == true && r != null) _onResponse(r);
+    // Pets load a moment after start; then add any answers left while the app was closed.
+    for (var i = 0; i < 30 && !state.petsLoaded; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
+    await drain();
     state.addListener(_changed);
     _changed();
   }
@@ -82,9 +92,16 @@ class ReminderNotifications {
       unawaited(snooze(r.payload));
       return;
     }
-    final petId = r.payload;
-    if (petId != null && petId.isNotEmpty) onLogNow(petId);
+    final pets = payloadPets(r.payload);
+    if (r.actionId == allNormalAction || r.actionId == tellAction) {
+      unawaited(logFromNotification(state, r.actionId!, r.input, pets, DateTime.now()));
+      return;
+    }
+    if (pets.isNotEmpty) onLogNow(pets.first);
   }
+
+  /// Adds answers given on the notification while MyPet was closed.
+  Future<void> drain() => drainInbox(state);
 
   void _changed() {
     _debounce?.cancel();
@@ -110,8 +127,10 @@ class ReminderNotifications {
           daily ? 'Daily log reminder' : 'Care reminders',
           actions: daily
               ? const [
-                  AndroidNotificationAction('log_now', 'Log now', showsUserInterface: true),
-                  AndroidNotificationAction('later', 'Later'),
+                  AndroidNotificationAction(allNormalAction, 'All normal'),
+                  AndroidNotificationAction(tellAction, 'Tell us',
+                      inputs: [AndroidNotificationActionInput(label: 'e.g. ate well, a bit tired')]),
+                  AndroidNotificationAction('log_now', 'Open', showsUserInterface: true),
                 ]
               : null,
         ),
@@ -136,7 +155,8 @@ class ReminderNotifications {
       final who = names.length == 1
           ? "${names.first}'s"
           : "${names.sublist(0, names.length - 1).join(', ')} and ${names.last}'s";
-      out.add(PlannedNotification(at, 'Time to log $who day', 'Takes about 5 seconds.', due.first.id, true));
+      out.add(PlannedNotification(at, 'Time to log $who day', 'Hold to answer here, or tap to open.', due.first.id, true,
+          pets: [for (final p in due) p.id]));
     }
 
     final tasks = <PlannedNotification>[];
@@ -171,7 +191,7 @@ class ReminderNotifications {
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         title: p.title,
         body: p.body,
-        payload: p.petId,
+        payload: p.daily ? dailyPayload(state, p.pets.isEmpty ? [p.petId] : p.pets) : p.petId,
       );
     }
   }
@@ -190,9 +210,13 @@ class ReminderNotifications {
   }
 }
 
-/// Runs when Later is tapped while the app is closed.
+/// Runs when a notification button is used while the app is closed.
 @pragma('vm:entry-point')
 Future<void> onBackgroundResponse(NotificationResponse r) async {
+  if (r.actionId == allNormalAction || r.actionId == tellAction) {
+    await saveToInbox(r.payload, r.actionId!, r.input, DateTime.now());
+    return;
+  }
   if (r.actionId != 'later') return;
   await ReminderNotifications._initTimeZone();
   await ReminderNotifications._plugin.initialize(settings: ReminderNotifications._settings);
@@ -205,5 +229,8 @@ class PlannedNotification {
   final String body;
   final String petId;
   final bool daily;
-  const PlannedNotification(this.at, this.title, this.body, this.petId, this.daily);
+
+  /// Every pet a daily reminder is about (it can be answered for all of them at once).
+  final List<String> pets;
+  const PlannedNotification(this.at, this.title, this.body, this.petId, this.daily, {this.pets = const []});
 }

@@ -203,12 +203,29 @@ final _medLine = RegExp(
     r'([A-Z][A-Za-z\-]+(?:\s[A-Z][A-Za-z\-]+)?)\s*(?:\(([^)]*)\))?\s+(\d+(?:\.\d+)?\s?(?:mg|ml|mcg|g|iu)\b)',
     caseSensitive: true);
 
+/// Common pet medicines sold by brand name, often written without a dose
+/// (parasite, flea and tick products, appetite and pain medicines).
+const _brands = [
+  'Milbemax', 'NexGard Spectra', 'NexGard', 'Bravecto', 'Simparica Trio', 'Simparica', 'Revolution Plus',
+  'Revolution', 'Frontline Plus', 'Frontline', 'Advocate', 'Drontal', 'Heartgard', 'Credelio', 'Broadline',
+  'Mirtazapine', 'Meloxicam', 'Gabapentin', 'Buprenorphine', 'Amoxicillin', 'Clavamox', 'Prednisolone',
+];
+
 List<String> findMedicines(String text) {
   final out = <String>[];
+  // Brand names first, then "Name 50 mg" lines.
+  for (final b in _brands) {
+    if (!RegExp('\\b${RegExp.escape(b)}\\b', caseSensitive: false).hasMatch(text)) continue;
+    if (out.any((o) => o.toLowerCase().startsWith(b.toLowerCase()) || b.toLowerCase().startsWith(o.split(' ').first.toLowerCase()))) continue;
+    final dose = RegExp('\\b${RegExp.escape(b)}\\b[^\\n]*?(\\d+(?:\\.\\d+)?\\s?(?:mg|ml|mcg|iu))\\b', caseSensitive: false).firstMatch(text);
+    out.add(dose == null ? b : '$b ${dose[1]!.replaceAll(' ', '')}');
+  }
   for (final m in _medLine.allMatches(text)) {
     final name = m[1]!.trim();
     if (RegExp(r'^(Total|Weight|Dose|Date|Pet|Patient|Rabies|Invoice|Lot|Give|Take|Apply|Inject)$', caseSensitive: false).hasMatch(name)) continue;
     final item = '$name ${m[3]!.replaceAll(' ', '')}';
+    final first = name.split(' ').first.toLowerCase();
+    if (out.any((o) => o.toLowerCase().startsWith(first))) continue;
     if (!out.contains(item)) out.add(item);
   }
   return out;
@@ -240,7 +257,7 @@ VetRecord parseVetRecord(String text) {
 
   // Vet: "Dr Name" or a labelled vet.
   String? vet = _after(lines, RegExp(r'(attending (vet|veterinarian)|veterinarian|vet|doctor|clinician)\s*:', caseSensitive: false));
-  vet ??= RegExp(r'\bDr\.?\s+[A-Z][a-zA-Z\-]+(?:\s+[A-Z][a-zA-Z\-]+)?').firstMatch(text)?[0];
+  vet ??= RegExp(r'\bDr\.?\s+[A-Z][a-zA-Z\-]+(?:[ \t]+[A-Z][a-zA-Z\-]+){0,2}').firstMatch(text)?[0];
 
   final petName = _after(lines, RegExp(r"^(patient|pet|pet name|patient name|animal)(?:'s name)?\s*:", caseSensitive: false))
       ?.split(RegExp(r'\s{2,}|\s+(species|breed|sex|age|dob)\b', caseSensitive: false))

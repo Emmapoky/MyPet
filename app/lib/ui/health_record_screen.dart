@@ -1,10 +1,14 @@
+import 'dart:io';
+
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
 import '../models/care_entry.dart';
 import '../models/pet.dart';
+import '../records/demo_documents.dart';
 import '../records/pdf_text.dart';
 import '../records/vet_record_parser.dart';
 import '../state/app_state.dart';
@@ -55,6 +59,9 @@ class _HealthRecordScreenState extends State<HealthRecordScreen> {
     final String? path;
     if (widget.pickPdf != null) {
       path = await widget.pickPdf!();
+    } else if (context.read<AppState>().demo) {
+      // In the demo: the demo pets' vet PDFs, ready to slot in (or a real file).
+      path = await pickDemoPdf(context, widget.pet.name);
     } else {
       final picked = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['pdf']);
       path = picked.isEmpty ? null : picked.first.path;
@@ -323,4 +330,62 @@ class _HealthRecordScreenState extends State<HealthRecordScreen> {
       ),
     );
   }
+}
+
+/// The demo's PDF picker: this pet's documents first, then the tricky ones, then Files.
+/// Returns the path of a copy the PDF reader can open, or null if cancelled.
+Future<String?> pickDemoPdf(BuildContext context, String petName) async {
+  final mine = demoDocuments.where((d) => d.pet == petName).toList();
+  final tricky = demoDocuments.where((d) => d.pet == null).toList();
+  final others = demoDocuments.where((d) => d.pet != null && d.pet != petName).toList();
+  final picked = await showModalBottomSheet<Object>(
+    context: context,
+    showDragHandle: true,
+    isScrollControlled: true,
+    builder: (c) {
+      final t = Theme.of(c);
+      Widget head(String s) => Padding(
+            padding: const EdgeInsets.fromLTRB(Tokens.space4, Tokens.space3, Tokens.space4, Tokens.space1),
+            child: Text(s, style: t.textTheme.labelLarge!.copyWith(color: t.colorScheme.onSurfaceVariant)),
+          );
+      Widget tile(DemoDocument d) => ListTile(
+            leading: const Icon(Icons.picture_as_pdf_rounded),
+            title: Text(d.pet == null || d.pet == petName ? d.label : '${d.pet}: ${d.label}'),
+            subtitle: Text(d.shows),
+            onTap: () => Navigator.pop(c, d),
+          );
+      return DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.7,
+        maxChildSize: 0.95,
+        builder: (_, scroll) => ListView(controller: scroll, children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: Tokens.space4),
+            child: Text('Demo vet PDFs', style: t.textTheme.titleMedium),
+          ),
+          if (mine.isNotEmpty) head("$petName's documents"),
+          for (final d in mine) tile(d),
+          head('Tricky ones'),
+          for (final d in tricky) tile(d),
+          head('Other demo pets'),
+          for (final d in others) tile(d),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.folder_open_rounded),
+            title: const Text('Choose from Files'),
+            onTap: () => Navigator.pop(c, 'files'),
+          ),
+        ]),
+      );
+    },
+  );
+  if (picked == 'files') {
+    final f = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['pdf']);
+    return f.isEmpty ? null : f.first.path;
+  }
+  if (picked is! DemoDocument) return null;
+  final b = await rootBundle.load('assets/demo_pdfs/${picked.file}');
+  final out = File('${Directory.systemTemp.path}/${picked.file}');
+  await out.writeAsBytes(b.buffer.asUint8List(b.offsetInBytes, b.lengthInBytes));
+  return out.path;
 }

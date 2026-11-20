@@ -14,6 +14,7 @@ import 'theme.dart';
 import 'vet_export.dart';
 import 'widgets/common.dart';
 import 'widgets/entry_tile.dart';
+import 'widgets/pet_photo.dart';
 
 /// A pet's profile and its one timeline across logs, care tasks, health records and
 /// behaviour checks, newest first (FR03).
@@ -103,7 +104,18 @@ class PetDetailScreen extends StatelessWidget {
         ],
       ),
       body: ListView(padding: const EdgeInsets.all(Tokens.space4), children: [
-        Text(details, style: t.textTheme.bodyLarge),
+        // The pet's photo: tap to add or change it (kept on this phone only).
+        Center(child: PetPhotoButton(pet: pet, size: 120, onTap: () => changePetPhoto(context, pet))),
+        if (pet.photo == null)
+          Center(
+            child: TextButton(
+              onPressed: () => changePetPhoto(context, pet),
+              child: Text('Add a photo of ${pet.name}'),
+            ),
+          )
+        else
+          const SizedBox(height: Tokens.space3),
+        Text(details, style: t.textTheme.bodyLarge, textAlign: TextAlign.center),
         const SizedBox(height: Tokens.space4),
         if (pet.isActive)
           Row(children: [
@@ -138,7 +150,8 @@ class PetDetailScreen extends StatelessWidget {
         if (tl.current.isEmpty)
           Text('Nothing logged yet.', style: t.textTheme.bodyMedium)
         else
-          Card(
+          MyCard(
+            padding: const EdgeInsets.symmetric(horizontal: Tokens.space4, vertical: Tokens.space2),
             child: Column(children: [
               for (final e in tl.current)
                 EntryTile(

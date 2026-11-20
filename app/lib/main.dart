@@ -36,6 +36,8 @@ Future<void> main() async {
       state.clipKeep = ClipKeep.values.firstWhere((k) => k.name == saved, orElse: () => ClipKeep.video);
     }
     state.onClipKeepChanged = (k) => keep.writeAsString(k.name);
+    // Answers given on the daily notification while the app was closed wait here.
+    state.notificationInbox = '${(await getApplicationSupportDirectory()).path}/notification_inbox.jsonl';
   } catch (_) {}
   runApp(MyPetApp(state: state));
   // Pet data arrives a moment after start; the first log opens once it is there.
@@ -46,4 +48,6 @@ Future<void> main() async {
     openQuickLog(state, petId);
   });
   await notifications.start();
+  // Back in the app: add any notification answers given while it was in the background.
+  AppLifecycleListener(onResume: () => notifications.drain());
 }

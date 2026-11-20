@@ -83,6 +83,7 @@ Future<void> startStory(BuildContext context, DemoPet pet) async {
   for (var i = 0; i < 50 && demo.activePets.length < demoPets.length; i++) {
     await Future<void>.delayed(const Duration(milliseconds: 20));
   }
+  demo.demo = true;
   demo.look = parent.look;
   demo.clipKeep = parent.clipKeep;
   demo.startGuide(Guide(steps: storySteps(demo, pet), narrator: pet.name, onDone: () => nav.pop()));

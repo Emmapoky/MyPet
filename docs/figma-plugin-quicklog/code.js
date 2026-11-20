@@ -298,7 +298,7 @@ const lockFrame = (name) => {
 {
   const { s, body } = phone('Quick-log doors', { title: 'Quick log', back: true });
   T(body, 'Choose how you log fast', 16, 'r', P.inkSoft, { w: 'fill' });
-  for (const [ic, t, sub, on] of [['notifications', 'Reminder buttons', 'All normal from the notification', true], ['mic', 'Voice', 'Say how the day went', true], ['graphic_eq', 'Siri', '"Tell MyPet about today"', true], ['widgets', 'Widgets', 'Home and lock screen', false], ['edit_note', 'Short form', 'Three taps, one save', true]]) {
+  for (const [ic, t, sub, on] of [['notifications', 'Reminder buttons', 'All normal from the notification', true], ['mic', 'Voice', 'Say how the day went', true], ['graphic_eq', 'Siri', '"Tell MyPet about today"', true], ['widgets', 'Widgets', 'Home and lock screen', false], ['edit_note', 'Short form', 'Three taps, one save', true], ['add_to_home_screen', 'Web: Quick log icon', 'Home Screen icon opens /#/log', true]]) {
     const c = card(body, { gap: 0 }); const r = AL('h', { gap: 12, align: 'CENTER', parent: c, fillW: true });
     circle(r, 44, P.brandC, ic, P.brand, 24); const tt = AL('v', { gap: 2, parent: r, grow: true }); T(tt, t, 17, 'h', P.ink); T(tt, sub, 13, 'r', P.inkSoft);
     const sw = AL('h', { fill: on ? P.brand : P.track, r: 999, pad: 3, parent: r, align: 'CENTER' }); sw.resize(52, 30); sw.primaryAxisSizingMode = 'FIXED'; sw.counterAxisSizingMode = 'FIXED'; sw.primaryAxisAlignItems = on ? 'MAX' : 'MIN'; circle(sw, 24, P.white);

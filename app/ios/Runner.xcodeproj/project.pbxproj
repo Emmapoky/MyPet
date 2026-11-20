@@ -434,11 +434,11 @@
 /* Begin XCBuildConfiguration section */
 		041F9F54BDE5C7859D92C6EC /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 9740EEB21CF90195004384FC /* Debug.xcconfig */;
 			buildSettings = {
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = HMB54648XT;
-				FLUTTER_BUILD_NAME = 1.0.0;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MyPetWidget/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -458,11 +458,11 @@
 		};
 		20FEF0BF2FBD9DA3E7A14C4C /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 7AFA3C8E1D35360C0083082E /* Release.xcconfig */;
 			buildSettings = {
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = HMB54648XT;
-				FLUTTER_BUILD_NAME = 1.0.0;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MyPetWidget/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -763,11 +763,11 @@
 		};
 		9F3E686869C825DC04D4F143 /* Profile */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 7AFA3C8E1D35360C0083082E /* Release.xcconfig */;
 			buildSettings = {
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = HMB54648XT;
-				FLUTTER_BUILD_NAME = 1.0.0;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MyPetWidget/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;

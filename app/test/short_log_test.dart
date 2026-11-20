@@ -75,4 +75,18 @@ void main() {
     expect(e.toiletingUnseen, isTrue);
     await t.pump(const Duration(seconds: 11));
   });
+
+  testWidgets('a widget link with no pets, or as the only page, still leads back to the app', (t) async {
+    final s = await signedInState();
+    phoneSize(t);
+    await t.pumpWidget(MyPetApp(state: s, engine: FakeEngine(bark)));
+    await settle(t);
+    navigatorKey.currentState!.pushAndRemoveUntil(MaterialPageRoute<void>(builder: (_) => const ShortLogScreen()), (_) => false);
+    await settle(t);
+    expect(find.text('No pets yet'), findsOneWidget);
+    await t.tap(find.text('Go to MyPet'));
+    await settle(t);
+    expect(find.text('No pets yet'), findsNothing);
+    expect(find.byType(ShortLogScreen), findsNothing);
+  });
 }

@@ -401,30 +401,46 @@ class _QuickLogScreenState extends State<QuickLogScreen> {
             const SizedBox(height: Tokens.space4),
             // One field, one border: label on the left, the number, then "kg" at the same
             // right inset as the mic circle below (Tokens.fieldEdge), never touching.
-            TextField(
-              controller: weight,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              textAlign: TextAlign.end,
-              style: t.textTheme.titleSmall,
-              decoration: InputDecoration(
-                hintText: '—',
-                semanticCounterText: 'Weight in kilograms, optional',
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(Tokens.radiusInput),
-                  borderSide: BorderSide(color: t.colorScheme.outline),
-                ),
-                prefixIcon: Padding(
-                  padding: const EdgeInsets.only(left: Tokens.fieldEdge, right: Tokens.space3),
+            Container(
+              constraints: const BoxConstraints(minHeight: 56),
+              padding: const EdgeInsets.only(left: Tokens.fieldEdge, right: Tokens.fieldTrail),
+              decoration: BoxDecoration(
+                color: t.colorScheme.surface,
+                border: Border.all(color: t.colorScheme.outline),
+                borderRadius: BorderRadius.circular(Tokens.radiusInput),
+              ),
+              child: Row(children: [
+                // Not Flexible: a Flexible next to an Expanded keeps half the row and leaves a
+                // gap before "kg". Capped instead, so big text still fits.
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.5),
                   child: Text('Weight (optional)',
                       style: t.textTheme.bodyLarge!.copyWith(color: t.colorScheme.onSurfaceVariant)),
                 ),
-                prefixIconConstraints: const BoxConstraints(minHeight: 56),
-                suffixIcon: Padding(
-                  padding: const EdgeInsets.only(left: Tokens.space2, right: Tokens.fieldTrail),
-                  child: Text('kg', style: t.textTheme.titleSmall),
+                const SizedBox(width: Tokens.space3),
+                Expanded(
+                  child: TextField(
+                    controller: weight,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    textAlign: TextAlign.end,
+                    style: t.textTheme.titleSmall,
+                    // No box of its own: the row above is the field's only border.
+                    decoration: const InputDecoration(
+                      hintText: '—',
+                      isCollapsed: true,
+                      filled: false,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(vertical: Tokens.space4),
+                      semanticCounterText: 'Weight in kilograms, optional',
+                    ),
+                  ),
                 ),
-                suffixIconConstraints: const BoxConstraints(minHeight: 56),
-              ),
+                const SizedBox(width: Tokens.space2),
+                // Ends at the same inset as the mic circle in the note field below.
+                Text('kg', style: t.textTheme.titleSmall),
+              ]),
             ),
             const SizedBox(height: Tokens.space4),
             TextField(

@@ -6,11 +6,13 @@ library;
 import 'dart:io';
 
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart' show Scrollable;
+import 'package:flutter/widgets.dart' show Scrollable, NavigatorState, Navigator;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart' show Brightness, MaterialApp, ThemeMode;
+import 'package:material_ui/material_ui.dart' show Brightness, MaterialApp, MaterialPageRoute, ThemeMode;
 import 'package:mypet/ui/health_record_screen.dart';
 import 'package:mypet/ui/pet_edit_screen.dart';
+import 'package:mypet/ui/pet_detail_screen.dart';
+import 'package:mypet/ui/quick_log_screen.dart';
 import 'package:mypet/ui/theme.dart';
 import 'package:provider/provider.dart';
 
@@ -132,9 +134,37 @@ void main() {
     await shot(t, '14-story-3');
     await t.tap(find.text('Next'));
     await shot(t, '14-story-4');
-    await t.tap(find.byTooltip('Shrink the guide'));
+    await t.tap(find.byTooltip('Tap me to shrink'));
     await t.pumpAndSettle();
     await shot(t, '14-story-shrunk');
+  });
+
+  testWidgets('pet owner review: log, weight, starter guide, pet page', (t) async {
+    await setUp(t);
+    final s = await state();
+    final pepper = s.pets.firstWhere((p) => p.name == 'Pepper');
+    final bean = s.pets.firstWhere((p) => p.name == 'Bean');
+    await s.updatePet(bean.copyWith(checks: const ['drinking', 'accidents', 'vomited']));
+    await t.pumpWidget(MyPetApp(state: s, engine: FakeEngine(bark)));
+    await t.pumpAndSettle();
+    final nav = t.state<NavigatorState>(find.byType(Navigator).first);
+    nav.push(MaterialPageRoute(builder: (_) => QuickLogScreen(pet: s.pets.firstWhere((p) => p.name == 'Bean'))));
+    await shot(t, '17-quick-log-all-some-none');
+    await t.scrollUntilVisible(find.text('Add a note (optional)'), 200, scrollable: find.byType(Scrollable).last);
+    await shot(t, '17b-quick-log-weight-note');
+    nav.pop();
+    s.selectPet(pepper.id);
+    s.goToTab(3);
+    await t.pumpAndSettle();
+    await t.scrollUntilVisible(find.text('Weight'), 200, scrollable: find.byType(Scrollable).first);
+    await shot(t, '18-insights-weight');
+    s.selectPet(bean.id);
+    await t.pumpAndSettle();
+    await shot(t, '19-insights-getting-to-know');
+    nav.push(MaterialPageRoute(builder: (_) => PetDetailScreen(petId: pepper.id)));
+    await t.pumpAndSettle();
+    await t.scrollUntilVisible(find.textContaining('What is typical'), 200, scrollable: find.byType(Scrollable).last);
+    await shot(t, '20-pet-page-starter');
   });
 
   testWidgets('health record from a vet PDF', (t) async {
@@ -169,6 +199,9 @@ void main() {
     ));
     await t.pumpAndSettle();
     await expectLater(find.byType(PetEditScreen), matchesGoldenFile('out/16-pet-edit.png'));
+    await t.scrollUntilVisible(find.text('Extra daily questions (optional)'), 300, scrollable: find.byType(Scrollable).first);
+    await t.pumpAndSettle();
+    await expectLater(find.byType(PetEditScreen), matchesGoldenFile('out/16b-pet-edit-more.png'));
   });
 
   testWidgets('dark mode', (t) async {

@@ -9,6 +9,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart' show Scrollable, NavigatorState, Navigator;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart' show Brightness, MaterialApp, MaterialPageRoute, ThemeMode;
+import 'package:mypet/state/speed_test.dart';
+import 'package:mypet/ui/speed_test_screen.dart';
 import 'package:mypet/ui/health_record_screen.dart';
 import 'package:mypet/ui/pet_edit_screen.dart';
 import 'package:mypet/ui/pet_detail_screen.dart';
@@ -165,6 +167,37 @@ void main() {
     await t.pumpAndSettle();
     await t.scrollUntilVisible(find.textContaining('What is typical'), 200, scrollable: find.byType(Scrollable).last);
     await shot(t, '20-pet-page-starter');
+  });
+
+  testWidgets('quick log from the widget: short form and confirmation', (t) async {
+    await setUp(t);
+    final s = await state();
+    await t.pumpWidget(MyPetApp(state: s, engine: FakeEngine(bark)));
+    await t.pumpAndSettle();
+    navigatorKey.currentState!.pushNamed('/log');
+    await shot(t, '21-short-log');
+    await t.tap(find.bySemanticsLabel(RegExp('^All normal for')));
+    await shot(t, '22-short-log-logged');
+    await t.pump(const Duration(seconds: 11));
+  });
+
+  testWidgets('test this phone', (t) async {
+    await setUp(t);
+    final s = await state();
+    await t.pumpWidget(MyPetApp(state: s, engine: FakeEngine(bark)));
+    await t.pumpAndSettle();
+    navigatorKey.currentState!.push(MaterialPageRoute(
+        builder: (_) => SpeedTestScreen(
+              clips: [
+                SpeedClip('Dog clip', Species.dog, () async => 'a.mp4'),
+                SpeedClip('Cat clip', Species.cat, () async => 'b.mp4'),
+                SpeedClip('Dog clip again', Species.dog, () async => 'a.mp4'),
+              ],
+              device: const {'platform': 'ios', 'device': 'iPhone 15 Pro', 'os': 'iOS 27.2'},
+            )));
+    await shot(t, '23-test-this-phone');
+    await t.tap(find.text('Start the test'));
+    await shot(t, '24-test-this-phone-result');
   });
 
   testWidgets('health record from a vet PDF', (t) async {

@@ -457,3 +457,15 @@ Future<void> _breakfast(AppState s, DemoPet d, String id, Day first) async {
     ));
   }
 }
+
+/// A fresh copy of a bundled demo clip to run a real check on (a check may delete or keep
+/// the file it is given), or null if the clip can't be unpacked.
+Future<String?> demoClipCopy(DemoClip c) async {
+  final dir = await unpackDemoClips([c]);
+  if (dir == null) return null;
+  final src = File('$dir/${c.file}');
+  final ext = c.file.contains('.') ? c.file.substring(c.file.lastIndexOf('.')) : '.mp4';
+  final copy = '${Directory.systemTemp.path}/speed_${DateTime.now().microsecondsSinceEpoch}$ext';
+  await src.copy(copy);
+  return copy;
+}

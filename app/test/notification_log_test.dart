@@ -54,4 +54,16 @@ void main() {
     expect((e.ate, e.energy), (false, 1));
     expect(File(s.notificationInbox!).existsSync(), isFalse);
   });
+
+  test('Siri and Shortcuts leave no pet ids: every pet is covered', () async {
+    final s = await signedInState();
+    final mao = await s.addPet(name: 'Mao', species: Species.cat);
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    final woof = await s.addPet(name: 'Woof', species: Species.dog);
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    expect(await logFromNotification(s, allNormalAction, null, const [], s.now()), 2);
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    expect(s.timelineOf(woof.id).ofKind(EntryKind.dailyLog), hasLength(1));
+    expect(s.timelineOf(mao.id).ofKind(EntryKind.dailyLog).single.ateAmount, 'all');
+  });
 }

@@ -69,7 +69,8 @@ Future<int> drainInbox(AppState s) async {
 /// A pet already logged that day is left alone.
 Future<int> logFromNotification(AppState s, String action, String? input, List<String> petIds, DateTime at) async {
   final day = Day.of(at);
-  final pets = [for (final id in petIds) ...s.activePets.where((p) => p.id == id)];
+  // No pets named (Siri and Shortcuts): every active pet.
+  final pets = petIds.isEmpty ? s.activePets : [for (final id in petIds) ...s.activePets.where((p) => p.id == id)];
   if (pets.isEmpty) return 0;
   bool logged(String id) => s.timelineOf(id).current.any((e) => e.kind == EntryKind.dailyLog && e.day == day);
   var n = 0;

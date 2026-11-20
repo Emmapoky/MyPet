@@ -5,6 +5,7 @@ import '../behaviour/engine.dart';
 import '../state/app_state.dart';
 import 'home_shell.dart';
 import 'quick_log_screen.dart';
+import 'short_log_screen.dart';
 import 'sign_in_screen.dart';
 import 'theme.dart';
 
@@ -35,6 +36,8 @@ class MyPetApp extends StatelessWidget {
           theme: buildTheme(Brightness.light),
           darkTheme: buildTheme(Brightness.dark),
           home: const _Gate(),
+          // mypet://log?pet=ID, from the home and lock-screen widgets: the short form.
+          onGenerateRoute: shortLogRoute,
           ),
         ),
       );
@@ -49,6 +52,14 @@ class _Gate extends StatelessWidget {
     if (!s.carerKnown) return const Scaffold(body: Center(child: CircularProgressIndicator()));
     return s.carer == null ? const SignInScreen() : const HomeShell();
   }
+}
+
+/// The route for a deep link to the short form (mypet://log, mypet://log?pet=ID), or
+/// null for any other link, which then just opens the app.
+Route<void>? shortLogRoute(RouteSettings r) {
+  final uri = Uri.tryParse(r.name ?? '');
+  if (uri == null || (uri.path != '/log' && uri.host != 'log')) return null;
+  return MaterialPageRoute<void>(settings: r, builder: (_) => ShortLogScreen(petId: uri.queryParameters['pet']));
 }
 
 /// Opens the quick log for a pet, from a notification's Log now.

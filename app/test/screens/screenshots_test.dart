@@ -167,6 +167,18 @@ void main() {
     await shot(t, '20-pet-page-starter');
   });
 
+  testWidgets('quick log from the widget: short form and confirmation', (t) async {
+    await setUp(t);
+    final s = await state();
+    await t.pumpWidget(MyPetApp(state: s, engine: FakeEngine(bark)));
+    await t.pumpAndSettle();
+    navigatorKey.currentState!.pushNamed('/log');
+    await shot(t, '21-short-log');
+    await t.tap(find.bySemanticsLabel(RegExp('^All normal for')));
+    await shot(t, '22-short-log-logged');
+    await t.pump(const Duration(seconds: 11));
+  });
+
   testWidgets('health record from a vet PDF', (t) async {
     await setUp(t);
     final s = await state(demo: false);

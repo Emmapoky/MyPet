@@ -313,10 +313,34 @@ Future<void> startStory(BuildContext context, DemoPet pet, {List<GuideStep>? ste
         ChangeNotifierProvider.value(value: demo),
         Provider.value(value: engine),
       ],
-      child: const HomeShell(),
+      // A navigator of its own, so every page the demo opens (pet page, log, settings)
+      // sits under the demo's AppState and finds the demo pets.
+      child: const _DemoNavigator(),
     ),
   ));
   demo.dispose();
+}
+
+class _DemoNavigator extends StatefulWidget {
+  const _DemoNavigator();
+
+  @override
+  State<_DemoNavigator> createState() => _DemoNavigatorState();
+}
+
+class _DemoNavigatorState extends State<_DemoNavigator> {
+  final _key = GlobalKey<NavigatorState>();
+
+  @override
+  Widget build(BuildContext context) {
+    return NavigatorPopHandler(
+      onPopWithResult: (_) => _key.currentState?.maybePop(),
+      child: Navigator(
+        key: _key,
+        onGenerateRoute: (_) => MaterialPageRoute<void>(builder: (_) => const HomeShell()),
+      ),
+    );
+  }
 }
 
 /// "Try a demo": example pets, each with a month of logs and real clips, told as a story.

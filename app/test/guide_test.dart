@@ -67,6 +67,12 @@ void main() {
     await t.tap(find.bySemanticsLabel(RegExp("Open Biscuit's guide")));
     await settle(t);
     expect(find.textContaining('days for me'), findsOneWidget);
+    // A pet page opened inside the demo shows the demo pet, not a blank page.
+    await t.tap(find.text('Pets').last);
+    await settle(t);
+    await t.tap(find.text('Biscuit').last);
+    await settle(t);
+    expect(find.text('Something changed'), findsWidgets);
     await t.tap(find.byTooltip('Leave the demo'));
     await settle(t);
     // Back on the picker; another pet's story starts from there.

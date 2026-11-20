@@ -148,9 +148,65 @@ class DemoPickerScreen extends StatelessWidget {
   }
 }
 
-/// The speech bubble over the app, pointing at the tab it talks about.
+/// Keeps the guide's bubble on top of every page while a walkthrough runs, without
+/// blocking the app: the person can tap around, open pages, and come back to it.
+class GuideHost extends StatefulWidget {
+  const GuideHost({super.key, required this.child});
+  final Widget child;
+
+  @override
+  State<GuideHost> createState() => _GuideHostState();
+}
+
+class _GuideHostState extends State<GuideHost> {
+  OverlayEntry? _entry;
+
+  void _sync(AppState s) {
+    if (!mounted) return;
+    if (s.guide != null && _entry == null) {
+      final nav = Navigator.of(context);
+      final home = ModalRoute.of(context);
+      final e = OverlayEntry(
+        builder: (_) => ChangeNotifierProvider.value(
+          value: s,
+          // Next and Back show a tab, so first close any page opened on top of the tabs.
+          child: GuideOverlay(backToTabs: () {
+            if (home != null && !home.isCurrent) nav.popUntil((r) => r == home);
+          }),
+        ),
+      );
+      _entry = e;
+      Overlay.of(context, rootOverlay: true).insert(e);
+    } else if (s.guide == null && _entry != null) {
+      _remove();
+    }
+  }
+
+  void _remove() {
+    _entry?.remove();
+    _entry?.dispose();
+    _entry = null;
+  }
+
+  @override
+  void dispose() {
+    _remove();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<AppState>();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _sync(s));
+    return widget.child;
+  }
+}
+
+/// The guide's speech bubble, pointing at the tab it talks about. It never blocks the app.
+/// It can shrink to just the guide's face (tap the face to open it again) or be closed.
 class GuideOverlay extends StatelessWidget {
-  const GuideOverlay({super.key});
+  const GuideOverlay({super.key, this.backToTabs});
+  final VoidCallback? backToTabs;
 
   @override
   Widget build(BuildContext context) {
@@ -165,9 +221,68 @@ class GuideOverlay extends StatelessWidget {
     final width = MediaQuery.sizeOf(context).width;
     final bottom = MediaQuery.paddingOf(context).bottom + 96;
     final arrowX = ((st.tab + 0.5) / 5 * (width - 2 * Tokens.space3) + Tokens.space3).clamp(40.0, width - 40);
+    final who = g.narrator ?? 'Pip';
+    Widget face(double size) => narrator != null
+        ? PetAvatar(pet: narrator, size: size)
+        : ClipOval(
+            child: Container(
+              width: size,
+              height: size,
+              color: c.brandContainer,
+              child: SvgPicture.asset('assets/illustrations/guide-dog.svg', fit: BoxFit.cover),
+            ),
+          );
+    void step(int d) {
+      Feel.tap();
+      backToTabs?.call();
+      s.guideStep(d);
+    }
+
+    if (g.collapsed) {
+      // Just the guide's face in the corner, with how far along the story is.
+      return Stack(children: [
+        Positioned(
+          right: Tokens.space4,
+          bottom: bottom,
+          child: Semantics(
+            button: true,
+            label: 'Open $who\'s guide, step ${g.at + 1} of ${g.steps.length}',
+            excludeSemantics: true,
+            child: Material(
+              color: t.colorScheme.surface,
+              shape: const CircleBorder(),
+              elevation: 6,
+              shadowColor: Colors.black38,
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: () {
+                  Feel.tap();
+                  s.setGuideCollapsed(false);
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: Stack(clipBehavior: Clip.none, children: [
+                    face(56),
+                    Positioned(
+                      right: -6,
+                      top: -6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(color: c.brand, borderRadius: BorderRadius.circular(10)),
+                        child: Text('${g.at + 1}/${g.steps.length}',
+                            style: t.textTheme.labelSmall!.copyWith(color: MyPetColors.onAccent(c.brand))),
+                      ),
+                    ),
+                  ]),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ]);
+    }
+
     return Stack(children: [
-      // Light dim; taps outside the bubble do nothing during the walkthrough.
-      Positioned.fill(child: ModalBarrier(color: Colors.black.withValues(alpha: 0.28), dismissible: false)),
       Positioned(
         left: arrowX - 10,
         bottom: bottom - 12,
@@ -186,23 +301,38 @@ class GuideOverlay extends StatelessWidget {
             shadowColor: Colors.black38,
             borderRadius: BorderRadius.circular(Tokens.radiusHero),
             child: Padding(
-              padding: const EdgeInsets.all(Tokens.space4),
+              padding: const EdgeInsets.fromLTRB(Tokens.space4, Tokens.space2, Tokens.space2, Tokens.space3),
               child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  narrator != null
-                      ? PetAvatar(pet: narrator, size: 56)
-                      : ClipOval(
-                          child: Container(
-                            width: 56,
-                            height: 56,
-                            color: c.brandContainer,
-                            child: SvgPicture.asset('assets/illustrations/guide-dog.svg', fit: BoxFit.cover),
-                          ),
-                        ),
+                  Padding(padding: const EdgeInsets.only(top: Tokens.space2), child: face(48)),
                   const SizedBox(width: Tokens.space3),
-                  Expanded(child: Text(st.text, style: t.textTheme.bodyLarge)),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: Tokens.space2),
+                      child: Text(st.text, style: t.textTheme.bodyLarge),
+                    ),
+                  ),
+                  Column(children: [
+                    IconButton(
+                      tooltip: 'Shrink the guide',
+                      onPressed: () {
+                        Feel.tap();
+                        s.setGuideCollapsed(true);
+                      },
+                      icon: const Icon(Icons.close_fullscreen_rounded),
+                    ),
+                    // The tour just closes; a demo story closes by leaving the demo.
+                    IconButton(
+                      tooltip: g.onDone == null ? 'Close the guide' : 'Leave the demo',
+                      onPressed: () {
+                        Feel.tap();
+                        backToTabs?.call();
+                        s.endGuide();
+                      },
+                      icon: Icon(g.onDone == null ? Icons.close_rounded : Icons.logout_rounded),
+                    ),
+                  ]),
                 ]),
-                const SizedBox(height: Tokens.space3),
                 Row(children: [
                   // Step dots
                   for (var i = 0; i < g.steps.length; i++)
@@ -216,24 +346,14 @@ class GuideOverlay extends StatelessWidget {
                       ),
                     ),
                   const Spacer(),
-                  if (!last) TextButton(onPressed: s.endGuide, child: const Text('Skip')),
                   if (g.at > 0)
-                    IconButton(
-                      tooltip: 'Back',
-                      onPressed: () {
-                        Feel.tap();
-                        s.guideStep(-1);
-                      },
-                      icon: const Icon(Icons.arrow_back_rounded),
-                    ),
+                    IconButton(tooltip: 'Back', onPressed: () => step(-1), icon: const Icon(Icons.arrow_back_rounded)),
                   FilledButton(
                     style: FilledButton.styleFrom(minimumSize: const Size(96, Tokens.minTarget)),
-                    onPressed: () {
-                      Feel.tap();
-                      s.guideStep(1);
-                    },
+                    onPressed: () => step(1),
                     child: Text(last ? 'Done' : 'Next'),
                   ),
+                  const SizedBox(width: Tokens.space2),
                 ]),
               ]),
             ),

@@ -16,13 +16,7 @@ import 'guide.dart';
 class HomeShell extends StatelessWidget {
   const HomeShell({super.key});
 
-  static const _pages = [
-    TodayScreen(),
-    PetsScreen(),
-    CheckScreen(),
-    InsightsScreen(),
-    RemindersScreen(),
-  ];
+  static const _pages = [TodayScreen(), PetsScreen(), CheckScreen(), InsightsScreen(), RemindersScreen()];
 
   @override
   Widget build(BuildContext context) {
@@ -36,69 +30,47 @@ class HomeShell extends StatelessWidget {
         }
       });
     }
-    return Stack(
-      children: [
-        Scaffold(
-          body: IndexedStack(index: s.tab, children: _pages),
-          bottomNavigationBar: SafeArea(
-            minimum: const EdgeInsets.fromLTRB(
-              Tokens.space3,
-              0,
-              Tokens.space3,
-              Tokens.space2,
-            ),
-            child: Container(
-              clipBehavior: Clip.antiAlias,
-              decoration: BoxDecoration(
-                color: t.colorScheme.surface.withValues(alpha: 0.96),
-                borderRadius: BorderRadius.circular(32),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.10),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: NavigationBar(
-                selectedIndex: s.tab,
-                onDestinationSelected: (i) {
-                  Feel.tap();
-                  s.goToTab(i);
-                },
-                // Very large text: icons only (each still has its name for screen readers),
-                // so labels never get cut off.
-                labelBehavior: MediaQuery.textScalerOf(context).scale(1) > 1.3
-                    ? NavigationDestinationLabelBehavior.alwaysHide
-                    : NavigationDestinationLabelBehavior.alwaysShow,
-                destinations: const [
-                  NavigationDestination(
-                    icon: Icon(Icons.grid_view_rounded),
-                    label: 'Today',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.pets_rounded),
-                    label: 'Pets',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.center_focus_strong_rounded),
-                    label: 'Check',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.show_chart_rounded),
-                    label: 'Insights',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.checklist_rounded),
-                    label: 'Reminders',
-                  ),
-                ],
+    // The guide (tour or demo story) floats above every page without blocking the app.
+    return GuideHost(
+      child: Stack(
+        children: [
+          Scaffold(
+            body: IndexedStack(index: s.tab, children: _pages),
+            bottomNavigationBar: SafeArea(
+              minimum: const EdgeInsets.fromLTRB(Tokens.space3, 0, Tokens.space3, Tokens.space2),
+              child: Container(
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  color: t.colorScheme.surface.withValues(alpha: 0.96),
+                  borderRadius: BorderRadius.circular(32),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.10), blurRadius: 16, offset: const Offset(0, 4)),
+                  ],
+                ),
+                child: NavigationBar(
+                  selectedIndex: s.tab,
+                  onDestinationSelected: (i) {
+                    Feel.tap();
+                    s.goToTab(i);
+                  },
+                  // Very large text: icons only (each still has its name for screen readers),
+                  // so labels never get cut off.
+                  labelBehavior: MediaQuery.textScalerOf(context).scale(1) > 1.3
+                      ? NavigationDestinationLabelBehavior.alwaysHide
+                      : NavigationDestinationLabelBehavior.alwaysShow,
+                  destinations: const [
+                    NavigationDestination(icon: Icon(Icons.grid_view_rounded), label: 'Today'),
+                    NavigationDestination(icon: Icon(Icons.pets_rounded), label: 'Pets'),
+                    NavigationDestination(icon: Icon(Icons.center_focus_strong_rounded), label: 'Check'),
+                    NavigationDestination(icon: Icon(Icons.show_chart_rounded), label: 'Insights'),
+                    NavigationDestination(icon: Icon(Icons.checklist_rounded), label: 'Reminders'),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-        if (s.guide != null) const Positioned.fill(child: GuideOverlay()),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -111,14 +83,10 @@ class MoreMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) => PopupMenuButton<int>(
     tooltip: 'More',
-    icon: Icon(
-      Icons.more_vert_rounded,
-      color: Theme.of(context).colorScheme.onSurfaceVariant,
-    ),
+    icon: Icon(Icons.more_vert_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant),
     onSelected: (i) {
       if (i == -1) {
-        Navigator.of(context)
-            .push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
+        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
       } else if (i == -2) {
         final s = context.read<AppState>();
         s.goToTab(0);
@@ -130,8 +98,7 @@ class MoreMenu extends StatelessWidget {
       }
     },
     itemBuilder: (_) => [
-      for (var i = 0; i < extra.length; i++)
-        PopupMenuItem(value: i, child: Text(extra[i].$1)),
+      for (var i = 0; i < extra.length; i++) PopupMenuItem(value: i, child: Text(extra[i].$1)),
       const PopupMenuItem(value: -2, child: Text('Show me around')),
       const PopupMenuItem(value: -3, child: Text('Try a demo')),
       const PopupMenuItem(value: -1, child: Text('Settings')),

@@ -100,6 +100,14 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Shrinks the guide to just its face, or opens it again.
+  void setGuideCollapsed(bool v) {
+    final g = guide;
+    if (g == null) return;
+    g.collapsed = v;
+    notifyListeners();
+  }
+
   void endGuide() {
     final done = guide?.onDone;
     guide = null;
@@ -309,4 +317,7 @@ class Guide {
   final String? narrator;
   final void Function()? onDone;
   int at = 0;
+
+  /// Shrunk to the guide's face in a corner, so the app can be shown without the bubble.
+  bool collapsed = false;
 }

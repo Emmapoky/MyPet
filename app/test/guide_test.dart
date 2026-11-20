@@ -58,13 +58,22 @@ void main() {
     await t.tap(find.text('Next'));
     await settle(t);
     expect(find.textContaining('days for me'), findsOneWidget);
-    await t.tap(find.text('Skip'));
+    // The app stays usable under the bubble: switch tabs, then shrink and reopen the guide.
+    await t.tap(find.text('Insights'));
+    await settle(t);
+    await t.tap(find.byTooltip('Shrink the guide'));
+    await settle(t);
+    expect(find.textContaining('days for me'), findsNothing);
+    await t.tap(find.bySemanticsLabel(RegExp("Open Biscuit's guide")));
+    await settle(t);
+    expect(find.textContaining('days for me'), findsOneWidget);
+    await t.tap(find.byTooltip('Leave the demo'));
     await settle(t);
     // Back on the picker; another pet's story starts from there.
     await t.tap(find.text('A cat off her food'));
     await settle(t);
     expect(find.textContaining("I'm Mochi"), findsOneWidget);
-    await t.tap(find.text('Skip'));
+    await t.tap(find.byTooltip('Leave the demo'));
     await settle(t);
     expect(find.text('Try a demo'), findsOneWidget);
     expect(s.pets.map((p) => p.name), ['Milo']);

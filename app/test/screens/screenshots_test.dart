@@ -116,7 +116,7 @@ void main() {
     await t.tap(find.text('Next'));
     await t.tap(find.text('Next'));
     await shot(t, '13-tour-3');
-    await t.tap(find.text('Skip'));
+    await t.tap(find.byTooltip('Close the guide'));
     s.goToTab(0);
     await t.pumpAndSettle();
     await t.tap(find.byTooltip('More').first);
@@ -132,6 +132,9 @@ void main() {
     await shot(t, '14-story-3');
     await t.tap(find.text('Next'));
     await shot(t, '14-story-4');
+    await t.tap(find.byTooltip('Shrink the guide'));
+    await t.pumpAndSettle();
+    await shot(t, '14-story-shrunk');
   });
 
   testWidgets('health record from a vet PDF', (t) async {

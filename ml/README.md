@@ -20,7 +20,7 @@ Rules these follow (Dr Yam, 18 Sep 2026; proposal report): machine learning, not
 | 9 | `09_compare_free_models.ipynb`: is another free audio model better than CLAP? (AST, YAMNet, PANNs) | Done 19 Nov 2026 |
 | 10 | ML Lab "Try a clip": record near a pet or pick a video on the phone | Done 19 Nov 2026 (iPhone) |
 | 11 | `build_photo_check.py`, `check_short_clips.py`: the picture half of the clip check, and 5 s vs 10 s clips | Done 19 Nov 2026 (Mac); picture on the iPhone not yet run |
-| 12 | `12_how_many_clips.ipynb`: learning curves, how many labelled clips the check needs, and whether more animals or more clips help | Running |
+| 12 | `12_how_many_clips.ipynb`: learning curves, how many labelled clips the check needs, and whether more animals or more clips help | Done |
 | 13 | `build_video_library.py`: real Commons videos of dogs and cats in the Test library, checked by picture and sound | Done 19 Nov 2026 (iPhone) |
 | later | Android timing on a borrowed phone; YAMNet only if needed | Later |
 
@@ -251,3 +251,22 @@ Full numbers: `results/11_photo_check.json`. Data: CIFAR-10 (Krizhevsky 2009); D
 - The phone's answers match Python's on the counts. The largest difference in a likelihood is 0.115, up from 0.0 for sound only. It comes from the picture gate, which multiplies small differences in the image numbers by about 100, and it did not change any of the counts.
 
 Full numbers: `results/13_video_clips.json`.
+
+### Step 12: how many clips does the check need?
+
+Erwyna asked whether training on 2,000 to 3,000 clips would make the check more accurate. Instead of guessing, `12_how_many_clips.ipynb` (Colab, free GPU) trains the app's classifier on 10% to 100% of the clips (5 seeds each) and scores it on animals it has not heard. Numbers are macro F1; results in `results/12_how_many_clips.json`.
+
+| Task | Clips now | F1 now | F1 at 2x | F1 at 3,000 | Reading |
+|---|---|---|---|---|---|
+| Cat (3 reasons) | 377 | 0.51 | 0.52 | 0.52 | Flat after about 190 clips. More clips from the same cats do not help. |
+| Dog energy | 1,200 | 0.52 | 0.53 | 0.54 | Flat. |
+| Dog mood | 1,200 | 0.48 | 0.49 | 0.50 | Slow climb. Curve fit is unreliable here. |
+| Dog 4 feelings | 1,200 | 0.38 | 0.42 | 0.42 | Still climbing: about +0.04 at 3,000 clips. |
+
+Cats by number of different cats (same total clips per cat): 2 cats 0.31, 4 cats 0.43, 8 cats 0.44, 12 cats 0.51, 16 cats 0.49. The spread between draws is 0.1 to 0.15, so this is a trend, not a measurement.
+
+What this means:
+- 2,000 to 3,000 more clips of the same kind would add about 0.01 for cats and about 0.04 for the dog 4-feeling check at best. That is not worth chasing.
+- What helps is more different animals, not more clips from the same ones, and only clips where someone knows how the animal felt. Unlabelled clips (for example from video sites) can improve the sound type (bark, purr) but not the feeling.
+- The bigger gain is already in the picture: for dogs the photo model is much stronger than sound (step 11), and the app combines both.
+- Limits: the curves come from the small labelled sets we have (CatMeows, 21 cats; EmotionalCanines); the extrapolation is a power-law fit and an estimate, not a promise.

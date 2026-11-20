@@ -76,7 +76,7 @@ Future<int> logFromNotification(AppState s, String action, String? input, List<S
   if (action == allNormalAction) {
     for (final p in pets.where((p) => !logged(p.id))) {
       await s.addEntry(p.id, EntryKind.dailyLog,
-          {'ate': true, 'energy': s.usualEnergy(p.id), 'toiletingNormal': true, 'source': 'notification'},
+          {'ate': true, 'ateAmount': 'all', 'energy': s.usualEnergy(p.id), 'toiletingNormal': true, 'source': 'notification'},
           day: day);
       n++;
     }
@@ -88,6 +88,8 @@ Future<int> logFromNotification(AppState s, String action, String? input, List<S
       final h = e.value;
       await s.addEntry(p.id, EntryKind.dailyLog, {
         'ate': ?h.ate,
+        'ateAmount': ?h.ateAmount,
+        ...h.checks,
         'energy': ?h.energy,
         'toiletingNormal': ?h.toiletingNormal,
         'weightKg': ?h.weightKg,

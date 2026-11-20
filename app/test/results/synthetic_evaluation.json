@@ -17,5 +17,6 @@
     "energy": 61
   },
   "false_flag_days_before_onset": 107,
-  "flags_before_7_logged_days": 0
+  "flags_before_7_logged_days": 0,
+  "pet_days_with_a_two_days_running_fact": 10
 }

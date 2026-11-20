@@ -99,6 +99,7 @@ flutter:
     - assets/illustrations/
     # Free-licence demo clips for More > Try a demo (credits in clips.json).
     - assets/demo_clips/
+    - assets/demo_voice/
     # Made-up vet PDFs for the demo pets (lib/records/demo_documents.dart, tool/make_demo_pdfs.dart).
     - assets/demo_pdfs/
 

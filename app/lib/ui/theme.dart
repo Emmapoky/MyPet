@@ -17,6 +17,13 @@ class Tokens {
   static const radiusChip = 12.0;
   static const radiusInput = 14.0;
   static const radiusCard = 18.0;
+
+  /// Inner edge of every text field: text, units and icons sit this far from the border.
+  static const fieldEdge = 16.0;
+
+  /// Right inset of a field's trailing unit or button ("kg", the mic circle): the same for
+  /// every field, so their right edges line up down the page.
+  static const fieldTrail = 12.0;
   static const radiusHero = 24.0;
   static const radiusSheet = 24.0;
   static const radiusButton = 999.0;
@@ -337,6 +344,7 @@ ThemeData buildTheme(Brightness b) {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: Tokens.fieldEdge, vertical: Tokens.space4),
       fillColor: scheme.surface,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(Tokens.radiusInput),

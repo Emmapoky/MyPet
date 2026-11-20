@@ -22,10 +22,32 @@ void main() {
         fallback: 'Mao');
     expect((r['Mao']!.ate, r['Mao']!.energy), (true, 2));
     expect((r['Woof']!.ate, r['Woof']!.toiletingNormal), (false, false));
-    expect(r['Mao']!.summary, 'Ate · Energy 2 of 5');
+    expect(r['Mao']!.summary, 'Ate all · Energy 2 of 5');
   });
 
   test('no name said: the whole sentence is for the pet being logged', () {
     expect(readSpokenLogs('ate everything, normal pee', ['Mao', 'Woof'], fallback: 'Woof').keys, ['Woof']);
+  });
+
+  test('amounts, corrections and extra checks', () {
+    expect(readSpokenLog('she only ate half her dinner').ateAmount, 'some');
+    expect(readSpokenLog('barely ate today').ateAmount, 'some');
+    expect(readSpokenLog("he didn't eat his breakfast, oh wait no he did, he finished it").ateAmount, 'all');
+    expect(readSpokenLog('ate well, then threw up').checks['vomited'], isTrue);
+    expect(readSpokenLog('peed on the rug again').checks['accident'], isTrue);
+    expect(readSpokenLog('drinking a lot of water').checks['drinkingMore'], isTrue);
+  });
+
+  test("the demo's driving voice note fills every answer", () {
+    final h = readSpokenLogs(
+        "Hey, quick one for Biscuit. So he didn't eat his breakfast this morning oh wait no he did, he finished it "
+        "after his walk. He's been a bit tired today, energy 2. Normal poo on the walk. And he was 10.4 kg at the vet. "
+        "That's it, thanks.",
+        ['Biscuit', 'Mochi'],
+        fallback: 'Biscuit')['Biscuit']!;
+    expect(h.ateAmount, 'all');
+    expect(h.energy, 2);
+    expect(h.toiletingNormal, isTrue);
+    expect(h.weightKg, 10.4);
   });
 }

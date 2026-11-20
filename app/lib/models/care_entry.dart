@@ -45,6 +45,13 @@ class CareEntry {
 
   // Daily log fields.
   bool? get ate => data['ate'] as bool?;
+
+  /// "all", "some" or "none". Older logs only have yes/no, read as all or none.
+  String? get ateAmount =>
+      data['ateAmount'] as String? ?? (ate == null ? null : (ate! ? 'all' : 'none'));
+
+  /// The person said they did not see the pet go (toileting left empty on purpose).
+  bool get toiletingUnseen => data['toiletingSeen'] == false;
   int? get energy => (data['energy'] as num?)?.toInt();
   bool? get toiletingNormal => data['toiletingNormal'] as bool?;
   double? get weightKg => (data['weightKg'] as num?)?.toDouble();

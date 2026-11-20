@@ -383,6 +383,7 @@ void main() {
       expect(find.text('Happy or playful'), findsOneWidget);
       expect(find.text('0:01 Barking'), findsOneWidget);
     expect(find.text('0:00 Dog in view'), findsOneWidget);
+      await t.scrollUntilVisible(find.text(Wording.notDiagnosisBehaviour), 200);
       expect(find.text(Wording.notDiagnosisBehaviour), findsOneWidget);
       await t.scrollUntilVisible(find.textContaining('Save keeps the video'), 200);
       expect(find.textContaining('Save keeps the video'), findsOneWidget);

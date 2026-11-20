@@ -42,8 +42,11 @@ void main() {
       ];
       final r = detector.run(e, start.addDays(5));
       expect(r.ready, isFalse);
-      expect(r.flags, isEmpty);
+      expect(r.baselineFlags, isEmpty);
       expect(r.daysUntilReady, 1);
+      // Day-1 safety net: plain counts of what was logged, no comparison (review layer 4).
+      expect(r.flags.map((f) => f.measure), containsAll([Measure.ate, Measure.energy]));
+      expect(r.flags.every((f) => f.confidence == Confidence.fact), isTrue);
     });
 
     test('missed days do not count towards the 7', () {
@@ -89,18 +92,20 @@ void main() {
       expect(detector.run(e, start.addDays(21)).flags, isEmpty);
     });
 
-    test('weight gain is not flagged, weight loss is', () {
+    test('weight is judged both ways, as a neutral fact (review change 1)', () {
       List<CareEntry> withWeights(double a, double b) => [
         for (var i = 0; i < 20; i++) log(start.addDays(i), w: 10),
         log(start.addDays(20), w: a),
         log(start.addDays(21), w: b),
       ];
-      expect(
-        detector.run(withWeights(11, 11), start.addDays(21)).flags,
-        isEmpty,
-      );
+      final up = detector.run(withWeights(11, 11), start.addDays(21)).flags.single;
+      expect(up.measure, Measure.weight);
+      expect(up.up, isTrue);
       final r = detector.run(withWeights(9.3, 9.2), start.addDays(21));
       expect(r.flags.single.measure, Measure.weight);
+      expect(r.flags.single.up, isFalse);
+      // Within the noise floor: nothing.
+      expect(detector.run(withWeights(10.1, 9.95), start.addDays(21)).flags, isEmpty);
     });
   });
 
@@ -153,7 +158,7 @@ void main() {
     },
   );
 
-  test('a later log on the same day replaces the earlier one', () {
+  test('two logs on one day keep the concerning answer (household, change 9)', () {
     final d = start.addDays(20);
     final e = [
       ...steady(20),
@@ -169,7 +174,9 @@ void main() {
       ),
       log(start.addDays(21), energy: 1),
     ];
-    expect(detector.run(e, start.addDays(21)).flags, isEmpty);
+    final f = detector.run(e, start.addDays(21)).flags.single;
+    expect(f.measure, Measure.energy);
+    expect(f.recent.map((r) => r.value), [4, 1, 1]);
   });
 
   test('median handles odd and even counts', () {

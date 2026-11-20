@@ -70,7 +70,7 @@ void main() {
       await settle(t);
       await t.tap(find.text('Log now'));
       await settle(t);
-      await t.tap(find.bySemanticsLabel('Ate today: Yes'));
+      await t.tap(find.bySemanticsLabel('Ate today: All'));
       await t.tap(find.bySemanticsLabel('Energy: 3'));
       await t.tap(find.bySemanticsLabel('Toileting normal: Yes'));
       await t.pump();

@@ -61,7 +61,7 @@ void main() {
     // The app stays usable under the bubble: switch tabs, then shrink and reopen the guide.
     await t.tap(find.text('Insights'));
     await settle(t);
-    await t.tap(find.byTooltip('Shrink the guide'));
+    await t.tap(find.byTooltip('Tap me to shrink'));
     await settle(t);
     expect(find.textContaining('days for me'), findsNothing);
     await t.tap(find.bySemanticsLabel(RegExp("Open Biscuit's guide")));

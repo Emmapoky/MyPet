@@ -22,7 +22,8 @@ void main() {
         planted = 0,
         falseBefore = 0,
         controlFalse = 0,
-        earlyFlags = 0;
+        earlyFlags = 0,
+        factDays = 0;
     final hitsBy = {for (final m in measures) m: 0};
     final plantedBy = {for (final m in measures) m: 0};
     final delays = <int>[];
@@ -42,7 +43,9 @@ void main() {
       for (var i = 0; i < days; i++) {
         final d = first.addDays(i);
         if (entries.any((e) => e.day == d)) loggedBefore.add(d);
-        final r = detector.run(entries, d);
+        final all = detector.run(entries, d);
+        if (all.flags.any((f) => f.confidence == Confidence.fact)) factDays++;
+        final r = DetectionResult(all.asOf, all.loggedDays, all.ready, all.baselineFlags);
         if (loggedBefore.length < 7 && r.flags.isNotEmpty) earlyFlags++;
         if (!changedPet) {
           controlPetDays++;
@@ -89,6 +92,7 @@ void main() {
       'control_flag_days_by_measure': falseBy,
       'false_flag_days_before_onset': falseBefore,
       'flags_before_7_logged_days': earlyFlags,
+      'pet_days_with_a_two_days_running_fact': factDays,
     };
     final out = File('test/results/synthetic_evaluation.json');
     out.parent.createSync(recursive: true);

@@ -26,7 +26,24 @@ class DemoPet {
     this.lowEnergy = false,
     this.offFood = false,
     this.checks = const [],
+    this.ageDays,
+    this.neutered,
+    this.portion = '',
+    this.meals,
+    this.gainPerDay = 0,
   });
+
+  /// Age today, in days, so the starter guide and growth mode have something to go on.
+  final int? ageDays;
+  final bool? neutered;
+  final String portion;
+  final int? meals;
+
+  /// Growing pets put on weight every day (Pepper); grown pets stay steady.
+  final double gainPerDay;
+
+  /// Weight on a day this many days before today.
+  double weightOn(int daysAgo) => double.parse((weightKg - gainPerDay * daysAgo).toStringAsFixed(2));
 
   /// Fixed id in the demo, so its drawing is the same on the picker and in the app.
   final String id;
@@ -174,6 +191,10 @@ final demoPets = <DemoPet>[
     species: Species.dog,
     breed: 'Shiba Inu',
     weightKg: 10.5,
+    ageDays: 5 * 365 + 40,
+    neutered: true,
+    portion: '120 g dry food',
+    meals: 2,
     seed: 7,
     title: 'A dog not feeling well',
     subtitle: 'Biscuit has had low energy this week',
@@ -208,6 +229,10 @@ final demoPets = <DemoPet>[
     species: Species.cat,
     breed: 'Domestic shorthair',
     weightKg: 4.2,
+    ageDays: 6 * 365 + 100,
+    neutered: true,
+    portion: 'Half a can and 30 g dry',
+    meals: 2,
     seed: 11,
     title: 'A cat off her food',
     subtitle: 'Mochi left her dinner twice this week',
@@ -233,7 +258,12 @@ final demoPets = <DemoPet>[
     name: 'Pepper',
     species: Species.dog,
     breed: 'Border Collie',
-    weightKg: 6.0,
+    weightKg: 7.6,
+    ageDays: 129,
+    neutered: false,
+    portion: '1 cup puppy food',
+    meals: 3,
+    gainPerDay: 0.11,
     seed: 23,
     title: 'A happy, healthy puppy',
     subtitle: 'What a normal month looks like',
@@ -267,6 +297,10 @@ final demoPets = <DemoPet>[
     species: Species.cat,
     breed: 'Ragdoll kitten',
     weightKg: 1.1,
+    ageDays: 72,
+    portion: '1 kitten pouch',
+    meals: 4,
+    gainPerDay: 0.015,
     seed: 31,
     title: 'A new kitten',
     subtitle: 'Bean came home 4 days ago, so MyPet is still learning',
@@ -328,7 +362,13 @@ Future<void> addDemoPets(AppState s, {bool fixedIds = false, List<DemoClip> clip
   for (final d in demoPets) {
     final first = today.addDays(1 - d.days);
     final pet = await s.addPet(
-        id: fixedIds ? d.id : null, name: d.name, species: d.species, breed: d.breed, weightKg: d.weightKg);
+        id: fixedIds ? d.id : null,
+        name: d.name,
+        species: d.species,
+        breed: d.breed,
+        weightKg: d.weightOn(d.days - 1),
+        birthDate: d.ageDays == null ? null : today.addDays(-d.ageDays!));
+    await s.updatePet(pet.copyWith(neutered: d.neutered, portion: d.portion, mealsPerDay: d.meals));
     final id = pet.id;
     await _logs(s, d, id, first, today);
     await _breakfast(s, d, id, first);
@@ -362,13 +402,22 @@ Future<void> _logs(AppState s, DemoPet d, String id, Day first, Day today) async
       (
         today.addDays(i - 2),
         {
-          'ate': !(d.offFood && i != 1),
+          'ate': !(d.offFood && i == 2),
+          // Off food: some on the first day, none on the last (Ate: All / Some / None).
+          'ateAmount': !d.offFood || i == 1 ? 'all' : (i == 0 ? 'some' : 'none'),
           'energy': d.lowEnergy && i != 1 ? 1 : 4,
           'toiletingNormal': true,
+          if (i == 2) 'weightKg': d.weightOn(0),
         }
       ),
   ];
-  for (final e in [for (final h in history) (h.day, h.data), ...last.where((l) => !l.$1.isBefore(first))]) {
+  // Weigh-ins follow the demo pet's own weight (steady, or growing for the young ones).
+  Map<String, dynamic> real(Day day, Map<String, dynamic> data) => {
+        ...data,
+        'ateAmount': data['ate'] == false ? 'none' : 'all',
+        if (data['weightKg'] != null) 'weightKg': d.weightOn(today.difference(day)),
+      };
+  for (final e in [for (final h in history) (h.day, real(h.day, h.data)), ...last.where((l) => !l.$1.isBefore(first))]) {
     final day = e.$1;
     await s.backend.addEntry(CareEntry(
       id: s.backend.newId(),

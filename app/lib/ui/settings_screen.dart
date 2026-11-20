@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../state/app_state.dart';
 import '../state/demo_data.dart';
 import 'theme.dart';
+import 'widgets/guide_target.dart';
 import 'widgets/common.dart';
 import 'widgets/clip_keep.dart';
 import 'wording.dart';
@@ -32,7 +33,7 @@ class SettingsScreen extends StatelessWidget {
           onSelectionChanged: (v) => s.setLook(v.first),
         ),
         const SectionTitle('Saved clips'),
-        const Card(child: ClipKeepChoices()),
+        const GuideTarget(id: 'savedClips', child: Card(child: ClipKeepChoices())),
         Padding(
           padding: const EdgeInsets.fromLTRB(Tokens.space2, Tokens.space2, Tokens.space2, 0),
           child: Text('Clips stay on this phone and are never uploaded.', style: t.textTheme.bodySmall),

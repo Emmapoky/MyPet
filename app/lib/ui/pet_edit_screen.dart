@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
+import '../models/life_stage.dart';
 import '../models/pet.dart';
 import '../state/app_state.dart';
 import '../util/day.dart';
@@ -29,6 +30,12 @@ class _PetEditScreenState extends State<PetEditScreen> {
   late Day? birth = widget.pet?.birthDate;
   late int colour = widget.pet == null ? context.read<AppState>().nextColour() : petColourIndex(widget.pet!);
   late String? photo = widget.pet?.photo;
+  late bool birthEstimated = widget.pet?.birthEstimated ?? false;
+  late bool? neutered = widget.pet?.neutered;
+  late SizeClass? adultSize = widget.pet?.adultSize;
+  late final portion = TextEditingController(text: widget.pet?.portion ?? '');
+  late int? meals = widget.pet?.mealsPerDay;
+  late final Set<String> checks = {...?widget.pet?.checks};
   String? error;
 
   /// What the avatar at the top shows while editing.
@@ -71,8 +78,19 @@ class _PetEditScreenState extends State<PetEditScreen> {
     }
     final s = context.read<AppState>();
     final nav = Navigator.of(context);
+    Pet extras(Pet p) => p.copyWith(
+          birthEstimated: birth != null && birthEstimated,
+          neutered: neutered,
+          clearNeutered: neutered == null,
+          adultSize: adultSize,
+          clearAdultSize: adultSize == null || species == Species.cat,
+          portion: portion.text.trim(),
+          mealsPerDay: meals,
+          clearMeals: meals == null,
+          checks: [for (final c in PetChecks.all) if (checks.contains(c)) c],
+        );
     if (widget.pet == null) {
-      await s.addPet(
+      final p = await s.addPet(
           name: n,
           species: species!,
           breed: breed.text.trim(),
@@ -80,8 +98,10 @@ class _PetEditScreenState extends State<PetEditScreen> {
           weightKg: w,
           colour: colour,
           photo: photo);
+      final full = extras(p);
+      if (full.toMap().toString() != p.toMap().toString()) await s.updatePet(full);
     } else {
-      await s.updatePet(widget.pet!.copyWith(
+      await s.updatePet(extras(widget.pet!).copyWith(
         name: n,
         species: species,
         breed: breed.text.trim(),
@@ -106,7 +126,41 @@ class _PetEditScreenState extends State<PetEditScreen> {
       initialDate: birth?.asDateTime ?? DateTime(now.year - 2, now.month, now.day),
       helpText: 'Birth date (a guess is fine)',
     );
-    if (d != null) setState(() => birth = Day.of(d));
+    if (d != null) {
+      setState(() {
+        birth = Day.of(d);
+        birthEstimated = false;
+      });
+    }
+  }
+
+  /// Adopted pets: "about 3 years" sets a birth date marked as a guess.
+  Future<void> _aboutAge() async {
+    final years = TextEditingController();
+    final r = await showDialog<double>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('About how old?'),
+        content: TextField(
+          controller: years,
+          autofocus: true,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(labelText: 'Years', hintText: 'For example 3, or 0.5 for 6 months'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, double.tryParse(years.text.trim().replaceAll(',', '.'))),
+            child: const Text('Use this'),
+          ),
+        ],
+      ),
+    );
+    if (r == null || r < 0 || r > 30) return;
+    setState(() {
+      birth = Day.today().addDays(-(r * 365.25).round());
+      birthEstimated = true;
+    });
   }
 
   @override
@@ -178,7 +232,9 @@ class _PetEditScreenState extends State<PetEditScreen> {
             title: const Text('Birth date (optional)'),
             subtitle: Text(birth == null
                 ? 'Not set'
-                : DateFormat('d MMMM y').format(birth!.asDateTime)),
+                : birthEstimated
+                    ? 'About ${_ageWords(birth!)} (a guess)'
+                    : DateFormat('d MMMM y').format(birth!.asDateTime)),
             trailing: birth == null
                 ? const Icon(Icons.calendar_today_outlined)
                 : IconButton(
@@ -188,12 +244,62 @@ class _PetEditScreenState extends State<PetEditScreen> {
                   ),
             onTap: _pickBirth,
           ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(onPressed: _aboutAge, child: const Text('Not sure? Say about how old')),
+          ),
           const SizedBox(height: Tokens.space2),
           TextField(
             controller: weight,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: const InputDecoration(labelText: 'Weight in kg (optional)'),
           ),
+          const SizedBox(height: Tokens.space5),
+          Semantics(header: true, child: Text('To get to know ${name.text.isEmpty ? 'your pet' : name.text} (optional)', style: t.textTheme.titleMedium)),
+          const SizedBox(height: Tokens.space1),
+          Text('Used for the starter guide and for how MyPet reads changes as your pet grows.',
+              style: t.textTheme.bodySmall),
+          const SizedBox(height: Tokens.space4),
+          ChoiceRow<bool>(
+            label: 'Neutered or spayed',
+            options: const [(true, 'Yes'), (false, 'No')],
+            selected: neutered,
+            onSelected: (v) => setState(() => neutered = neutered == v ? null : v),
+          ),
+          if (species == Species.dog) ...[
+            const SizedBox(height: Tokens.space4),
+            ChoiceRow<SizeClass>(
+              label: 'Size when grown (if the breed does not say)',
+              options: [for (final c in SizeClass.values) (c, sizeClassName(c))],
+              selected: adultSize,
+              onSelected: (v) => setState(() => adultSize = adultSize == v ? null : v),
+            ),
+          ],
+          const SizedBox(height: Tokens.space4),
+          TextField(
+            controller: portion,
+            decoration: const InputDecoration(
+                labelText: 'Usual portion', hintText: 'In your own units, like 60 g, 1 cup or half a can'),
+          ),
+          const SizedBox(height: Tokens.space4),
+          ChoiceRow<int>(
+            label: 'Meals a day',
+            options: const [(1, '1'), (2, '2'), (3, '3'), (4, '4')],
+            selected: meals,
+            onSelected: (v) => setState(() => meals = meals == v ? null : v),
+          ),
+          const SizedBox(height: Tokens.space5),
+          Semantics(header: true, child: Text('Extra daily questions (optional)', style: t.textTheme.titleMedium)),
+          const SizedBox(height: Tokens.space1),
+          Text('One more tap each on the daily log. Only switch on what helps this pet.', style: t.textTheme.bodySmall),
+          for (final c in PetChecks.all)
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(PetChecks.question(c)),
+              subtitle: Text(PetChecks.why(c)),
+              value: checks.contains(c),
+              onChanged: (on) => setState(() => on ? checks.add(c) : checks.remove(c)),
+            ),
           if (error != null) ...[
             const SizedBox(height: Tokens.space3),
             Semantics(liveRegion: true, child: Text(error!, style: TextStyle(color: t.colorScheme.error))),
@@ -208,4 +314,9 @@ class _PetEditScreenState extends State<PetEditScreen> {
       ),
     );
   }
+}
+
+String _ageWords(Day birth) {
+  final m = Day.today().difference(birth) ~/ 30;
+  return m < 24 ? '$m months' : '${m ~/ 12} years';
 }

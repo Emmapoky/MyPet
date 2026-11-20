@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
+import 'package:video_player/video_player.dart';
 
 import '../behaviour/analysis.dart';
 import '../behaviour/engine.dart';
@@ -56,14 +58,92 @@ class _CheckScreenState extends State<CheckScreen> {
 
   late BehaviourEngine _engine;
 
+  // The demo plays a pet's clip as if it was just filmed, then shows its saved result.
+  DemoCheckRun? _demoRun;
+  VideoPlayerController? _demoVideo;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _engine = context.read<BehaviourEngine>();
   }
 
+  void _maybeDemo(AppState s) {
+    final r = s.demoCheck;
+    if (r == null) {
+      if (_demoRun != null && _demoVideo != null) _endDemo();
+      return;
+    }
+    if (identical(r, _demoRun)) return;
+    _demoRun = r;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _playDemo(s, r));
+  }
+
+  void _endDemo() {
+    _timer?.cancel();
+    final v = _demoVideo;
+    _demoVideo = null;
+    _demoRun = null;
+    v?.dispose();
+    if (mounted && _step != _Step.result) setState(() => _step = _Step.record);
+  }
+
+  Future<void> _playDemo(AppState s, DemoCheckRun r) async {
+    final pet = s.pets.where((p) => p.id == r.petId).firstOrNull;
+    if (!mounted || pet == null) return;
+    _timer?.cancel();
+    s.selectPet(pet.id);
+    bool live() => mounted && identical(s.demoCheck, r);
+    final v = VideoPlayerController.file(File(r.clip));
+    try {
+      await v.initialize();
+    } catch (_) {
+      await v.dispose();
+      if (live()) _demoResult(s, r, pet);
+      return;
+    }
+    if (!live()) return v.dispose();
+    await Feel.recordStart();
+    final secs = v.value.duration.inSeconds.clamp(CheckScreen.minSeconds, CheckScreen.seconds);
+    setState(() {
+      _demoVideo = v;
+      _step = _Step.recording;
+      _left = secs;
+      _outcome = null;
+    });
+    await v.setVolume(1);
+    await v.play();
+    _timer = Timer.periodic(const Duration(seconds: 1), (t) async {
+      if (!live()) return t.cancel();
+      if (_left > 1) return setState(() => _left--);
+      t.cancel();
+      await v.pause();
+      unawaited(Feel.recordStop());
+      setState(() => _step = _Step.checking);
+      await Future<void>.delayed(const Duration(milliseconds: 1600));
+      if (live()) _demoResult(s, r, pet);
+    });
+  }
+
+  void _demoResult(AppState s, DemoCheckRun r, Pet pet) {
+    final v = _demoVideo;
+    _demoVideo = null;
+    v?.dispose();
+    setState(() {
+      _outcome = r.outcome;
+      _checkedPet = pet;
+      _ms = 900;
+      _picked = false;
+      _saved = false;
+      _step = _Step.result;
+    });
+    Feel.result();
+    s.runDemoCheck(null);
+  }
+
   @override
   void dispose() {
+    _demoVideo?.dispose();
     _timer?.cancel();
     _engine.discard(_outcome?.clip);
     super.dispose();
@@ -210,8 +290,11 @@ class _CheckScreenState extends State<CheckScreen> {
   Widget build(BuildContext context) {
     final s = context.watch<AppState>();
     if (s.tab == CheckScreen.tabIndex) _loadOnce();
+    _maybeDemo(s);
     final pet = s.selectedPet;
     final onResult = _step == _Step.result && _outcome != null;
+    final dv = _demoVideo;
+    if (dv != null && pet != null && !onResult) return _DemoFilming(video: dv, pet: pet, left: _left, checking: _step == _Step.checking);
     if (pet != null && _problem == null && !onResult) {
       // Full-screen camera, like a camera app: pets to swipe through by the record button.
       return Scaffold(
@@ -280,6 +363,62 @@ class _CheckScreenState extends State<CheckScreen> {
       );
     }
     return const SizedBox.shrink();
+  }
+}
+
+/// The demo's "just filmed" view: the clip plays full screen with its sound and a REC
+/// timer, then MyPet reads it, as a real check would on the phone.
+class _DemoFilming extends StatelessWidget {
+  const _DemoFilming({required this.video, required this.pet, required this.left, required this.checking});
+  final VideoPlayerController video;
+  final Pet pet;
+  final int left;
+  final bool checking;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    final c = MyPetColors.of(context);
+    final shot = (video.value.duration.inSeconds.clamp(CheckScreen.minSeconds, CheckScreen.seconds) - left + 1)
+        .clamp(0, CheckScreen.seconds);
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        child: Stack(children: [
+          Center(child: AspectRatio(aspectRatio: video.value.aspectRatio, child: VideoPlayer(video))),
+          Positioned(
+            top: Tokens.space4,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Semantics(
+                liveRegion: true,
+                label: checking ? 'Reading the clip of ${pet.name}' : 'Filming ${pet.name}, $shot seconds',
+                excludeSemantics: true,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: Tokens.space4, vertical: Tokens.space2),
+                  decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(20)),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    if (!checking) ...[
+                      Container(width: 12, height: 12, decoration: const BoxDecoration(color: Color(0xFFE5484D), shape: BoxShape.circle)),
+                      const SizedBox(width: Tokens.space2),
+                      Text('Filming ${pet.name}  0:${shot.toString().padLeft(2, '0')}',
+                          style: t.textTheme.titleSmall!.copyWith(color: Colors.white)),
+                    ] else ...[
+                      const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+                      const SizedBox(width: Tokens.space2),
+                      Text('Reading sound and picture on this phone',
+                          style: t.textTheme.titleSmall!.copyWith(color: Colors.white)),
+                    ],
+                  ]),
+                ),
+              ),
+            ),
+          ),
+          if (checking) Positioned.fill(child: ColoredBox(color: c.brand.withValues(alpha: 0.12))),
+        ]),
+      ),
+    );
   }
 }
 
@@ -819,7 +958,8 @@ class SavedCheckScreen extends StatelessWidget {
       );
 }
 
-String _pct(double p) => '${(100 * p).round()}%';
+/// Shown confidence is capped: no short clip deserves "98%" (pet owner review, Trust in Check).
+String _pct(double p) => showPct(p);
 
 class _FeelingRow extends StatelessWidget {
   const _FeelingRow(this.f);

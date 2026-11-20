@@ -16,6 +16,7 @@ import 'pet_detail_screen.dart';
 import 'pet_edit_screen.dart';
 import 'quick_log_screen.dart';
 import 'theme.dart';
+import 'widgets/guide_target.dart';
 import 'widgets/common.dart';
 import 'widgets/entry_tile.dart';
 import 'widgets/flag_card.dart';
@@ -106,13 +107,19 @@ class _TodayBody extends StatelessWidget {
     final added = Day.of(pet.createdAt);
     final firstLog = logs.isEmpty ? null : logs.map((e) => e.day).reduce((a, b) => a.isBefore(b) ? a : b);
     final start = firstLog == null || added.isBefore(firstLog) ? added : firstLog;
+    // One gentle line for missed days, never a row per day (review change 8).
+    final missed = <Day>[];
     for (var i = 1; i <= Schedule.missedLookbackDays; i++) {
       final d = today.addDays(-i);
       if (d.isBefore(start)) break;
-      if (!loggedDays.contains(d)) {
-        rows.add(_CareRow('Daily log', _RowState.missed, 'Missed ${date(d.asDateTime)}',
-            () => _openLog(context, day: d)));
-      }
+      if (!loggedDays.contains(d)) missed.add(d);
+    }
+    if (missed.length == 1) {
+      rows.add(_CareRow('Daily log', _RowState.missed, 'Not logged ${date(missed.first.asDateTime)}',
+          () => _openLog(context, day: missed.first)));
+    } else if (missed.length > 1) {
+      rows.add(_CareRow('Daily log', _RowState.missed, '${missed.length} days not logged · fill in ${date(missed.first.asDateTime)}',
+          () => _openLog(context, day: missed.first)));
     }
 
     final done = {
@@ -181,7 +188,8 @@ class _TodayBody extends StatelessWidget {
         todayLog != null &&
         s.now().difference(todayLog.createdAt.toLocal()).inMinutes.abs() < 10;
     final result = s.detectionOf(pet.id);
-    final flags = result?.ready == true ? result!.flags : const [];
+    // Before 7 days only the day-1 facts can be here ("did not eat 2 days in a row").
+    final flags = result?.flags ?? const [];
     final recent = timeline.current.take(6).toList();
     final rows = _rows(context, s);
 
@@ -194,7 +202,7 @@ class _TodayBody extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(Tokens.space4, Tokens.space2, Tokens.space4, Tokens.space5),
       children: [
-        HeroCard(
+        GuideTarget(id: 'stats', child: HeroCard(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Expanded(
@@ -219,18 +227,18 @@ class _TodayBody extends StatelessWidget {
                   : HeroStat(value: '${math.min(result?.loggedDays ?? 0, 7)}/7', caption: 'days to learn'),
             ]),
           ]),
-        ),
+        )),
         const SizedBox(height: Tokens.space4),
         if (pets.length > 1) ...[
           PetStrip(pets: pets, selected: pet.id),
           const SizedBox(height: Tokens.space4),
         ],
-        for (final f in flags) ...[
-          FlagCard(flag: f, pet: pet, compact: true, onTap: () => s.goToTab(3)),
+        for (final (i, f) in flags.indexed) ...[
+          GuideTarget(id: i == 0 ? 'flag' : 'flag$i', child: FlagCard(flag: f, pet: pet, compact: true, onTap: () => s.goToTab(3))),
           const SizedBox(height: Tokens.space4),
         ],
         if (logged)
-          Container(
+          GuideTarget(id: 'log', child: Container(
             padding: const EdgeInsets.symmetric(horizontal: Tokens.space4, vertical: Tokens.space3),
             decoration: BoxDecoration(
               color: c.loggedContainer,
@@ -244,13 +252,13 @@ class _TodayBody extends StatelessWidget {
                     style: t.textTheme.titleSmall!.copyWith(color: c.onLoggedContainer)),
               ),
             ]),
-          )
+          ))
         else
-          FilledButton.icon(
+          GuideTarget(id: 'log', child: FilledButton.icon(
             icon: const Icon(Icons.edit_note_rounded),
             label: const Text('Log now'),
             onPressed: () => _openLog(context),
-          ),
+          )),
         const SizedBox(height: Tokens.space4),
         MyCard(
           title: "${pet.name}'s day",

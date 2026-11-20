@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 
 import '../data/backend.dart';
 import '../detection/change_detector.dart';
-import '../behaviour/analysis.dart' show ClipKeep;
+import '../behaviour/analysis.dart' show ClipKeep, CheckOutcome;
 import '../models/care_entry.dart';
 import '../models/pet.dart';
 import '../models/reminder.dart';
@@ -95,6 +95,16 @@ class AppState extends ChangeNotifier {
   /// The walkthrough showing now (first-run tour or the story demo), if any.
   Guide? guide;
 
+  /// A demo check waiting to play on the Check tab.
+  DemoCheckRun? demoCheck;
+  void runDemoCheck(DemoCheckRun? r) {
+    demoCheck = r;
+    notifyListeners();
+  }
+
+  /// The guide's "Tap me to shrink" hint shows until the person has shrunk it once.
+  bool guideHintSeen = false;
+
   /// False until the first-run tour was shown once (main.dart remembers it on the phone).
   bool tourSeen = true;
   void Function()? onTourSeen;
@@ -121,6 +131,7 @@ class AppState extends ChangeNotifier {
     final g = guide;
     if (g == null) return;
     g.collapsed = v;
+    if (v) guideHintSeen = true;
     notifyListeners();
   }
 
@@ -198,7 +209,10 @@ class AppState extends ChangeNotifier {
     pets = list;
     petsLoaded = true;
     for (final p in list) {
-      if (_petSubs.containsKey('e${p.id}')) continue;
+      if (_petSubs.containsKey('e${p.id}')) {
+        _detect(p.id); // birth date or size may have changed the life stage
+        continue;
+      }
       _petSubs['e${p.id}'] = backend.watchEntries(p.id).listen((all) {
         _timelines[p.id] = Timeline.resolve(all);
         notifyListeners();
@@ -214,11 +228,14 @@ class AppState extends ChangeNotifier {
 
   /// Runs the detector off the main thread (NFR03).
   Future<void> _detect(String petId) async {
-    final entries = timelineOf(petId).ofKind(EntryKind.dailyLog);
+    final tl = timelineOf(petId);
+    final entries = [...tl.ofKind(EntryKind.dailyLog), ...tl.ofKind(EntryKind.healthRecord)];
     final asOf = today;
+    final pet = pets.where((p) => p.id == petId).firstOrNull;
+    final facts = pet == null ? const PetFacts() : PetFacts.of(pet, asOf);
     final result = detectInBackground
-        ? await compute(_runDetector, (entries, asOf))
-        : _runDetector((entries, asOf));
+        ? await compute(_runDetector, (entries, asOf, facts))
+        : _runDetector((entries, asOf, facts));
     _detection[petId] = result;
     notifyListeners();
   }
@@ -255,6 +272,25 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> updatePet(Pet pet) => backend.savePet(pet);
+
+  /// Every logged weight for a pet, one per day (the latest that day), oldest first.
+  List<(Day, double)> weightsOf(String petId) {
+    final byDay = <Day, CareEntry>{};
+    for (final e in timelineOf(petId).ofKind(EntryKind.dailyLog)) {
+      if (e.weightKg == null) continue;
+      final prev = byDay[e.day];
+      if (prev == null || e.createdAt.isAfter(prev.createdAt)) byDay[e.day] = e;
+    }
+    final out = [for (final e in byDay.entries) (e.key, e.value.weightKg!)];
+    out.sort((a, b) => a.$1.compareTo(b.$1));
+    return out;
+  }
+
+  /// The pet's weight now: the latest logged weight, else the one on the profile (change 2).
+  double? currentWeight(Pet pet) {
+    final w = weightsOf(pet.id);
+    return w.isEmpty ? pet.weightKg : w.last.$2;
+  }
 
   /// The first pet colour no active pet uses yet, so a household's pets look different.
   int nextColour() {
@@ -310,17 +346,35 @@ class AppState extends ChangeNotifier {
   }
 }
 
-DetectionResult _runDetector((List<CareEntry>, Day) args) =>
-    const ChangeDetector().run(args.$1, args.$2);
+DetectionResult _runDetector((List<CareEntry>, Day, PetFacts) args) =>
+    const ChangeDetector().run(args.$1, args.$2, pet: args.$3);
 
 /// One bubble of a walkthrough: which tab to show, who is talking, and what they say.
+/// A page a guide step opens on top of its tab, so the step can be done, not just read.
+enum GuideOpen { none, petPage, settings, check, driving, closeUp, voiceLog }
+
 class GuideStep {
-  const GuideStep(this.tab, this.text, {this.petName});
+  const GuideStep(this.tab, this.text, {this.petName, this.target, this.open = GuideOpen.none, this.stay = false});
+
+  /// Keep the page the last step opened (the next part of the same scene).
+  final bool stay;
   final int tab;
   final String text;
 
   /// Pet to show on the tab (story mode).
   final String? petName;
+
+  /// The part of the page the step talks about: it scrolls into view and is outlined.
+  final String? target;
+  final GuideOpen open;
+}
+
+/// The demo plays a pet's clip on Check as if it was just filmed, then shows its result.
+class DemoCheckRun {
+  DemoCheckRun(this.petId, this.clip, this.outcome);
+  final String petId;
+  final String clip;
+  final CheckOutcome outcome;
 }
 
 /// A walkthrough: the first-run tour (told by Pip, a guide dog) or the story demo

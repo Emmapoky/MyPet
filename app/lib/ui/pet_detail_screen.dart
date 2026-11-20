@@ -6,10 +6,12 @@ import '../models/care_entry.dart';
 import '../models/pet.dart';
 import '../state/app_state.dart';
 import 'check_screen.dart';
+import 'widgets/guide_target.dart';
 import 'widgets/clip_keep.dart';
 import 'health_record_screen.dart';
 import 'pet_edit_screen.dart';
 import 'quick_log_screen.dart';
+import 'widgets/starter_card.dart';
 import 'theme.dart';
 import 'vet_export.dart';
 import 'widgets/common.dart';
@@ -68,7 +70,7 @@ class PetDetailScreen extends StatelessWidget {
       pet.species == Species.cat ? 'Cat' : 'Dog',
       if (pet.breed.isNotEmpty) pet.breed,
       if (pet.birthDate != null) _age(pet, s.now()),
-      if (pet.weightKg != null) '${pet.weightKg} kg',
+      if (s.currentWeight(pet) != null) '${s.currentWeight(pet)!.toStringAsFixed(1)} kg',
       if (!pet.isActive) statusWord(pet.status),
     ].join(' · ');
 
@@ -76,11 +78,11 @@ class PetDetailScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(pet.name),
         actions: [
-          IconButton(
+          GuideTarget(id: 'pdf', child: IconButton(
             tooltip: 'Export for the vet',
             icon: const Icon(Icons.picture_as_pdf_rounded),
             onPressed: () => showVetExport(context, pet),
-          ),
+          )),
           PopupMenuButton<String>(
             tooltip: 'More',
             onSelected: (v) => switch (v) {
@@ -105,7 +107,7 @@ class PetDetailScreen extends StatelessWidget {
       ),
       body: ListView(padding: const EdgeInsets.all(Tokens.space4), children: [
         // The pet's photo: tap to add or change it (kept on this phone only).
-        Center(child: PetPhotoButton(pet: pet, size: 120, onTap: () => changePetPhoto(context, pet))),
+        Center(child: GuideTarget(id: 'photo', child: PetPhotoButton(pet: pet, size: 120, onTap: () => changePetPhoto(context, pet)))),
         if (pet.photo == null)
           Center(
             child: TextButton(
@@ -137,6 +139,25 @@ class PetDetailScreen extends StatelessWidget {
               ),
             ),
           ]),
+        if (pet.isActive) ...[
+          const SizedBox(height: Tokens.space2),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: GuideTarget(id: 'changed', child: TextButton.icon(
+              icon: const Icon(Icons.restart_alt_rounded),
+              label: const Text('Something changed'),
+              onPressed: () => showSomethingChanged(context, pet),
+            )),
+          ),
+          const SizedBox(height: Tokens.space2),
+          StarterCard(
+            pet: pet,
+            today: s.today,
+            weightKg: s.currentWeight(pet),
+            learning: !(s.detectionOf(pet.id)?.ready ?? false),
+            onEdit: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => PetEditScreen(pet: pet))),
+          ),
+        ],
         SectionTitle('Timeline (${tl.current.length})'),
         if (tl.conflicts.isNotEmpty)
           Padding(
@@ -154,11 +175,18 @@ class PetDetailScreen extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: Tokens.space4, vertical: Tokens.space2),
             child: Column(children: [
               for (final e in tl.current)
-                EntryTile(
-                  entry: e,
-                  today: s.today,
-                  onTap: () => openEntrySheet(context, pet, e),
-                ),
+                () {
+                  final tile = EntryTile(
+                    entry: e,
+                    today: s.today,
+                    onTap: () => openEntrySheet(context, pet, e),
+                  );
+                  // The newest saved check, for the demo's "tap one to replay it".
+                  final firstCheck = tl.current.firstWhere((x) => x.kind == EntryKind.behaviourResult, orElse: () => e);
+                  return e.kind == EntryKind.behaviourResult && identical(e, firstCheck)
+                      ? GuideTarget(id: 'savedCheck', child: tile)
+                      : tile;
+                }(),
             ]),
           ),
         const SizedBox(height: Tokens.space3),
@@ -195,12 +223,24 @@ void openEntrySheet(BuildContext context, Pet pet, CareEntry e) {
     ));
     return;
   }
-  final canEdit = e.kind == EntryKind.dailyLog || e.kind == EntryKind.healthRecord;
+  final canEdit = e.kind == EntryKind.dailyLog || (e.kind == EntryKind.healthRecord && e.data['type'] != 'change');
+  // Who logged it (household, review change 9). Invites need the cloud stage, so for now
+  // this is "you", the notification, or another carer on a shared phone.
+  final by = e.data['source'] == 'notification'
+      ? 'Logged by you from the notification'
+      : e.createdBy == s.carer?.id
+          ? 'Logged by you'
+          : 'Logged by another carer';
   showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
     builder: (c) => SafeArea(
       child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Tokens.space4),
+          child: Text('$by, ${DateFormat('EEE d MMM, h:mm a').format(e.createdAt.toLocal())}',
+              style: Theme.of(context).textTheme.bodySmall),
+        ),
         if (canEdit)
           ListTile(
             leading: const Icon(Icons.edit_outlined),
@@ -233,4 +273,52 @@ void openEntrySheet(BuildContext context, Pet pet, CareEntry e) {
       ]),
     ),
   );
+}
+
+/// "Something changed" (review change 7): new food, a move, medicine. One tap marks the day,
+/// and MyPet starts a fresh baseline for the measures it affects, noted on any flag.
+Future<void> showSomethingChanged(BuildContext context, Pet pet) async {
+  const options = <(String, String, List<String>)>[
+    ('New food or portion', 'Eating and weight', ['ate', 'weight']),
+    ('Started or stopped a medicine', 'Everything', []),
+    ('Moved house or a new routine', 'Energy, eating and toileting', ['energy', 'ate', 'toileting', 'accidents']),
+    ('A new pet or person at home', 'Energy, eating and toileting', ['energy', 'ate', 'toileting', 'accidents']),
+    ('Neutered or spayed', 'Everything', []),
+    ('Something else', 'Everything', []),
+  ];
+  final s = context.read<AppState>();
+  final messenger = ScaffoldMessenger.of(context);
+  final pick = await showModalBottomSheet<(String, String, List<String>)>(
+    context: context,
+    showDragHandle: true,
+    isScrollControlled: true,
+    builder: (c) => SafeArea(
+      child: ListView(shrinkWrap: true, children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(Tokens.space4, 0, Tokens.space4, Tokens.space2),
+          child: Text("What changed for ${pet.name}? MyPet starts learning ${pet.name}'s usual again from today "
+              'for what it affects, so the change is not flagged.',
+              style: Theme.of(c).textTheme.bodyMedium),
+        ),
+        for (final o in options)
+          ListTile(
+            title: Text(o.$1),
+            subtitle: Text('Fresh start for: ${o.$2}'),
+            onTap: () => Navigator.pop(c, o),
+          ),
+      ]),
+    ),
+  );
+  if (pick == null) return;
+  final e = await s.addEntry(pet.id, EntryKind.healthRecord, {
+    'type': 'change',
+    'title': pick.$1,
+    'measures': pick.$3,
+  });
+  messenger
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(
+      content: Text('Noted: ${pick.$1}'),
+      action: SnackBarAction(label: 'Undo', onPressed: () => s.deleteEntry(e)),
+    ));
 }

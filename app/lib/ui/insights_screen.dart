@@ -14,9 +14,12 @@ import 'home_shell.dart';
 import 'quick_log_screen.dart';
 import 'theme.dart';
 import 'vet_export.dart';
+import 'widgets/guide_target.dart';
 import 'widgets/common.dart';
 import 'widgets/flag_card.dart';
 import 'widgets/pet_bar.dart';
+import 'widgets/starter_card.dart';
+import 'pet_edit_screen.dart';
 
 /// Insights (report Table 4.4 screen 6; Figma screens 05 and 06): 7 or 30 days, the pet's
 /// usual against today, change noticed, export for the vet. Hidden before 7 days (NFR07).
@@ -44,7 +47,18 @@ class _InsightsScreenState extends State<InsightsScreen> {
     } else if (result == null || !result.ready) {
       final have = result?.loggedDays ?? 0;
       children = [
-        EmptyState(
+        for (final f in result?.flags ?? const <ChangeFlag>[]) ...[
+          FlagCard(flag: f, pet: pet),
+          const SizedBox(height: Tokens.space4),
+        ],
+        GuideTarget(id: 'starter', child: StarterCard(
+          pet: pet,
+          today: s.today,
+          weightKg: s.currentWeight(pet),
+          onEdit: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => PetEditScreen(pet: pet))),
+        )),
+        const SizedBox(height: Tokens.space4),
+        GuideTarget(id: 'unlock', child: EmptyState(
           icon: Icons.hourglass_top_rounded,
           title: 'Insights unlock after ${Thresholds.minLoggedDays} days',
           body: '$have of ${Thresholds.minLoggedDays} days logged',
@@ -62,7 +76,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
             onPressed: () => Navigator.of(context)
                 .push(MaterialPageRoute(builder: (_) => QuickLogScreen(pet: pet))),
           ),
-        ),
+        )),
       ];
     } else {
       children = _ready(context, s, pet, result);
@@ -118,8 +132,9 @@ class _InsightsScreenState extends State<InsightsScreen> {
 
     final days = [for (var i = range - 1; i >= 0; i--) today.addDays(-i)];
     final todayLog = byDay[today];
-    final ateYes = base.where((e) => e.ate == true).length;
-    final ateKnown = base.where((e) => e.ate != null).length;
+    final ateYes = base.where((e) => e.ateAmount == 'all').length;
+    final ateKnown = base.where((e) => e.ateAmount != null).length;
+    final weights = s.weightsOf(pet.id).where((w) => !w.$1.isBefore(today.addDays(range == 7 ? -60 : -120))).toList();
     final energyFlag = result.flags.any((f) => f.measure == Measure.energy);
     final ateFlag = result.flags.any((f) => f.measure == Measure.ate);
 
@@ -153,12 +168,12 @@ class _InsightsScreenState extends State<InsightsScreen> {
           ]),
         )
       else
-        for (final f in result.flags) ...[
-          FlagCard(flag: f, pet: pet),
+        for (final (i, f) in result.flags.indexed) ...[
+          GuideTarget(id: i == 0 ? 'insightsFlag' : 'insightsFlag$i', child: FlagCard(flag: f, pet: pet)),
           const SizedBox(height: Tokens.space4),
         ],
       if (result.flags.isEmpty) const SizedBox(height: Tokens.space4),
-      MyCard(
+      GuideTarget(id: 'usual', child: MyCard(
         title: "${pet.name}'s usual and today",
         accent: c.petAccent(pet),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -196,13 +211,21 @@ class _InsightsScreenState extends State<InsightsScreen> {
             value: ateKnown == 0
                 ? '—'
                 : ateYes == ateKnown
-                    ? 'Every day'
-                    : '$ateYes of $ateKnown days',
+                    ? 'All, every day'
+                    : 'All on $ateYes of $ateKnown days',
             status: ateFlag ? 'Less' : 'As usual',
             changed: ateFlag,
           ),
         ]),
-      ),
+      )),
+      if (weights.length >= 2) ...[
+        const SizedBox(height: Tokens.space4),
+        GuideTarget(id: 'weight', child: MyCard(
+          title: 'Weight',
+          accent: c.petAccent(pet),
+          child: WeightChart(weights: weights, color: c.petAccent(pet)),
+        )),
+      ],
       const SizedBox(height: Tokens.space3),
       Text(
         'Only compared with ${pet.name}, '

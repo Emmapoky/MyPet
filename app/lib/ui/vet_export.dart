@@ -42,6 +42,7 @@ Future<void> showVetExport(BuildContext context, Pet pet) async {
     from: to.addDays(-(days - 1)),
     to: to,
     now: s.now(),
+    weightsAll: s.weightsOf(pet.id),
   );
   final dir = await getTemporaryDirectory();
   final file = File('${dir.path}/MyPet ${pet.name} last $days days.pdf');

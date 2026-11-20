@@ -41,4 +41,35 @@ class Thresholds {
   /// Proposed. Below this many baseline days the flag is labelled early and its wording
   /// is softened (FR16, thin baseline). Half of the 28-day window.
   static const int thinBaselineDays = 14;
+
+  /// Proposed (pet owner review, layer 3). Pets under 6 months change fast, so food and
+  /// energy are compared with the last 14 days instead of 28.
+  static const int youngBaselineDays = 14;
+
+  /// Proposed. A measure needs this many baseline days before it is judged against them.
+  /// Fewer, for example just after a "Something changed" tag, and only day-1 facts apply.
+  static const int minBaselineReadings = 4;
+
+  /// Proposed (review change 7). The day of a vet visit, vaccination or procedure and the
+  /// 2 days after it are left out of the baseline: pets are often quiet or off food then.
+  static const int vetDaysLeftOut = 2;
+
+  /// Proposed (review change 1). How far back weight readings are used for the trend:
+  /// 60 days for adults, 28 for growing pets (they change fast), 90 for seniors.
+  static const int weightDays = 60;
+  static const int growingWeightDays = 28;
+  static const int slowWeightDays = 90;
+
+  /// Proposed. A kitchen scale reads to about 0.05 kg, so smaller changes are never news.
+  /// The weight noise floor is the larger of this and [minWeightSpreadShare] of the weight.
+  static const double scaleResolutionKg = 0.05;
+
+  /// Proposed. A slow change in weight is measured over 30 days (and 90 for seniors), and
+  /// needs readings at least 14 days apart. It is reported at 3 times the noise floor,
+  /// about 4.5% of body weight, the same size as a single-reading change.
+  static const int driftDays = 30;
+  static const int minDriftDays = 14;
+
+  /// Proposed (review layer 3). A growing pet whose weight has not gone up for 2 weeks.
+  static const int growthStallDays = 14;
 }

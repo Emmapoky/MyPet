@@ -1,4 +1,5 @@
 import '../util/day.dart';
+import 'life_stage.dart';
 
 /// How many pet colours there are (MyPetColors.petAccents).
 const petColourCount = 8;
@@ -43,6 +44,22 @@ class Pet {
   /// Profile photo file name in the app's photo folder on this phone (null: illustration).
   final String? photo;
 
+  /// Neutered or spayed (null: not said). Changes the energy guide only.
+  final bool? neutered;
+
+  /// The birth date is a guess from "about N years" (adopted pets).
+  final bool birthEstimated;
+
+  /// Expected adult size for a dog, when the breed does not say it.
+  final SizeClass? adultSize;
+
+  /// Usual portion in the owner's own words and units, such as "60 g" or "1 cup".
+  final String portion;
+  final int? mealsPerDay;
+
+  /// Extra one-tap questions on the daily log for this pet: drinking, accidents, vomited.
+  final List<String> checks;
+
   const Pet({
     required this.id,
     required this.name,
@@ -55,6 +72,12 @@ class Pet {
     required this.createdAt,
     this.colour,
     this.photo,
+    this.neutered,
+    this.birthEstimated = false,
+    this.adultSize,
+    this.portion = '',
+    this.mealsPerDay,
+    this.checks = const [],
   });
 
   bool get isActive => status == PetStatus.active;
@@ -72,6 +95,15 @@ class Pet {
     int? colour,
     String? photo,
     bool clearPhoto = false,
+    bool? neutered,
+    bool clearNeutered = false,
+    bool? birthEstimated,
+    SizeClass? adultSize,
+    bool clearAdultSize = false,
+    String? portion,
+    int? mealsPerDay,
+    bool clearMeals = false,
+    List<String>? checks,
   }) =>
       Pet(
         id: id,
@@ -85,6 +117,12 @@ class Pet {
         createdAt: createdAt,
         colour: colour ?? this.colour,
         photo: clearPhoto ? null : (photo ?? this.photo),
+        neutered: clearNeutered ? null : (neutered ?? this.neutered),
+        birthEstimated: birthEstimated ?? this.birthEstimated,
+        adultSize: clearAdultSize ? null : (adultSize ?? this.adultSize),
+        portion: portion ?? this.portion,
+        mealsPerDay: clearMeals ? null : (mealsPerDay ?? this.mealsPerDay),
+        checks: checks ?? this.checks,
       );
 
   Map<String, dynamic> toMap() => {
@@ -98,6 +136,12 @@ class Pet {
         'createdAt': createdAt.toUtc().toIso8601String(),
         'colour': ?colour,
         'photo': ?photo,
+        'neutered': ?neutered,
+        if (birthEstimated) 'birthEstimated': true,
+        'adultSize': ?adultSize?.name,
+        if (portion.isNotEmpty) 'portion': portion,
+        'mealsPerDay': ?mealsPerDay,
+        if (checks.isNotEmpty) 'checks': checks,
       };
 
   factory Pet.fromMap(String id, Map<String, dynamic> m) => Pet(
@@ -113,5 +157,38 @@ class Pet {
         createdAt: DateTime.parse(m['createdAt'] as String),
         colour: (m['colour'] as num?)?.toInt(),
         photo: m['photo'] as String?,
+        neutered: m['neutered'] as bool?,
+        birthEstimated: (m['birthEstimated'] as bool?) ?? false,
+        adultSize: m['adultSize'] == null ? null : SizeClass.values.asNameMap()[m['adultSize']],
+        portion: (m['portion'] as String?) ?? '',
+        mealsPerDay: (m['mealsPerDay'] as num?)?.toInt(),
+        checks: List<String>.from((m['checks'] as List?) ?? const []),
       );
+}
+
+/// Optional one-tap checks a pet can have on its daily log (review section 6).
+class PetChecks {
+  static const drinking = 'drinking';
+  static const accidents = 'accidents';
+  static const vomited = 'vomited';
+  static const all = [drinking, accidents, vomited];
+
+  /// The data key on a daily log, true for the concerning answer.
+  static String key(String check) => switch (check) {
+        drinking => 'drinkingMore',
+        accidents => 'accident',
+        _ => 'vomited',
+      };
+
+  static String question(String check) => switch (check) {
+        drinking => 'Drinking more than usual',
+        accidents => 'Accident indoors',
+        _ => 'Vomited',
+      };
+
+  static String why(String check) => switch (check) {
+        drinking => 'Useful for older cats and dogs, kidneys or diabetes',
+        accidents => 'Useful for puppies in house training and older pets',
+        _ => 'Useful for pets with a sensitive tummy',
+      };
 }

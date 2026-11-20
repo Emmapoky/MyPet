@@ -42,4 +42,19 @@ class Feel {
     _buzz(HapticFeedback.mediumImpact);
     await _play('saved.wav');
   }
+
+  /// The guide moves to its next step.
+  static void guideNext() {
+    _buzz(HapticFeedback.selectionClick);
+    _play('guide_next.wav');
+  }
+
+  /// The guide points at a part of the page.
+  static void spotlight() => _play('guide_spot.wav');
+
+  /// A check's result appears.
+  static void result() {
+    _buzz(HapticFeedback.lightImpact);
+    _play('result.wav');
+  }
 }

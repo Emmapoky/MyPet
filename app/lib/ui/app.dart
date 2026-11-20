@@ -55,6 +55,17 @@ class _Gate extends StatelessWidget {
   }
 }
 
+/// Leaves a page that a link may have opened as the only page: back if there is a page
+/// behind it, otherwise to the app's home.
+void leaveToHome(BuildContext context) {
+  final nav = Navigator.of(context);
+  if (nav.canPop()) {
+    nav.pop();
+  } else {
+    nav.pushAndRemoveUntil(MaterialPageRoute<void>(builder: (_) => const _Gate()), (_) => false);
+  }
+}
+
 /// The route for a deep link to the short form (mypet://app/log?pet=ID), or
 /// null for any other link, which then just opens the app.
 Route<void>? shortLogRoute(RouteSettings r) {

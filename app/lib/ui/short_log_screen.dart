@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../models/care_entry.dart';
 import '../models/pet.dart';
 import '../state/app_state.dart';
+import 'app.dart';
 import 'feedback.dart';
 import 'theme.dart';
 import 'widgets/common.dart';
@@ -119,8 +120,16 @@ class _ShortLogScreenState extends State<ShortLogScreen> {
     final pet = shortLogPet(s, petId ?? widget.petId);
     if (pet == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Quick log')),
-        body: const EmptyState(icon: Icons.pets_rounded, title: 'No pets yet', body: 'Add a pet first, then log here.'),
+        appBar: AppBar(
+          title: const Text('Quick log'),
+          leading: BackButton(onPressed: () => leaveToHome(context)),
+        ),
+        body: EmptyState(
+          icon: Icons.pets_rounded,
+          title: 'No pets yet',
+          body: 'Add a pet first, then log here.',
+          action: FilledButton(onPressed: () => leaveToHome(context), child: const Text('Go to MyPet')),
+        ),
       );
     }
     petId ??= pet.id;
@@ -130,7 +139,10 @@ class _ShortLogScreenState extends State<ShortLogScreen> {
     if (saved != null) {
       final next = pets.where((p) => !s.loggedToday(p.id)).firstOrNull;
       return Scaffold(
-        appBar: AppBar(title: const Text('Quick log')),
+        appBar: AppBar(
+          title: const Text('Quick log'),
+          leading: BackButton(onPressed: () => leaveToHome(context)),
+        ),
         body: PageWash(
           child: ListView(padding: const EdgeInsets.all(Tokens.space4), children: [
             HeroCard(
@@ -157,14 +169,17 @@ class _ShortLogScreenState extends State<ShortLogScreen> {
             if (next != null)
               FilledButton(onPressed: () => _next(next), child: Text('Next: ${next.name}'))
             else
-              FilledButton(onPressed: () => Navigator.of(context).maybePop(), child: const Text('Done')),
+              FilledButton(onPressed: () => leaveToHome(context), child: const Text('Done')),
           ]),
         ),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Quick log')),
+      appBar: AppBar(
+          title: const Text('Quick log'),
+          leading: BackButton(onPressed: () => leaveToHome(context)),
+        ),
       body: PageWash(
         child: ListView(padding: const EdgeInsets.all(Tokens.space4), children: [
           if (pets.length > 1) ...[

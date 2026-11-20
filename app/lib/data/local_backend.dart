@@ -49,17 +49,28 @@ class LocalBackend implements Backend {
     if (m['signedIn'] == true) _current = const Carer(localCarerId, null);
   }
 
-  Future<void> _save() async {
+  /// Saves run one after another, so two quick changes can never write the same temporary
+  /// file at once and leave a broken file behind.
+  Future<void> _saving = Future.value();
+
+  Future<void> _save() {
     _changes.add(null);
     final f = file;
-    if (f == null) return;
+    if (f == null) return Future.value();
+    return _saving = _saving.then((_) => _write(f)).catchError((_) {});
+  }
+
+  Future<void> _write(File f) async {
     final tmp = File('${f.path}.tmp');
-    await tmp.writeAsString(jsonEncode({
-      'signedIn': _current != null,
-      'pets': {for (final p in _pets.values) p.id: p.toMap()},
-      'entries': {for (final e in _entries.values) e.id: e.toMap()},
-      'reminders': {for (final r in _reminders.values) r.id: r.toMap()},
-    }));
+    await tmp.writeAsString(
+      jsonEncode({
+        'signedIn': _current != null,
+        'pets': {for (final p in _pets.values) p.id: p.toMap()},
+        'entries': {for (final e in _entries.values) e.id: e.toMap()},
+        'reminders': {for (final r in _reminders.values) r.id: r.toMap()},
+      }),
+      flush: true,
+    );
     await tmp.rename(f.path);
   }
 

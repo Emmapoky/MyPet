@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="MyPet test build: daily pet care log, change flags and a behaviour check, in the browser.">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="MyPet">
+  <meta name="theme-color" content="#6A4FD6">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="icon" type="image/png" href="favicon.png"/>
+  <title>MyPet (test build)</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    html, body { margin: 0; height: 100%; background: #F7F4FF; }
+    /* On a laptop the app shows at phone width, in the middle. */
+    #app { position: relative; height: 100%; width: 100%; margin: 0 auto; background: #FFFFFF; }
+    @media (min-width: 600px) {
+      body { background: #EDE8FF; }
+      #app { max-width: 430px; box-shadow: 0 0 40px rgba(60, 40, 140, 0.18); }
+    }
+    #loading { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 16px; font: 600 16px system-ui, sans-serif; color: #6A4FD6; }
+    #loading img { width: 96px; height: 96px; border-radius: 22px; }
+  </style>
+  <!-- ONNX Runtime Web 1.20.1 (CPU/wasm build): runs the behaviour models in the browser
+       (lib/web/web_engine.dart). tool/build_web.sh puts it in ort/; it is not in git. -->
+  <script src="ort/ort.wasm.min.js"></script>
+  <script>if (window.ort) { ort.env.wasm.wasmPaths = new URL('ort/', document.baseURI).href; }</script>
+  <script src="mypet_media.js"></script>
+</head>
+<body>
+  <div id="app"><div id="loading"><img src="icons/Icon-192.png" alt=""><span>Opening MyPet…</span></div></div>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

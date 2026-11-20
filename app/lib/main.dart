@@ -1,7 +1,9 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
+
+import 'util/io.dart';
 
 import 'package:material_ui/material_ui.dart';
-import 'package:path_provider/path_provider.dart';
+import 'util/paths.dart';
 
 import 'behaviour/analysis.dart' show ClipKeep;
 import 'data/bootstrap.dart';
@@ -40,6 +42,8 @@ Future<void> main() async {
     state.notificationInbox = '${(await getApplicationSupportDirectory()).path}/notification_inbox.jsonl';
   } catch (_) {}
   runApp(MyPetApp(state: state));
+  // The web build (testers' link) has no phone notifications.
+  if (kIsWeb) return;
   // Pet data arrives a moment after start; the first log opens once it is there.
   final notifications = ReminderNotifications(state, onLogNow: (petId) async {
     for (var i = 0; i < 20 && state.activePets.every((p) => p.id != petId); i++) {

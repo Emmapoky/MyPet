@@ -1,4 +1,5 @@
-import 'dart:io';
+import '../../util/io.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'package:image_picker/image_picker.dart';
 import 'package:material_ui/material_ui.dart';
@@ -55,7 +56,11 @@ Future<PhotoChoice?> pickPetPhoto(BuildContext context, {required bool hasPhoto}
     if (x == null) return null;
     final file = 'pet_${DateTime.now().millisecondsSinceEpoch}.jpg';
     await Directory(dir).create(recursive: true);
-    await File(x.path).copy('$dir/$file');
+    if (kIsWeb) {
+      await File('$dir/$file').writeAsBytes(await x.readAsBytes());
+    } else {
+      await File(x.path).copy('$dir/$file');
+    }
     return NewPhoto(file);
   } catch (_) {
     messenger.showSnackBar(const SnackBar(content: Text('Could not open photos. Allow access in Settings.')));

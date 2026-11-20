@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io';
+import '../util/media.dart';
 import 'dart:math' as math;
 
 import 'package:intl/intl.dart';
@@ -94,7 +94,11 @@ class _CheckScreenState extends State<CheckScreen> {
     _timer?.cancel();
     s.selectPet(pet.id);
     bool live() => mounted && identical(s.demoCheck, r);
-    final v = VideoPlayerController.file(File(r.clip));
+    final v = clipPlayer(r.clip);
+    if (v == null) {
+      if (live()) _demoResult(s, r, pet);
+      return;
+    }
     try {
       await v.initialize();
     } catch (_) {

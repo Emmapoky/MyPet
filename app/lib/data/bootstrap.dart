@@ -1,7 +1,7 @@
-import 'dart:io';
+import '../util/io.dart';
 
 import 'package:firebase_core/firebase_core.dart';
-import 'package:path_provider/path_provider.dart';
+import '../util/paths.dart';
 
 import '../firebase_options.dart';
 import 'backend.dart';

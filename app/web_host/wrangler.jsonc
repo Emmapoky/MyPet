@@ -1,0 +1,12 @@
+// MyPet web test build: https://mypet-test.<account>.workers.dev
+// Build first with app/tool/build_web.sh, then from app/web_host: npx wrangler deploy
+{
+  "name": "mypet-test",
+  "main": "worker.js",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "../build/web",
+    "binding": "ASSETS",
+    "run_worker_first": ["/models/*"]
+  }
+}

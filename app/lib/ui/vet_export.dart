@@ -1,7 +1,8 @@
-import 'dart:io';
+import '../util/io.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'package:material_ui/material_ui.dart';
-import 'package:path_provider/path_provider.dart';
+import '../util/paths.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -48,7 +49,11 @@ Future<void> showVetExport(BuildContext context, Pet pet) async {
   final file = File('${dir.path}/MyPet ${pet.name} last $days days.pdf');
   await file.writeAsBytes(bytes);
   await SharePlus.instance.share(ShareParams(
-    files: [XFile(file.path, mimeType: 'application/pdf')],
+    files: [
+      kIsWeb
+          ? XFile.fromData(bytes, name: file.path.split('/').last, mimeType: 'application/pdf')
+          : XFile(file.path, mimeType: 'application/pdf'),
+    ],
     subject: 'MyPet record: ${pet.name}',
     sharePositionOrigin: box == null ? null : box.localToGlobal(Offset.zero) & box.size,
   ));

@@ -1,4 +1,5 @@
-import 'dart:io';
+import '../../util/io.dart';
+import '../../util/media.dart';
 
 import 'package:material_ui/material_ui.dart';
 
@@ -37,7 +38,7 @@ class PetAvatar extends StatelessWidget {
     } else {
       final file = petPhotoFile(context.read<AppState>(), p);
       face = file != null
-          ? ClipOval(child: Image.file(file, width: size, height: size, fit: BoxFit.cover, gaplessPlayback: true))
+          ? ClipOval(child: Image(image: fileImage(file), width: size, height: size, fit: BoxFit.cover, gaplessPlayback: true))
           : PetPortrait.of(p, background: c.petAccent(p), size: size);
     }
     return ExcludeSemantics(

@@ -1,4 +1,4 @@
-import 'dart:io';
+import '../../util/media.dart';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:video_player/video_player.dart';
@@ -39,8 +39,8 @@ class _ClipReplayState extends State<ClipReplay> {
   void initState() {
     super.initState();
     final path = widget.clip;
-    if (path != null && File(path).existsSync()) {
-      final v = VideoPlayerController.file(File(path));
+    final v = path == null ? null : clipPlayer(path);
+    if (v != null) {
       _video = v;
       v.initialize().then((_) {
         if (mounted) setState(() => _ready = true);

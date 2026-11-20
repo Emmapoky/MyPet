@@ -59,3 +59,7 @@ assets/models/*
 !assets/models/.gitkeep
 assets/behaviour/*
 !assets/behaviour/.gitkeep
+
+# Web test build (tool/build_web.sh, web_host/)
+web_host/.wrangler/
+web_host/node_modules/

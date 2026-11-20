@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
 import '../behaviour/engine.dart';
+import '../behaviour/engine_factory.dart';
 import '../state/app_state.dart';
 import 'home_shell.dart';
 import 'quick_log_screen.dart';
@@ -13,7 +14,7 @@ final navigatorKey = GlobalKey<NavigatorState>();
 
 class MyPetApp extends StatelessWidget {
   MyPetApp({super.key, required this.state, BehaviourEngine? engine})
-      : engine = engine ?? PhoneBehaviourEngine();
+      : engine = engine ?? makeBehaviourEngine();
   final AppState state;
 
   /// The on-phone behaviour check. Loaded the first time the Check tab opens.

@@ -7,7 +7,7 @@
 // When the app is closed, the answer is written to a small inbox file on the phone, and
 // added to the timeline the next time MyPet opens.
 import 'dart:convert';
-import 'dart:io';
+import '../util/io.dart';
 
 import '../logging/spoken_log.dart';
 import '../models/care_entry.dart';

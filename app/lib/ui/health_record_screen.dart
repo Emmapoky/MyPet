@@ -1,4 +1,5 @@
-import 'dart:io';
+import '../util/io.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/services.dart' show rootBundle;
@@ -63,8 +64,7 @@ class _HealthRecordScreenState extends State<HealthRecordScreen> {
       // In the demo: the demo pets' vet PDFs, ready to slot in (or a real file).
       path = await pickDemoPdf(context, widget.pet.name);
     } else {
-      final picked = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['pdf']);
-      path = picked.isEmpty ? null : picked.first.path;
+      path = await pickPdfFile();
     }
     if (path == null) return;
     final file = path;
@@ -380,12 +380,22 @@ Future<String?> pickDemoPdf(BuildContext context, String petName) async {
     },
   );
   if (picked == 'files') {
-    final f = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['pdf']);
-    return f.isEmpty ? null : f.first.path;
+    return pickPdfFile();
   }
   if (picked is! DemoDocument) return null;
   final b = await rootBundle.load('assets/demo_pdfs/${picked.file}');
   final out = File('${Directory.systemTemp.path}/${picked.file}');
   await out.writeAsBytes(b.buffer.asUint8List(b.offsetInBytes, b.lengthInBytes));
+  return out.path;
+}
+
+/// Lets the person pick a PDF and returns its path. On the web build the picked file is
+/// copied into the browser store first, since a browser gives no file path.
+Future<String?> pickPdfFile() async {
+  final f = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['pdf']);
+  if (f.isEmpty) return null;
+  if (!kIsWeb) return f.first.path;
+  final out = File('${Directory.systemTemp.path}/${f.first.name}');
+  await out.writeAsBytes(await f.first.readAsBytes());
   return out.path;
 }

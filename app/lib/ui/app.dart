@@ -36,7 +36,7 @@ class MyPetApp extends StatelessWidget {
           theme: buildTheme(Brightness.light),
           darkTheme: buildTheme(Brightness.dark),
           home: const _Gate(),
-          // mypet://log?pet=ID, from the home and lock-screen widgets: the short form.
+          // mypet://app/log?pet=ID (Flutter hands the Navigator "/log?pet=ID"), from the home and lock-screen widgets: the short form.
           onGenerateRoute: shortLogRoute,
           ),
         ),
@@ -54,7 +54,7 @@ class _Gate extends StatelessWidget {
   }
 }
 
-/// The route for a deep link to the short form (mypet://log, mypet://log?pet=ID), or
+/// The route for a deep link to the short form (mypet://app/log?pet=ID), or
 /// null for any other link, which then just opens the app.
 Route<void>? shortLogRoute(RouteSettings r) {
   final uri = Uri.tryParse(r.name ?? '');

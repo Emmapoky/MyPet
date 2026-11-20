@@ -10,7 +10,7 @@ import 'feedback.dart';
 import 'theme.dart';
 import 'widgets/common.dart';
 
-/// The short form the home and lock-screen widgets open (mypet://log?pet=ID): one big
+/// The short form the home and lock-screen widgets open (mypet://app/log?pet=ID): one big
 /// "All normal" button, or three rows for what was different, then a confirmation with
 /// Undo for 10 seconds. No clip, weight or note here; the full log has those.
 class ShortLogScreen extends StatefulWidget {

@@ -294,23 +294,32 @@ const lockFrame = (name) => {
   T(body, 'Shows "Done" when every pet is logged', 13, 'r', P.inkSoft, { w: 'fill' });
   NX.done = s;
 }
-// Settings: which doors are on
+// Settings > Quick log: a card inside Settings (app 5a289aa)
 {
-  const { s, body } = phone('Quick-log doors', { title: 'Quick log', back: true });
-  T(body, 'Choose how you log fast', 16, 'r', P.inkSoft, { w: 'fill' });
-  for (const [ic, t, sub, on] of [['notifications', 'Reminder buttons', 'All normal from the notification', true], ['mic', 'Voice', 'Say how the day went', true], ['graphic_eq', 'Siri', '"Tell MyPet about today"', true], ['widgets', 'Widgets', 'Home and lock screen', false], ['edit_note', 'Short form', 'Three taps, one save', true], ['add_to_home_screen', 'Web: Quick log icon', 'Home Screen icon opens /#/log', true]]) {
-    const c = card(body, { gap: 0 }); const r = AL('h', { gap: 12, align: 'CENTER', parent: c, fillW: true });
-    circle(r, 44, P.brandC, ic, P.brand, 24); const tt = AL('v', { gap: 2, parent: r, grow: true }); T(tt, t, 17, 'h', P.ink); T(tt, sub, 13, 'r', P.inkSoft);
-    const sw = AL('h', { fill: on ? P.brand : P.track, r: 999, pad: 3, parent: r, align: 'CENTER' }); sw.resize(52, 30); sw.primaryAxisSizingMode = 'FIXED'; sw.counterAxisSizingMode = 'FIXED'; sw.primaryAxisAlignItems = on ? 'MAX' : 'MIN'; circle(sw, 24, P.white);
+  const { s, body } = phone('Settings, Quick log', { title: 'Settings', back: true });
+  const c = card(body, { gap: 4 }); T(c, 'Quick log', 20, 'hx', P.ink);
+  const sw = (r, on) => { const w = AL('h', { fill: on ? P.brand : P.track, r: 999, pad: 3, parent: r, align: 'CENTER' }); w.resize(52, 30); w.primaryAxisSizingMode = 'FIXED'; w.counterAxisSizingMode = 'FIXED'; w.primaryAxisAlignItems = on ? 'MAX' : 'MIN'; circle(w, 24, P.white); };
+  for (const [ic, t, sub, kind] of [['notifications', 'Reminder buttons', 'All normal from the notification', 1], ['mic', 'Voice', 'Say how the day went', 1], ['edit_note', 'Short form', 'Three taps, one save', 1], ['graphic_eq', 'Siri', 'Say "Tell MyPet about today". Add or remove it in the Shortcuts app.', 0], ['widgets', 'Widgets', 'Add or remove MyPet on your Home Screen or lock screen.', 0]]) {
+    const r = AL('h', { gap: 12, align: 'CENTER', pad: [8, 0, 8, 0], parent: c, fillW: true });
+    circle(r, 40, P.brandC, ic, P.brand, 22); const tt = AL('v', { gap: 2, parent: r, grow: true }); T(tt, t, 16, 'h', P.ink); T(tt, sub, 13, 'r', P.inkSoft, { w: 'fill' });
+    if (kind) sw(r, true); else I(r, 'info', 22, P.inkSoft);
   }
+  T(body, 'Off: Reminder buttons = reminder only says "Tap to log." · Voice = voice card hidden · Short form = widgets and links open the full daily log', 13, 'r', P.inkSoft, { w: 'fill' });
   NX.doors = s;
 }
-
+// Web build only: Quick log icon replaces the Siri and Widgets info rows
+{
+  const { s, body } = phone('Settings, Quick log (web)', { title: 'Settings', back: true });
+  const c = card(body, { gap: 4 }); T(c, 'Quick log', 20, 'hx', P.ink);
+  const r = AL('h', { gap: 12, align: 'CENTER', pad: [8, 0, 8, 0], parent: c, fillW: true });
+  circle(r, 40, P.brandC, 'add_to_home_screen', P.brand, 22); const tt = AL('v', { gap: 2, parent: r, grow: true }); T(tt, 'Quick log icon', 16, 'h', P.ink); T(tt, 'Open this page at /#/log, then Share > Add to Home Screen', 13, 'r', P.inkSoft, { w: 'fill' });
+  NX.doorsWeb = s;
+}
 STAGE = 'layout';
 const r1 = flowRow('1 · Five doors, one tap or less');
 labelled(r1, 'Notification (hold)', NX.notif); labelled(r1, 'Siri', NX.siri); labelled(r1, 'Voice', NX.voice); labelled(r1, 'Widgets (lock + home)', NX.widgets); labelled(r1, 'Short form', NX.short); labelled(r1, 'Short form, not complete', NX.short2);
 const r2 = flowRow('2 · After the log, and settings');
-labelled(r2, 'Confirmation', NX.done); labelled(r2, 'Quick-log doors', NX.doors);
+labelled(r2, 'Confirmation', NX.done); labelled(r2, 'Settings > Quick log', NX.doors); labelled(r2, 'Settings > Quick log (web)', NX.doorsWeb);
 const nb = AL('v', { fill: P.surface, r: 28, pad: 36, gap: 14, parent: r2, shadow: true, name: 'Rules'}); nb.resize(560, 100); nb.primaryAxisSizingMode = 'AUTO';
 T(nb, 'Rules for every door', 28, 'hx', P.ink);
 for (const t of ['One tap = "All normal" for the selected pet.', 'Every door ends on the same confirmation, with Undo for 10 seconds.', 'Widgets open mypet://app/log on the short form. Save needs all three rows answered.', 'Same log entry as the full Quick log: one record, no duplicates.', 'Pet comes from the notification, or the last pet used.', 'Widgets only open the app on the short form (deep link); they never log by themselves.']) { const l = AL('h', { gap: 10, parent: nb, fillW: true }); I(l, 'check_circle', 20, P.brand); T(l, t, 17, 'r', P.ink, { grow: true }); }

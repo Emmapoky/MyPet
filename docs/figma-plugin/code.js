@@ -618,6 +618,13 @@ const NX = {};
     button(body, 'Send to Erwyna', { fill: true, icon: 'send' }); button(body, 'Copy results', { kind: 'outlined' }); button(body, 'Run again', { kind: 'text' });
     NX.test3 = s; }
 }
+// App icon (app 9190432): paw inset 64 of 1024, sun dot, hero gradient, full-bleed square
+{
+  const s = figma.createFrame(); s.name = 'App icon'; s.resize(340, 340); s.cornerRadius = 76; s.clipsContent = true; s.fills = grad(P.heroA, P.heroB);
+  s.layoutMode = 'VERTICAL'; s.primaryAxisAlignItems = 'CENTER'; s.counterAxisAlignItems = 'CENTER'; s.primaryAxisSizingMode = 'FIXED'; s.counterAxisSizingMode = 'FIXED';
+  I(s, 'pets', 200, P.white); const d = circle(s, 40, P.sun); d.layoutPositioning = 'ABSOLUTE'; d.x = 236; d.y = 60;
+  NX.icon = s;
+}
 // Saved clips setting
 {
   const { s, body } = phone('Saved clips', { title: 'Saved clips', back: true });
@@ -699,7 +706,7 @@ const NX = {};
 const row3 = flowRow('New in the app (20 Nov)');
 labelled(row3, 'Pet profile', NX.profile); labelled(row3, 'Walkthrough', NX.tour); labelled(row3, 'Try a demo', NX.demo);
 labelled(row3, 'Notification quick-fill', NX.notif); labelled(row3, 'Voice log', NX.voice); labelled(row3, 'Siri shortcut', NX.siri);
-labelled(row3, 'Widgets (not built)', NX.widgets); labelled(row3, 'Guide and FAQ', NX.guide); labelled(row3, 'Test this phone', NX.test1); labelled(row3, 'Test running', NX.test2); labelled(row3, 'Test result', NX.test3); labelled(row3, 'Saved clips', NX.clips); labelled(row3, 'Vet PDF import', NX.pdf);
+labelled(row3, 'Widgets (not built)', NX.widgets); labelled(row3, 'Guide and FAQ', NX.guide); labelled(row3, 'App icon', NX.icon); labelled(row3, 'Test this phone', NX.test1); labelled(row3, 'Test running', NX.test2); labelled(row3, 'Test result', NX.test3); labelled(row3, 'Saved clips', NX.clips); labelled(row3, 'Vet PDF import', NX.pdf);
 const row4 = flowRow('Pet-owner review changes (in the app 20 Nov)');
 labelled(row4, 'Insights, weight', NX.weight); labelled(row4, 'Quick log, extras', NX.extras); labelled(row4, 'Pet details', NX.details); labelled(row4, 'Pet page', NX.petpage);
 
@@ -727,6 +734,8 @@ STAGE = 'Tracker';
     ['Demo: log by voice while driving', '', 'Drawn', 'In app'],
     ['Siri: Tell MyPet, All normal today', '', 'Drawn', 'In app'],
     ['Guide and FAQ (More, below Try a demo)', '', 'Drawn', 'In app'],
+    ['App icon (paw, sun dot, hero gradient)', '', 'Drawn', 'In app'],
+    ['Settings > Quick log card (3 switches, Siri and Widgets info rows)', '', 'Drawn', 'In app'],
     ['More > Test this phone (timing test, 3 states)', '', 'Drawn', 'In app'],
     ['Home and lock-screen widgets', '', 'Drawn', 'Not in the app']
   ];

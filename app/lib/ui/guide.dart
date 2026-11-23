@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
@@ -106,101 +109,141 @@ List<GuideStep> carlSteps() => const [
           petName: 'Biscuit'),
     ];
 
-/// A full-screen scene for the driving demo: Carl in the car, then a close-up of Carl
-/// with MyPet's reminder arriving.
-class VoiceScene extends StatelessWidget {
+/// Soft in-car sound for the driving demo: road and engine, very quiet, looped. Starts with
+/// the driving scene, carries on under Carl's voice note, and fades out once he parks.
+/// Off when the app's sounds are off; the speaker button on the scene mutes it.
+class DriveSound {
+  static AudioPlayer? _player;
+  static Timer? _fade;
+  static bool muted = false;
+  static final on = ValueNotifier<bool>(true);
+  static const _volume = 0.22;
+
+  static bool get _allowed =>
+      Feel.sounds && !const bool.fromEnvironment('FLUTTER_TEST') && !Platform.environment.containsKey('FLUTTER_TEST');
+
+  static Future<void> start() async {
+    on.value = !muted;
+    if (!_allowed || _player != null) return;
+    final p = _player = AudioPlayer();
+    try {
+      await p.setAudioContext(AudioContextConfig(focus: AudioContextConfigFocus.mixWithOthers).build());
+      await p.setReleaseMode(ReleaseMode.loop);
+      await p.play(AssetSource('demo_voice/drive_ambience.m4a'), volume: 0);
+      if (!muted) _ramp(_volume, 1200);
+    } catch (_) {}
+  }
+
+  static void setMuted(bool m) {
+    muted = m;
+    on.value = !m;
+    _ramp(m ? 0 : _volume, 400);
+  }
+
+  /// Engine off: a slow fade, then the player goes.
+  static void stop() {
+    final p = _player;
+    if (p == null) return;
+    _ramp(0, 1500, then: () {
+      p.dispose();
+      if (identical(_player, p)) _player = null;
+    });
+  }
+
+  static void _ramp(double to, int ms, {VoidCallback? then}) {
+    final p = _player;
+    _fade?.cancel();
+    if (p == null) return then?.call();
+    final from = p.volume;
+    var i = 0;
+    const steps = 15;
+    _fade = Timer.periodic(Duration(milliseconds: ms ~/ steps), (t) {
+      i++;
+      p.setVolume(from + (to - from) * i / steps).catchError((_) {});
+      if (i >= steps) {
+        t.cancel();
+        then?.call();
+      }
+    });
+  }
+}
+
+/// The scene's palette: a soft day in light mode, a calm night in dark mode, in the app's
+/// violet family. Flat fills only.
+class _DriveColors {
+  const _DriveColors({
+    required this.sky,
+    required this.sun,
+    required this.hillFar,
+    required this.hillNear,
+    required this.ground,
+    required this.road,
+    required this.lane,
+    required this.post,
+    required this.body,
+    required this.bodyShade,
+    required this.glass,
+    required this.tyre,
+    required this.light,
+    required this.dash,
+    required this.wheel,
+  });
+  final Color sky, sun, hillFar, hillNear, ground, road, lane, post;
+  final Color body, bodyShade, glass, tyre, light, dash, wheel;
+
+  static _DriveColors of(BuildContext context) => Theme.of(context).brightness == Brightness.dark ? night : day;
+
+  static const day = _DriveColors(
+    sky: Color(0xFFF3F0FF),
+    sun: Color(0xFFFFE3A1),
+    hillFar: Color(0xFFE3DCFA),
+    hillNear: Color(0xFFD3C8F5),
+    ground: Color(0xFFE9E3FB),
+    road: Color(0xFF5F5794),
+    lane: Color(0xFFFFFFFF),
+    post: Color(0xFFFFFFFF),
+    body: Color(0xFF6A4FD6),
+    bodyShade: Color(0xFF5B43BF),
+    glass: Color(0xFF3A3170),
+    tyre: Color(0xFF2B2550),
+    light: Color(0xFFFFC94D),
+    dash: Color(0xFF3B3468),
+    wheel: Color(0xFF26214A),
+  );
+
+  static const night = _DriveColors(
+    sky: Color(0xFF1B1735),
+    sun: Color(0xFFF3EAC6),
+    hillFar: Color(0xFF26214A),
+    hillNear: Color(0xFF2E2858),
+    ground: Color(0xFF221D42),
+    road: Color(0xFF37315F),
+    lane: Color(0xFFF6E7B0),
+    post: Color(0xFF8D84C2),
+    body: Color(0xFF8B75F0),
+    bodyShade: Color(0xFF7760DB),
+    glass: Color(0xFF221D45),
+    tyre: Color(0xFF15122B),
+    light: Color(0xFFFF8FA8),
+    dash: Color(0xFF141128),
+    wheel: Color(0xFF0D0B1E),
+  );
+}
+
+/// A full-screen scene for the driving demo: Carl's car on the road, then the view from
+/// the driver's seat as MyPet's reminder arrives.
+class VoiceScene extends StatefulWidget {
   const VoiceScene({super.key, required this.closeUp, required this.petName});
   final bool closeUp;
   final String petName;
 
   @override
-  Widget build(BuildContext context) {
-    final t = Theme.of(context);
-    final c = MyPetColors.of(context);
-    return Scaffold(
-      backgroundColor: const Color(0xFF1E1B3A),
-      body: Stack(fit: StackFit.expand, children: [
-        const DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFF3B2F73), Color(0xFFE98A6B), Color(0xFF2B2740)],
-              stops: [0, 0.55, 0.56],
-            ),
-          ),
-        ),
-        if (!closeUp) ...[
-          const Positioned(left: 0, right: 0, bottom: 0, height: 260, child: _Road()),
-          Align(
-            alignment: const Alignment(0, 0.35),
-            child: Semantics(
-              label: 'Carl driving home',
-              child: Icon(Icons.directions_car_filled_rounded, size: 150, color: c.brand),
-            ),
-          ),
-        ] else
-          Center(
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const CarerFace(name: 'Carl', size: 180),
-              const SizedBox(height: Tokens.space4),
-              Text('Carl', style: t.textTheme.headlineSmall!.copyWith(color: Colors.white)),
-            ]),
-          ),
-        if (closeUp)
-          Positioned(
-            top: MediaQuery.paddingOf(context).top + Tokens.space3,
-            left: Tokens.space3,
-            right: Tokens.space3,
-            child: TweenAnimationBuilder<double>(
-              tween: Tween(begin: -1, end: 0),
-              duration: const Duration(milliseconds: 600),
-              curve: Curves.easeOutBack,
-              builder: (_, v, child) => FractionalTranslation(translation: Offset(0, v), child: child),
-              child: Material(
-                color: Colors.white.withValues(alpha: 0.92),
-                borderRadius: BorderRadius.circular(22),
-                child: Padding(
-                  padding: const EdgeInsets.all(Tokens.space4),
-                  child: Row(children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        color: c.brand,
-                        child: const Icon(Icons.pets_rounded, color: Colors.white),
-                      ),
-                    ),
-                    const SizedBox(width: Tokens.space3),
-                    Expanded(
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text('MyPet · now', style: t.textTheme.labelMedium!.copyWith(color: Colors.black54)),
-                        Text("How was $petName's day?",
-                            style: t.textTheme.titleSmall!.copyWith(color: Colors.black87)),
-                        Text('Hold to answer here, or tap to open.',
-                            style: t.textTheme.bodySmall!.copyWith(color: Colors.black54)),
-                      ]),
-                    ),
-                  ]),
-                ),
-              ),
-            ),
-          ),
-      ]),
-    );
-  }
+  State<VoiceScene> createState() => _VoiceSceneState();
 }
 
-/// The road, with lane marks rushing past.
-class _Road extends StatefulWidget {
-  const _Road();
-  @override
-  State<_Road> createState() => _RoadState();
-}
-
-class _RoadState extends State<_Road> with SingleTickerProviderStateMixin {
-  late final _move = AnimationController(vsync: this, duration: const Duration(milliseconds: 700));
+class _VoiceSceneState extends State<VoiceScene> with SingleTickerProviderStateMixin {
+  // One slow loop drives everything: lane marks, roadside posts and the car's gentle sway.
+  late final _move = AnimationController(vsync: this, duration: const Duration(milliseconds: 1600));
 
   @override
   void initState() {
@@ -208,6 +251,8 @@ class _RoadState extends State<_Road> with SingleTickerProviderStateMixin {
     // Endless only on a real device; a test would never settle.
     if (!const bool.fromEnvironment('FLUTTER_TEST') && !Platform.environment.containsKey('FLUTTER_TEST')) {
       _move.repeat();
+    } else {
+      _move.value = 0.35;
     }
   }
 
@@ -218,37 +263,319 @@ class _RoadState extends State<_Road> with SingleTickerProviderStateMixin {
   }
 
   @override
-  Widget build(BuildContext context) => AnimatedBuilder(
-        animation: _move,
-        builder: (_, _) => CustomPaint(painter: _RoadPainter(_move.value)),
-      );
+  Widget build(BuildContext context) {
+    final d = _DriveColors.of(context);
+    final top = MediaQuery.paddingOf(context).top;
+    return Scaffold(
+      backgroundColor: d.sky,
+      body: Stack(fit: StackFit.expand, children: [
+        Semantics(
+          label: widget.closeUp ? 'The road from the driver\'s seat' : 'Carl driving home',
+          child: AnimatedBuilder(
+            animation: _move,
+            builder: (_, _) => CustomPaint(painter: _DrivePainter(_move.value, d, inside: widget.closeUp)),
+          ),
+        ),
+        if (widget.closeUp)
+          Positioned(
+            top: top + Tokens.space3 + 56,
+            left: Tokens.space4,
+            right: Tokens.space4,
+            child: _ReminderBanner(petName: widget.petName),
+          ),
+        Positioned(top: top + Tokens.space2, right: Tokens.space3, child: const _SoundButton()),
+      ]),
+    );
+  }
 }
 
-class _RoadPainter extends CustomPainter {
-  _RoadPainter(this.v);
+/// Mutes or unmutes the driving sound.
+class _SoundButton extends StatelessWidget {
+  const _SoundButton();
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final fg = dark ? Colors.white : const Color(0xFF3B3468);
+    return ValueListenableBuilder<bool>(
+      valueListenable: DriveSound.on,
+      builder: (_, on, _) => Semantics(
+        button: true,
+        label: on ? 'Mute road sound' : 'Play road sound',
+        child: Material(
+          color: fg.withValues(alpha: 0.08),
+          shape: const CircleBorder(),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: () => DriveSound.setMuted(on),
+            child: SizedBox(
+              width: Tokens.minTarget,
+              height: Tokens.minTarget,
+              child: Icon(on ? Icons.volume_up_rounded : Icons.volume_off_rounded, size: 22, color: fg),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// MyPet's evening reminder, sliding down like a phone notification.
+class _ReminderBanner extends StatelessWidget {
+  const _ReminderBanner({required this.petName});
+  final String petName;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    final c = MyPetColors.of(context);
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 1, end: 0),
+      duration: const Duration(milliseconds: 650),
+      curve: Curves.easeOutCubic,
+      builder: (_, v, child) => Opacity(
+        opacity: 1 - v,
+        child: FractionalTranslation(translation: Offset(0, -0.4 * v), child: child),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(Tokens.space4),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(Tokens.radiusHero),
+          boxShadow: const [BoxShadow(color: Color(0x141B1735), blurRadius: 16, offset: Offset(0, 4))],
+        ),
+        child: Row(children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(color: c.brand, borderRadius: BorderRadius.circular(10)),
+            child: const Icon(Icons.pets_rounded, color: Colors.white, size: 22),
+          ),
+          const SizedBox(width: Tokens.space3),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Text('MyPet', style: t.textTheme.labelMedium!.copyWith(color: const Color(0xFF6B6690))),
+                const Spacer(),
+                Text('now', style: t.textTheme.labelSmall!.copyWith(color: const Color(0xFF8D88A8))),
+              ]),
+              const SizedBox(height: 2),
+              Text("How was $petName's day?",
+                  style: t.textTheme.titleSmall!.copyWith(color: const Color(0xFF1F1A3D))),
+              Text('Hold to answer by voice',
+                  style: t.textTheme.bodySmall!.copyWith(color: const Color(0xFF6B6690))),
+            ]),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+/// The whole scene in flat shapes: sky, sun (or moon), two lines of hills, the road with
+/// lane marks and posts rushing past, then either Carl's car from behind or the inside of
+/// the car (windscreen frame, dashboard, steering wheel and his phone on its mount).
+class _DrivePainter extends CustomPainter {
+  _DrivePainter(this.v, this.c, {required this.inside});
   final double v;
+  final _DriveColors c;
+  final bool inside;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final road = Path()
-      ..moveTo(size.width * 0.42, 0)
-      ..lineTo(size.width * 0.58, 0)
-      ..lineTo(size.width, size.height)
-      ..lineTo(0, size.height)
-      ..close();
-    canvas.drawPath(road, Paint()..color = const Color(0xFF3A3650));
-    final mark = Paint()..color = const Color(0xFFF6E7B0);
-    for (var i = 0; i < 6; i++) {
-      final f = ((i + v) / 6);
-      final y = f * f * size.height;
-      final h = 6 + 30 * f;
-      final w = 2 + 8 * f;
-      canvas.drawRect(Rect.fromCenter(center: Offset(size.width / 2, y), width: w, height: h), mark);
+    final w = size.width, h = size.height;
+    final horizon = h * (inside ? 0.40 : 0.50);
+    final p = Paint()..isAntiAlias = true;
+
+    canvas.drawRect(Offset.zero & size, p..color = c.sky);
+    canvas.drawCircle(Offset(w * 0.74, horizon - h * 0.13), w * 0.085, p..color = c.sun);
+
+    Path hills(double base, double amp, double phase) {
+      final path = Path()..moveTo(0, h);
+      for (var x = 0.0; x <= w; x += 4) {
+        final y = base - amp * (0.6 + 0.4 * math.sin(x / w * 2.4 * math.pi + phase)) * (0.7 + 0.3 * math.sin(x / w * 5.3 + phase * 2));
+        path.lineTo(x, y);
+      }
+      return path
+        ..lineTo(w, h)
+        ..close();
+    }
+
+    canvas.drawPath(hills(horizon, h * 0.07, 0.8), p..color = c.hillFar);
+    canvas.drawPath(hills(horizon + 1, h * 0.035, 2.6), p..color = c.hillNear);
+    canvas.drawRect(Rect.fromLTRB(0, horizon, w, h), p..color = c.ground);
+
+    // Road in perspective, every line meeting at one point on the horizon. Carl keeps left
+    // (as in Malaysia and Australia), so the centre line runs to the right of his lane.
+    final cx = w / 2;
+    final bottom = inside ? h * 0.80 : h;
+    final (left, right, mid) = inside ? (-0.80 * w, 0.95 * w, 0.30 * w) : (-0.62 * w, 0.98 * w, 0.22 * w);
+    double k(double y) => ((y - horizon) / (bottom - horizon)).clamp(0.0, 1.0);
+    double xAt(double edge, double y) => cx + edge * k(y);
+    canvas.drawPath(
+        Path()
+          ..moveTo(cx - 1, horizon)
+          ..lineTo(cx + 1, horizon)
+          ..lineTo(xAt(right, bottom), bottom)
+          ..lineTo(xAt(left, bottom), bottom)
+          ..close(),
+        p..color = c.road);
+
+    // Lane marks and roadside posts, spaced evenly in depth, so they speed up as they near.
+    const n = 7;
+    for (var i = 0; i < n; i++) {
+      final f = (i + v) / n;
+      final e = f * f * f;
+      final y0 = horizon + (bottom - horizon) * e;
+      final f1 = (i + v + 0.45) / n;
+      final y1 = math.min(bottom, horizon + (bottom - horizon) * f1 * f1 * f1);
+      final lw0 = w * 0.016 * k(y0), lw1 = w * 0.016 * k(y1);
+      final m0 = xAt(mid, y0), m1 = xAt(mid, y1);
+      canvas.drawPath(
+          Path()
+            ..moveTo(m0 - lw0, y0)
+            ..lineTo(m0 + lw0, y0)
+            ..lineTo(m1 + lw1, y1)
+            ..lineTo(m1 - lw1, y1)
+            ..close(),
+          p..color = c.lane.withValues(alpha: 0.9));
+      final postH = 6 + 70 * e;
+      final postW = 1.5 + 6 * e;
+      for (final edge in [left * 1.12, right * 1.08]) {
+        final x = xAt(edge, y0);
+        canvas.drawRRect(
+            RRect.fromRectAndRadius(Rect.fromLTWH(x - postW / 2, y0 - postH, postW, postH), Radius.circular(postW / 2)),
+            p..color = c.post.withValues(alpha: 0.35 + 0.6 * e));
+      }
+    }
+
+    if (inside) {
+      _cabin(canvas, size, p);
+    } else {
+      final y = h * 0.80;
+      _car(canvas, Offset((xAt(left, y) + xAt(mid, y)) / 2, y), w * 0.46, p);
     }
   }
 
+  /// Carl's car from behind, with a gentle sway as it drives.
+  void _car(Canvas canvas, Offset at, double cw, Paint p) {
+    final bob = math.sin(v * 2 * math.pi * 2) * 1.2;
+    canvas.save();
+    canvas.translate(at.dx, at.dy + bob);
+    final bh = cw * 0.34; // lower body height
+    canvas.drawOval(Rect.fromCenter(center: Offset(0, bh * 0.62 - bob), width: cw * 1.08, height: cw * 0.10),
+        p..color = const Color(0x22000000));
+    for (final s in [-1.0, 1.0]) {
+      canvas.drawRRect(
+          RRect.fromRectAndRadius(
+              Rect.fromCenter(center: Offset(s * cw * 0.36, bh * 0.48), width: cw * 0.17, height: bh * 0.34),
+              Radius.circular(cw * 0.04)),
+          p..color = c.tyre);
+    }
+    // Cabin and rear window.
+    final roof = Path()
+      ..moveTo(-cw * 0.40, -bh * 0.02)
+      ..lineTo(-cw * 0.30, -bh * 0.82)
+      ..quadraticBezierTo(-cw * 0.28, -bh * 0.92, -cw * 0.20, -bh * 0.92)
+      ..lineTo(cw * 0.20, -bh * 0.92)
+      ..quadraticBezierTo(cw * 0.28, -bh * 0.92, cw * 0.30, -bh * 0.82)
+      ..lineTo(cw * 0.40, -bh * 0.02)
+      ..close();
+    canvas.drawPath(roof, p..color = c.bodyShade);
+    final glass = Path()
+      ..moveTo(-cw * 0.33, -bh * 0.10)
+      ..lineTo(-cw * 0.255, -bh * 0.76)
+      ..lineTo(cw * 0.255, -bh * 0.76)
+      ..lineTo(cw * 0.33, -bh * 0.10)
+      ..close();
+    canvas.drawPath(glass, p..color = c.glass);
+    // A tiny head and shoulders: Carl at the wheel.
+    canvas.drawCircle(Offset(cw * 0.10, -bh * 0.42), cw * 0.055, p..color = c.bodyShade);
+    canvas.drawRRect(
+        RRect.fromRectAndCorners(Rect.fromCenter(center: Offset(cw * 0.10, -bh * 0.17), width: cw * 0.20, height: bh * 0.22),
+            topLeft: Radius.circular(cw * 0.06), topRight: Radius.circular(cw * 0.06)),
+        p);
+    // Lower body.
+    final body = RRect.fromRectAndRadius(Rect.fromLTRB(-cw / 2, -bh * 0.08, cw / 2, bh * 0.52), Radius.circular(cw * 0.09));
+    canvas.drawRRect(body, p..color = c.body);
+    // Tail lights, plate and a bumper line.
+    for (final s in [-1.0, 1.0]) {
+      canvas.drawRRect(
+          RRect.fromRectAndRadius(
+              Rect.fromCenter(center: Offset(s * cw * 0.36, bh * 0.10), width: cw * 0.16, height: bh * 0.12),
+              Radius.circular(bh * 0.06)),
+          p..color = c.light);
+    }
+    canvas.drawRRect(
+        RRect.fromRectAndRadius(Rect.fromCenter(center: Offset(0, bh * 0.20), width: cw * 0.22, height: bh * 0.14),
+            Radius.circular(bh * 0.04)),
+        p..color = Colors.white.withValues(alpha: 0.92));
+    canvas.drawRRect(
+        RRect.fromRectAndRadius(Rect.fromLTRB(-cw * 0.44, bh * 0.38, cw * 0.44, bh * 0.43), Radius.circular(bh * 0.03)),
+        p..color = c.bodyShade);
+    canvas.restore();
+  }
+
+  /// The driver's view: windscreen frame, dashboard, wheel and the phone on its mount.
+  void _cabin(Canvas canvas, Size size, Paint p) {
+    final w = size.width, h = size.height;
+    p.color = c.dash;
+    // Roof edge and pillars.
+    canvas.drawPath(
+        Path()
+          ..moveTo(0, 0)
+          ..lineTo(w, 0)
+          ..lineTo(w, h * 0.10)
+          ..quadraticBezierTo(w / 2, h * 0.035, 0, h * 0.10)
+          ..close(),
+        p);
+    canvas.drawPath(Path()..moveTo(0, 0)..lineTo(w * 0.10, 0)..lineTo(0, h * 0.70)..close(), p);
+    canvas.drawPath(Path()..moveTo(w, 0)..lineTo(w * 0.90, 0)..lineTo(w, h * 0.70)..close(), p);
+    // Dashboard.
+    final dashTop = h * 0.74;
+    canvas.drawPath(
+        Path()
+          ..moveTo(0, dashTop + h * 0.02)
+          ..quadraticBezierTo(w / 2, dashTop - h * 0.035, w, dashTop + h * 0.02)
+          ..lineTo(w, h)
+          ..lineTo(0, h)
+          ..close(),
+        p);
+    // Steering wheel, swaying a touch.
+    final sway = math.sin(v * 2 * math.pi) * 0.025;
+    canvas.save();
+    canvas.translate(w * 0.64, h * 1.02);
+    canvas.rotate(sway);
+    final r = w * 0.36;
+    canvas.drawCircle(Offset.zero, r, Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = w * 0.045
+      ..color = c.wheel);
+    final spoke = Paint()
+      ..color = c.wheel
+      ..strokeWidth = w * 0.035
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(Offset(-r, -r * 0.05), Offset(-r * 0.2, -r * 0.12), spoke);
+    canvas.drawLine(Offset(r, -r * 0.05), Offset(r * 0.2, -r * 0.12), spoke);
+    canvas.drawCircle(Offset(0, -r * 0.08), r * 0.24, Paint()..color = c.wheel);
+    canvas.restore();
+    // Phone on its mount, screen lit with MyPet's colour.
+    final phone = RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset(w * 0.18, dashTop - h * 0.045), width: w * 0.15, height: w * 0.27),
+        Radius.circular(w * 0.03));
+    canvas.drawRect(Rect.fromCenter(center: Offset(w * 0.18, dashTop + h * 0.02), width: w * 0.03, height: h * 0.05),
+        p..color = c.wheel);
+    canvas.drawRRect(phone, p..color = c.wheel);
+    canvas.drawRRect(phone.deflate(w * 0.008), p..color = const Color(0xFF6A4FD6));
+    canvas.drawRRect(
+        RRect.fromRectAndRadius(
+            Rect.fromCenter(center: phone.center.translate(0, -w * 0.06), width: w * 0.11, height: w * 0.045),
+            Radius.circular(w * 0.01)),
+        p..color = Colors.white.withValues(alpha: 0.9));
+  }
+
   @override
-  bool shouldRepaint(_RoadPainter old) => old.v != v;
+  bool shouldRepaint(_DrivePainter old) => old.v != v || old.c != c || old.inside != inside;
 }
 
 /// A demo owner's face: a friendly drawn person in the brand colours.
@@ -472,6 +799,13 @@ class _GuideHostState extends State<GuideHost> {
     if (key != _stepKey) {
       _stepKey = key;
       if (g != null) _perform(s, g);
+      // The road sound plays while Carl drives and fades out once he parks.
+      final open = g?.steps[g.at].open;
+      if (open == GuideOpen.driving || open == GuideOpen.closeUp || open == GuideOpen.voiceLog) {
+        DriveSound.start();
+      } else {
+        DriveSound.stop();
+      }
     }
     if (s.guide != null && _entry == null) {
       final nav = Navigator.of(context);
@@ -500,6 +834,7 @@ class _GuideHostState extends State<GuideHost> {
 
   @override
   void dispose() {
+    DriveSound.stop();
     _remove();
     super.dispose();
   }

@@ -59,7 +59,7 @@ More > Try a demo. Your own pets are never touched. In every story, Next moves t
 2. **"A cat off her food" (Mochi).** Ate went Some, then None: the flag on Today and Insights, Check plays her hiss at the vacuum, Settings > Saved clips (video, sound only, or results only).
 3. **"A happy, healthy puppy" (Pepper).** Everything calm; his weight chart climbs every week and MyPet expects that.
 4. **"A new kitten" (Bean).** Only 4 days of logs: Insights waits and shows "Getting to know Bean" instead.
-5. **"Log by voice while driving" (Carl).** A car on the road, a close-up of Carl as MyPet's reminder arrives, then the daily log fills itself in as his voice note plays: Ate flips from None to All when he corrects himself, energy 2, toileting normal, 10.4 kg, the note. Then Save.
+5. **"Log by voice while driving" (Carl).** Carl's car on the road, then the view from his seat as MyPet's reminder arrives (with quiet road sound you can mute), then the daily log fills itself in as his voice note plays: Ate flips from None to All when he corrects himself, energy 2, toileting normal, 10.4 kg, the note. Then Save.
 
 Tip for recording: on a Mac, run the app in the iPhone Simulator (iPhone 17 Pro Max) and use the Simulator's File > Record Screen, or QuickTime. The Simulator has no camera, so film real checks on the iPhone; the demo's Check steps play their clips without a camera.
 

@@ -40,9 +40,9 @@ void main() {
 
   test("the demo's driving voice note fills every answer", () {
     final h = readSpokenLogs(
-        "Hey, quick one for Biscuit. So he didn't eat his breakfast this morning oh wait no he did, he finished it "
-        "after his walk. He's been a bit tired today, energy 2. Normal poo on the walk. And he was 10.4 kg at the vet. "
-        "That's it, thanks.",
+        "Hey, so, quick one for Biscuit. So he didn't eat his breakfast this morning, oh wait, no, he did. He finished "
+        "it after his walk. He's been a bit tired today, so energy 2. Normal poo on the walk too. Oh, and he was 10.4 "
+        "kilos at the vet. Yeah, that's it. Thanks!",
         ['Biscuit', 'Mochi'],
         fallback: 'Biscuit')['Biscuit']!;
     expect(h.ateAmount, 'all');

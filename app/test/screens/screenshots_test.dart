@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart' show Scrollable, NavigatorState, Navigator;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart' show Brightness, MaterialApp, MaterialPageRoute, ThemeMode;
+import 'package:mypet/ui/settings_screen.dart';
 import 'package:mypet/state/speed_test.dart';
 import 'package:mypet/ui/speed_test_screen.dart';
 import 'package:mypet/ui/health_record_screen.dart';
@@ -198,6 +199,17 @@ void main() {
     await shot(t, '23-test-this-phone');
     await t.tap(find.text('Start the test'));
     await shot(t, '24-test-this-phone-result');
+  });
+
+  testWidgets('settings: quick log doors', (t) async {
+    await setUp(t);
+    final s = await state();
+    await t.pumpWidget(MyPetApp(state: s, engine: FakeEngine(bark)));
+    await t.pumpAndSettle();
+    navigatorKey.currentState!.push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
+    await t.pumpAndSettle();
+    await t.scrollUntilVisible(find.text('Quick log'), 100, scrollable: find.byType(Scrollable).last);
+    await shot(t, '25-settings-quick-log');
   });
 
   testWidgets('health record from a vet PDF', (t) async {

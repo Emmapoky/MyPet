@@ -8,6 +8,7 @@ import '../models/pet.dart';
 import '../state/app_state.dart';
 import 'app.dart';
 import 'feedback.dart';
+import 'quick_log_screen.dart';
 import 'theme.dart';
 import 'widgets/common.dart';
 
@@ -133,6 +134,8 @@ class _ShortLogScreenState extends State<ShortLogScreen> {
       );
     }
     petId ??= pet.id;
+    // Short form switched off in Settings: links and widgets open the full daily log.
+    if (!s.doors.shortForm) return QuickLogScreen(pet: pet);
     final pets = s.activePets;
     final done = pets.where((p) => s.loggedToday(p.id)).length;
 

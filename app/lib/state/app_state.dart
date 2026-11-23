@@ -14,6 +14,35 @@ import '../models/timeline.dart';
 import '../util/day.dart';
 
 /// Holds what the screens show and passes every change to the [Backend].
+/// Which quick ways to log are switched on (Settings > Quick log). Siri and the widgets
+/// are added and removed by the phone itself, so they have no switch here.
+class QuickDoors {
+  const QuickDoors({this.reminderButtons = true, this.voice = true, this.shortForm = true});
+
+  /// "All normal" and "Tell us" on the evening reminder.
+  final bool reminderButtons;
+
+  /// "Tell us about the day" by voice on the daily log.
+  final bool voice;
+
+  /// Widgets and links open the short form; off opens the full daily log instead.
+  final bool shortForm;
+
+  QuickDoors copyWith({bool? reminderButtons, bool? voice, bool? shortForm}) => QuickDoors(
+        reminderButtons: reminderButtons ?? this.reminderButtons,
+        voice: voice ?? this.voice,
+        shortForm: shortForm ?? this.shortForm,
+      );
+
+  Map<String, bool> toMap() => {'reminderButtons': reminderButtons, 'voice': voice, 'shortForm': shortForm};
+
+  factory QuickDoors.fromMap(Map<String, dynamic> m) => QuickDoors(
+        reminderButtons: m['reminderButtons'] != false,
+        voice: m['voice'] != false,
+        shortForm: m['shortForm'] != false,
+      );
+}
+
 class AppState extends ChangeNotifier {
   AppState(this.backend,
       {DateTime Function()? clock, this.detectInBackground = true})
@@ -154,6 +183,16 @@ class AppState extends ChangeNotifier {
       final p = activePets.where((p) => p.name == name).firstOrNull;
       if (p != null) _selectedPetId = p.id;
     }
+  }
+
+  /// Saved with [onDoorsChanged] by main.dart.
+  QuickDoors doors = const QuickDoors();
+  void Function(QuickDoors)? onDoorsChanged;
+
+  void setDoors(QuickDoors d) {
+    doors = d;
+    onDoorsChanged?.call(d);
+    notifyListeners();
   }
 
   void setLook(ThemeMode m) {

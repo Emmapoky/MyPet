@@ -27,6 +27,10 @@ void main() {
     expect(daily, hasLength(7));
     expect(daily.first.at, DateTime(2027, 3, 15, 21));
     expect(daily.first.title, "Time to log Milo and Mochi's day");
+    expect(daily.first.body, 'Hold to answer here, or tap to open.');
+    s.setDoors(s.doors.copyWith(reminderButtons: false));
+    expect(ReminderNotifications.plan(s).firstWhere((p) => p.daily).body, 'Tap to log.');
+    s.setDoors(s.doors.copyWith(reminderButtons: true));
 
     await s.addEntry(milo.id, EntryKind.dailyLog, {
       'ate': true,

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
@@ -32,6 +33,8 @@ class SettingsScreen extends StatelessWidget {
           selected: {s.look},
           onSelectionChanged: (v) => s.setLook(v.first),
         ),
+        const SectionTitle('Quick log'),
+        const Card(child: QuickDoorsSettings()),
         const SectionTitle('Saved clips'),
         const GuideTarget(id: 'savedClips', child: Card(child: ClipKeepChoices())),
         Padding(
@@ -105,5 +108,42 @@ class AboutMyPet extends StatelessWidget {
         row(Icons.local_hospital_outlined, Wording.notDiagnosis),
       ]),
     );
+  }
+}
+
+/// Settings > Quick log: the quick ways to log a day, as in the Figma "Quick-log doors".
+class QuickDoorsSettings extends StatelessWidget {
+  const QuickDoorsSettings({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<AppState>();
+    final d = s.doors;
+    final t = Theme.of(context);
+    Widget sw(IconData icon, String title, String sub, bool on, QuickDoors Function(bool) set) => SwitchListTile(
+          secondary: Icon(icon, color: t.colorScheme.primary),
+          title: Text(title),
+          subtitle: Text(sub),
+          value: on,
+          onChanged: (v) => s.setDoors(set(v)),
+        );
+    Widget info(IconData icon, String title, String sub) => ListTile(
+          leading: Icon(icon, color: t.colorScheme.primary),
+          title: Text(title),
+          subtitle: Text(sub),
+        );
+    return Column(children: [
+      sw(Icons.notifications_rounded, 'Reminder buttons', 'All normal from the notification', d.reminderButtons,
+          (v) => d.copyWith(reminderButtons: v)),
+      sw(Icons.mic_rounded, 'Voice', 'Say how the day went', d.voice, (v) => d.copyWith(voice: v)),
+      sw(Icons.edit_note_rounded, 'Short form', 'Three taps, one save', d.shortForm, (v) => d.copyWith(shortForm: v)),
+      if (kIsWeb)
+        info(Icons.add_to_home_screen_rounded, 'Quick log icon',
+            'Open this page at /#/log, then Share > Add to Home Screen')
+      else ...[
+        info(Icons.graphic_eq_rounded, 'Siri', 'Say "Tell MyPet about today". Add or remove it in the Shortcuts app.'),
+        info(Icons.widgets_rounded, 'Widgets', 'Add or remove MyPet on your Home Screen or lock screen.'),
+      ],
+    ]);
   }
 }

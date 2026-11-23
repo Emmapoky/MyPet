@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mypet/models/care_entry.dart';
 import 'package:mypet/models/pet.dart';
+import 'package:mypet/state/app_state.dart';
 import 'package:mypet/ui/app.dart';
 import 'package:mypet/ui/feedback.dart';
 import 'package:mypet/ui/short_log_screen.dart';
@@ -88,5 +89,20 @@ void main() {
     await settle(t);
     expect(find.text('No pets yet'), findsNothing);
     expect(find.byType(ShortLogScreen), findsNothing);
+  });
+
+  testWidgets('with the short form switched off, a widget link opens the full daily log', (t) async {
+    final s = await signedInState();
+    await s.addPet(name: 'Biscuit', species: Species.dog);
+    s.setDoors(s.doors.copyWith(shortForm: false, voice: false));
+    phoneSize(t);
+    await t.pumpWidget(MyPetApp(state: s, engine: FakeEngine(bark)));
+    await settle(t);
+    navigatorKey.currentState!.pushNamed('/log');
+    await settle(t);
+    expect(find.text("How was Biscuit's day?"), findsNothing);
+    expect(find.text('Ate today'), findsOneWidget);
+    expect(find.textContaining('Tell us about'), findsNothing);
+    expect(QuickDoors.fromMap(s.doors.toMap()).shortForm, isFalse);
   });
 }

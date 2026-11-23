@@ -618,6 +618,31 @@ const NX = {};
     button(body, 'Send to Erwyna', { fill: true, icon: 'send' }); button(body, 'Copy results', { kind: 'outlined' }); button(body, 'Run again', { kind: 'text' });
     NX.test3 = s; }
 }
+// App icon (app 9190432): paw inset 64 of 1024, sun dot, hero gradient, full-bleed square
+{
+  const s = figma.createFrame(); s.name = 'App icon'; s.resize(340, 340); s.cornerRadius = 76; s.clipsContent = true; s.fills = grad(P.heroA, P.heroB);
+  s.layoutMode = 'VERTICAL'; s.primaryAxisAlignItems = 'CENTER'; s.counterAxisAlignItems = 'CENTER'; s.primaryAxisSizingMode = 'FIXED'; s.counterAxisSizingMode = 'FIXED';
+  I(s, 'pets', 200, P.white); const d = circle(s, 40, P.sun); d.layoutPositioning = 'ABSOLUTE'; d.x = 236; d.y = 60;
+  NX.icon = s;
+}
+// Demo scenes: log by voice while driving (app 4a42750), flat and minimal
+{
+  const mkScene = (name, sky) => { const s = figma.createFrame(); s.name = name; s.resize(390, 844); s.cornerRadius = 32; s.clipsContent = true; s.fills = solid(sky); return s; };
+  const rect = (p, x, y, w, h, c, r) => { const n = figma.createRectangle(); n.resize(w, h); n.x = x; n.y = y; n.fills = solid(c); if (r) n.cornerRadius = r; p.appendChild(n); n.layoutPositioning = 'ABSOLUTE'; return n; };
+  const addAbs = (p, n, x, y) => { p.appendChild(n); n.layoutPositioning = 'ABSOLUTE'; n.x = x; n.y = y; return n; };
+  { const s = mkScene('Demo: road scene', '#F1ECFF'); s.layoutMode = 'VERTICAL'; s.primaryAxisSizingMode = 'FIXED'; s.counterAxisSizingMode = 'FIXED';
+    rect(s, 0, 480, 390, 364, '#6B6480'); rect(s, 186, 500, 18, 70, '#FFFFFF', 4); rect(s, 186, 620, 18, 70, '#FFFFFF', 4); rect(s, 186, 740, 18, 70, '#FFFFFF', 4);
+    rect(s, 40, 560, 130, 90, P.pink, 24); rect(s, 62, 534, 86, 40, P.pink, 16); rect(s, 70, 542, 70, 22, '#FFFFFF', 8); rect(s, 52, 640, 28, 22, P.ink, 6); rect(s, 130, 640, 28, 22, P.ink, 6);
+    const b = AL('v', { fill: P.surface, r: 20, pad: 14, parent: s, shadow: true, name: 'Caption' }); T(b, 'Carl drives. Biscuit stays home.', 17, 'h', P.ink); addAbs(s, b, 24, 90);
+    NX.road = s; }
+  { const s = mkScene('Demo: driver seat', '#E6EAFB');
+    rect(s, 0, 0, 390, 300, '#CFD8FA', 0); rect(s, 0, 300, 390, 544, '#2B2340', 0); rect(s, 24, 150, 342, 150, '#E6EAFB', 24);
+    const w = figma.createRectangle(); w.resize(200, 200); w.cornerRadius = 100; w.fills = []; w.strokes = solid('#6B6480'); w.strokeWeight = 18; addAbs(s, w, 190, 560);
+    rect(s, 120, 360, 120, 190, '#1B1530', 18); rect(s, 128, 370, 104, 170, '#6A4FD6', 10);
+    const bn = AL('h', { fill: P.surface, r: 20, pad: 14, gap: 10, align: 'CENTER', parent: s, shadow: true, name: 'Reminder banner' }); const lm = circle(bn, 28, P.brand, 'pets', P.white, 16); lm.cornerRadius = 8; T(bn, 'Log Biscuit\'s day?', 15, 'h', P.ink); addAbs(s, bn, 20, 40);
+    const mu = circle(s, 44, P.surface, 'volume_off', P.ink, 24); mu.layoutPositioning = 'ABSOLUTE'; mu.x = 326; mu.y = 60; mu.name = 'Mute';
+    NX.seat = s; }
+}
 // Saved clips setting
 {
   const { s, body } = phone('Saved clips', { title: 'Saved clips', back: true });
@@ -699,7 +724,7 @@ const NX = {};
 const row3 = flowRow('New in the app (20 Nov)');
 labelled(row3, 'Pet profile', NX.profile); labelled(row3, 'Walkthrough', NX.tour); labelled(row3, 'Try a demo', NX.demo);
 labelled(row3, 'Notification quick-fill', NX.notif); labelled(row3, 'Voice log', NX.voice); labelled(row3, 'Siri shortcut', NX.siri);
-labelled(row3, 'Widgets (not built)', NX.widgets); labelled(row3, 'Guide and FAQ', NX.guide); labelled(row3, 'Test this phone', NX.test1); labelled(row3, 'Test running', NX.test2); labelled(row3, 'Test result', NX.test3); labelled(row3, 'Saved clips', NX.clips); labelled(row3, 'Vet PDF import', NX.pdf);
+labelled(row3, 'Widgets (not built)', NX.widgets); labelled(row3, 'Guide and FAQ', NX.guide); labelled(row3, 'App icon', NX.icon); labelled(row3, 'Demo: road scene', NX.road); labelled(row3, 'Demo: driver seat', NX.seat); labelled(row3, 'Test this phone', NX.test1); labelled(row3, 'Test running', NX.test2); labelled(row3, 'Test result', NX.test3); labelled(row3, 'Saved clips', NX.clips); labelled(row3, 'Vet PDF import', NX.pdf);
 const row4 = flowRow('Pet-owner review changes (in the app 20 Nov)');
 labelled(row4, 'Insights, weight', NX.weight); labelled(row4, 'Quick log, extras', NX.extras); labelled(row4, 'Pet details', NX.details); labelled(row4, 'Pet page', NX.petpage);
 
@@ -724,9 +749,11 @@ STAGE = 'Tracker';
     ['Quick log: All / Some / None, extra checks', 'FR05', 'Drawn', 'In app'],
     ['Getting to know card, weight card', 'FR13 FR15', 'Drawn', 'In app'],
     ['Pet details and pet page: typical, something changed', 'FR01', 'Drawn', 'In app'],
-    ['Demo: log by voice while driving', '', 'Drawn', 'In app'],
+    ['Demo: log by voice while driving (road + driver-seat scenes, mute)', '', 'Drawn', 'In app'],
     ['Siri: Tell MyPet, All normal today', '', 'Drawn', 'In app'],
     ['Guide and FAQ (More, below Try a demo)', '', 'Drawn', 'In app'],
+    ['App icon (paw, sun dot, hero gradient)', '', 'Drawn', 'In app'],
+    ['Settings > Quick log card (3 switches, Siri and Widgets info rows)', '', 'Drawn', 'In app'],
     ['More > Test this phone (timing test, 3 states)', '', 'Drawn', 'In app'],
     ['Home and lock-screen widgets', '', 'Drawn', 'Not in the app']
   ];

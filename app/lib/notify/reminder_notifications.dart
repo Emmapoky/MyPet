@@ -120,12 +120,12 @@ class ReminderNotifications {
     return ok;
   }
 
-  static NotificationDetails _details({bool daily = false}) => NotificationDetails(
-        iOS: DarwinNotificationDetails(categoryIdentifier: daily ? _dailyCategory : null),
+  static NotificationDetails _details({bool daily = false, bool buttons = true}) => NotificationDetails(
+        iOS: DarwinNotificationDetails(categoryIdentifier: daily && buttons ? _dailyCategory : null),
         android: AndroidNotificationDetails(
           daily ? 'daily_log' : 'care',
           daily ? 'Daily log reminder' : 'Care reminders',
-          actions: daily
+          actions: daily && buttons
               ? const [
                   AndroidNotificationAction(allNormalAction, 'All normal'),
                   AndroidNotificationAction(tellAction, 'Tell us',
@@ -155,7 +155,7 @@ class ReminderNotifications {
       final who = names.length == 1
           ? "${names.first}'s"
           : "${names.sublist(0, names.length - 1).join(', ')} and ${names.last}'s";
-      out.add(PlannedNotification(at, 'Time to log $who day', 'Hold to answer here, or tap to open.', due.first.id, true,
+      out.add(PlannedNotification(at, 'Time to log $who day', s.doors.reminderButtons ? 'Hold to answer here, or tap to open.' : 'Tap to log.', due.first.id, true,
           pets: [for (final p in due) p.id]));
     }
 
@@ -177,7 +177,7 @@ class ReminderNotifications {
 
   Future<void> sync() async {
     final planned = plan(state);
-    final sig = planned.map((p) => '${p.at}|${p.title}|${p.petId}').join(';');
+    final sig = '${state.doors.reminderButtons};${planned.map((p) => '${p.at}|${p.title}|${p.petId}').join(';')}';
     if (sig == _lastSignature) return;
     _lastSignature = sig;
     if (planned.isNotEmpty && !await _permission()) return;
@@ -187,7 +187,7 @@ class ReminderNotifications {
       await _plugin.zonedSchedule(
         id: id++,
         scheduledDate: tz.TZDateTime.from(p.at, tz.local),
-        notificationDetails: _details(daily: p.daily),
+        notificationDetails: _details(daily: p.daily, buttons: state.doors.reminderButtons),
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         title: p.title,
         body: p.body,

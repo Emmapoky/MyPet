@@ -323,7 +323,7 @@ class _QuickLogScreenState extends State<QuickLogScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(Tokens.space4, Tokens.space2, Tokens.space4, Tokens.space4),
           children: [
-            _VoiceCard(petName: pet.name, listening: _listening, heard: _heard, onTap: _voice),
+            if (context.watch<AppState>().doors.voice) _VoiceCard(petName: pet.name, listening: _listening, heard: _heard, onTap: _voice),
             const SizedBox(height: Tokens.space4),
             if (last != null) ...[
               Material(

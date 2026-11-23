@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:material_ui/material_ui.dart';
@@ -36,6 +37,14 @@ Future<void> main() async {
       state.clipKeep = ClipKeep.values.firstWhere((k) => k.name == saved, orElse: () => ClipKeep.video);
     }
     state.onClipKeepChanged = (k) => keep.writeAsString(k.name);
+    // Quick-log doors switched on or off in Settings.
+    final doors = File('${(await getApplicationSupportDirectory()).path}/doors.json');
+    if (await doors.exists()) {
+      try {
+        state.doors = QuickDoors.fromMap(jsonDecode(await doors.readAsString()) as Map<String, dynamic>);
+      } catch (_) {}
+    }
+    state.onDoorsChanged = (d) => doors.writeAsString(jsonEncode(d.toMap()));
     // Answers given on the daily notification while the app was closed wait here.
     state.notificationInbox = '${(await getApplicationSupportDirectory()).path}/notification_inbox.jsonl';
   } catch (_) {}

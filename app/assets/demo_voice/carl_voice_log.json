@@ -1,39 +1,39 @@
 {
- "seconds": 17.18,
+ "seconds": 18.3,
  "segments": [
   {
-   "start": 0.75,
-   "end": 2.19,
+   "start": 0.7,
+   "end": 2.22,
    "text": "Hey, so, quick one for Biscuit."
   },
   {
-   "start": 2.69,
-   "end": 4.84,
+   "start": 2.44,
+   "end": 5.0,
    "text": "So he didn't eat his breakfast this morning,"
   },
   {
-   "start": 5.07,
-   "end": 7.57,
+   "start": 5.7,
+   "end": 8.14,
    "text": "oh wait, no, he did. He finished it after his walk."
   },
   {
-   "start": 8.12,
-   "end": 10.53,
+   "start": 8.62,
+   "end": 11.34,
    "text": "He's been a bit tired today, so energy 2."
   },
   {
-   "start": 10.98,
-   "end": 12.25,
+   "start": 11.9,
+   "end": 13.1,
    "text": "Normal poo on the walk too."
   },
   {
-   "start": 12.7,
-   "end": 15.05,
+   "start": 13.68,
+   "end": 15.74,
    "text": "Oh, and he was 10.4 kilos at the vet."
   },
   {
-   "start": 15.55,
-   "end": 16.58,
+   "start": 16.28,
+   "end": 17.4,
    "text": "Yeah, that's it. Thanks!"
   }
  ]

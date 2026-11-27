@@ -1,10 +1,10 @@
 # Demo voice log
 
 `carl_voice_log.m4a` is a made-up voice message from "Carl", a demo owner, for the
-"Log while driving" demo. The voice is synthetic: Kokoro TTS (voice am_fenrir), an
-open-weight model under the Apache 2.0 licence, run offline, with a light phone voice-note
-filter. The script is casual on purpose (a filler word, a self-correction). No real person's
-voice is used.
+"Log while driving" demo. The voice is synthetic: a preset voice ("Dylan") generated on
+Higgsfield (Text to Speech V2, ElevenLabs engine) from Erwyna's account, with a light phone
+voice-note filter. The script is casual on purpose (a filler word, a self-correction). No real
+person's voice is used.
 
 `carl_voice_log.json` lists when each sentence is spoken, so the demo shows the words
 appear and the log fill in as they are said. The words shown are what a phone's dictation
